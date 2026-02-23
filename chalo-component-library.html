@@ -1,0 +1,2869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chalo ਚਲੋ — Component Library v1.0</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Noto+Sans+Gurmukhi:wght@400;500;600;700&family=Fraunces:wght@700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   DESIGN TOKENS
+============================================================ */
+:root {
+  --saffron:        #FF6B00;
+  --saffron-hover:  #CC4A00;
+  --saffron-10:     rgba(255,107,0,0.10);
+  --saffron-15:     rgba(255,107,0,0.15);
+  --saffron-25:     rgba(255,107,0,0.25);
+  --navy:           #1A1F3C;
+  --navy-mid:       #2D3461;
+  --green:          #2ECC71;
+  --green-10:       rgba(46,204,113,0.10);
+  --green-15:       rgba(46,204,113,0.15);
+  --green-30:       rgba(46,204,113,0.30);
+  --red:            #E74C3C;
+  --red-10:         rgba(231,76,60,0.10);
+  --red-25:         rgba(231,76,60,0.25);
+  --amber:          #F39C12;
+  --amber-10:       rgba(243,156,18,0.10);
+  --amber-15:       rgba(243,156,18,0.15);
+  --blue:           #4A90D9;
+  --purple:         #9333EA;
+  --bg-screen:      #F8F9FA;
+  --white:          #FFFFFF;
+  --text-primary:   #374151;
+  --text-secondary: #6B7280;
+  --border:         #E5E7EB;
+  --border-mid:     #D1D5DB;
+
+  /* Shadows */
+  --sh-sm:  0 1px 4px rgba(0,0,0,0.30);
+  --sh-md:  0 4px 16px rgba(0,0,0,0.40);
+  --sh-lg:  0 8px 32px rgba(0,0,0,0.50);
+  --sh-xl:  0 16px 56px rgba(0,0,0,0.60);
+  --glow-s: 0 0 32px rgba(255,107,0,0.25);
+  --glow-g: 0 0 24px rgba(46,204,113,0.30);
+  --glow-d: 0 4px 16px rgba(231,76,60,0.45);
+
+  /* Radius */
+  --r-xs:   4px;
+  --r-sm:   8px;
+  --r-md:   12px;
+  --r-lg:   16px;
+  --r-xl:   20px;
+  --r-2xl:  24px;
+  --r-full: 9999px;
+
+  /* Motion */
+  --ease-out:    cubic-bezier(0.16,1,0.3,1);
+  --ease-spring: cubic-bezier(0.34,1.56,0.64,1);
+  --ease-in:     cubic-bezier(0.55,0,1,0.45);
+  --fast:   150ms;
+  --normal: 250ms;
+  --slow:   400ms;
+}
+
+/* ============================================================
+   PAGE SHELL
+============================================================ */
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: #0A0C14;
+  font-family: 'Poppins', sans-serif;
+  color: var(--text-primary);
+  min-height: 100vh;
+}
+
+/* Sidebar nav */
+.sidebar {
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  width: 220px;
+  background: #111218;
+  border-right: 1px solid #1E2030;
+  padding: 28px 0 20px;
+  overflow-y: auto;
+  z-index: 100;
+}
+.sidebar-logo {
+  padding: 0 20px 24px;
+  border-bottom: 1px solid #1E2030;
+  margin-bottom: 16px;
+}
+.sidebar-logo .logo-name {
+  font-family: 'Fraunces', serif;
+  font-size: 22px;
+  color: var(--saffron);
+  line-height: 1;
+}
+.sidebar-logo .logo-sub {
+  font-size: 10px;
+  color: #4B5563;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+.nav-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: #374151;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 12px 20px 6px;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6B7280;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: all var(--fast);
+  text-decoration: none;
+}
+.nav-item:hover { color: #E5E7EB; background: rgba(255,255,255,0.03); }
+.nav-item.active { color: var(--saffron); border-left-color: var(--saffron); background: rgba(255,107,0,0.06); }
+.nav-item .nav-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+/* Main content */
+.main {
+  margin-left: 220px;
+  padding: 48px 48px 80px;
+  max-width: 1200px;
+}
+
+/* Page header */
+.page-header { margin-bottom: 56px; }
+.page-header h1 {
+  font-family: 'Fraunces', serif;
+  font-size: 40px;
+  color: var(--saffron);
+  line-height: 1;
+  letter-spacing: -1px;
+}
+.page-header .tagline {
+  font-family: 'Noto Sans Gurmukhi';
+  font-size: 16px;
+  color: #4B5563;
+  margin-top: 6px;
+}
+.page-header .meta {
+  font-size: 12px;
+  color: #374151;
+  margin-top: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* Section headers */
+.section-header {
+  margin: 64px 0 28px;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+.section-header h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #E5E7EB;
+  letter-spacing: -0.5px;
+}
+.section-id {
+  font-family: 'JetBrains Mono';
+  font-size: 11px;
+  color: var(--saffron);
+  background: rgba(255,107,0,0.08);
+  padding: 3px 10px;
+  border-radius: var(--r-xs);
+}
+
+/* Component groups */
+.comp-group {
+  background: #111218;
+  border: 1px solid #1E2030;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+.comp-group-header {
+  padding: 14px 20px;
+  background: #0F1117;
+  border-bottom: 1px solid #1E2030;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.comp-group-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #9CA3AF;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+.comp-group-body {
+  padding: 28px 24px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-start;
+}
+.comp-group-body.vertical {
+  flex-direction: column;
+  gap: 16px;
+}
+.comp-group-body.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.comp-group-body.grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20px;
+}
+
+/* Component frame */
+.comp-frame {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.comp-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: #4B5563;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.comp-spec {
+  font-family: 'JetBrains Mono';
+  font-size: 10px;
+  color: #374151;
+  margin-top: 2px;
+}
+
+/* Spec tag */
+.spec-tag {
+  font-family: 'JetBrains Mono';
+  font-size: 10px;
+  color: #4B5563;
+  background: #0A0C14;
+  border: 1px solid #1E2030;
+  border-radius: 3px;
+  padding: 2px 6px;
+}
+
+/* ============================================================
+   01 — BUTTONS
+============================================================ */
+
+/* Base button reset */
+button { font-family: 'Poppins', sans-serif; cursor: pointer; border: none; outline: none; }
+
+/* Primary Customer (Saffron) */
+.btn-primary {
+  height: 54px;
+  padding: 0 24px;
+  background: var(--saffron);
+  color: white;
+  border-radius: var(--r-sm);
+  font-size: 16px;
+  font-weight: 700;
+  box-shadow: var(--glow-s), var(--sh-md);
+  transition: background var(--fast) var(--ease-out),
+              transform var(--fast) var(--ease-out),
+              box-shadow var(--fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+}
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: white;
+  opacity: 0;
+  transition: opacity var(--fast);
+}
+.btn-primary:hover {
+  background: var(--saffron-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 0 40px rgba(255,107,0,0.35), 0 8px 24px rgba(0,0,0,0.5);
+}
+.btn-primary:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: var(--glow-s);
+}
+.btn-primary:active::after { opacity: 0.08; }
+
+/* Primary Driver (Green) */
+.btn-driver {
+  height: 54px;
+  padding: 0 24px;
+  background: var(--green);
+  color: #0A0C14;
+  border-radius: var(--r-sm);
+  font-size: 16px;
+  font-weight: 700;
+  box-shadow: var(--glow-g);
+  transition: all var(--fast) var(--ease-out);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn-driver:hover {
+  background: #27AE60;
+  transform: translateY(-1px);
+  box-shadow: 0 0 32px rgba(46,204,113,0.4), 0 8px 24px rgba(0,0,0,0.4);
+}
+.btn-driver:active { transform: scale(0.98); }
+
+/* Accept (60dp extra tall) */
+.btn-accept {
+  height: 60px;
+  padding: 0 32px;
+  background: var(--green);
+  color: #0A0C14;
+  border-radius: var(--r-sm);
+  font-size: 18px;
+  font-weight: 800;
+  box-shadow: var(--glow-g);
+  transition: all var(--fast) var(--ease-out);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.btn-accept:hover {
+  background: #27AE60;
+  transform: translateY(-2px);
+  box-shadow: 0 0 40px rgba(46,204,113,0.5), 0 12px 32px rgba(0,0,0,0.4);
+}
+.btn-accept:active { transform: scale(0.97); }
+
+/* Secondary */
+.btn-secondary {
+  height: 54px;
+  padding: 0 24px;
+  background: transparent;
+  color: var(--saffron);
+  border: 1.5px solid var(--saffron);
+  border-radius: var(--r-sm);
+  font-size: 16px;
+  font-weight: 600;
+  transition: all var(--fast) var(--ease-out);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn-secondary:hover {
+  background: var(--saffron-10);
+  transform: translateY(-1px);
+}
+.btn-secondary:active { transform: scale(0.98); }
+
+/* Ghost */
+.btn-ghost {
+  height: 48px;
+  padding: 0 20px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  border-radius: var(--r-sm);
+  font-size: 14px;
+  font-weight: 600;
+  transition: all var(--fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn-ghost:hover { color: var(--text-primary); background: rgba(255,255,255,0.06); }
+
+/* Reject */
+.btn-reject {
+  height: 60px;
+  padding: 0 24px;
+  background: transparent;
+  color: var(--red);
+  border: 1.5px solid var(--red);
+  border-radius: var(--r-sm);
+  font-size: 14px;
+  font-weight: 700;
+  transition: all var(--fast) var(--ease-out);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-reject:hover { background: var(--red-10); transform: translateY(-1px); }
+
+/* Danger */
+.btn-danger {
+  height: 54px;
+  padding: 0 24px;
+  background: var(--red);
+  color: white;
+  border-radius: var(--r-sm);
+  font-size: 16px;
+  font-weight: 700;
+  box-shadow: var(--glow-d);
+  transition: all var(--fast) var(--ease-out);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn-danger:hover { background: #C0392B; transform: translateY(-1px); }
+
+/* Dark (Navy) */
+.btn-dark {
+  height: 44px;
+  padding: 0 20px;
+  background: var(--navy);
+  color: white;
+  border-radius: var(--r-sm);
+  font-size: 14px;
+  font-weight: 700;
+  transition: all var(--fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn-dark:hover { background: var(--navy-mid); }
+
+/* Go Offline */
+.btn-offline {
+  height: 44px;
+  padding: 0 20px;
+  background: rgba(231,76,60,0.10);
+  color: var(--red);
+  border: 1.5px solid rgba(231,76,60,0.25);
+  border-radius: var(--r-sm);
+  font-size: 14px;
+  font-weight: 700;
+  transition: all var(--fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.btn-offline:hover { background: rgba(231,76,60,0.18); }
+
+/* Disabled */
+.btn-disabled {
+  height: 54px;
+  padding: 0 24px;
+  background: var(--saffron);
+  color: white;
+  border-radius: var(--r-sm);
+  font-size: 16px;
+  font-weight: 700;
+  opacity: 0.45;
+  cursor: not-allowed;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+/* Icon button */
+.btn-icon {
+  width: 44px; height: 44px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--r-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: white;
+  transition: all var(--fast);
+}
+.btn-icon:hover { background: rgba(255,255,255,0.14); }
+
+/* Full-width wrapper */
+.btn-full { width: 100%; }
+
+/* ============================================================
+   02 — INPUTS
+============================================================ */
+
+.input-group { display: flex; flex-direction: column; gap: 6px; }
+.input-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #9CA3AF;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+/* Text input */
+.input-field {
+  height: 52px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: 'Poppins';
+  color: var(--text-primary);
+  background: var(--white);
+  transition: border-color var(--fast), box-shadow var(--fast);
+  outline: none;
+  width: 100%;
+}
+.input-field::placeholder { color: var(--text-secondary); font-weight: 400; }
+.input-field:focus {
+  border-color: var(--saffron);
+  box-shadow: 0 0 0 3px rgba(255,107,0,0.12);
+}
+
+/* Phone input */
+.phone-wrap {
+  display: flex;
+  height: 52px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  background: var(--white);
+  transition: border-color var(--fast), box-shadow var(--fast);
+}
+.phone-wrap:focus-within {
+  border-color: var(--saffron);
+  box-shadow: 0 0 0 3px rgba(255,107,0,0.12);
+}
+.phone-prefix {
+  padding: 0 14px;
+  background: #F3F4F6;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  border-right: 1.5px solid var(--border);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.phone-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Poppins';
+  color: var(--navy);
+  letter-spacing: 1.5px;
+  background: transparent;
+}
+
+/* Search bar */
+.search-bar {
+  height: 52px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-full);
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-screen);
+  transition: border-color var(--fast), box-shadow var(--fast), background var(--fast);
+  cursor: text;
+}
+.search-bar:focus-within {
+  border-color: var(--saffron);
+  box-shadow: 0 0 0 3px rgba(255,107,0,0.12);
+  background: var(--white);
+}
+.search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  font-family: 'Poppins';
+  color: var(--text-primary);
+  background: transparent;
+}
+.search-icon { font-size: 16px; flex-shrink: 0; }
+
+/* From-To card */
+.from-to-card {
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--white);
+}
+.ft-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 52px;
+  padding: 0 14px;
+  position: relative;
+}
+.ft-row.from-row { background: #F9FAFB; border-bottom: 1px solid var(--border); }
+.ft-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.ft-dot.origin { background: var(--navy); }
+.ft-dot.dest   { background: var(--saffron); }
+.ft-text { font-size: 14px; font-weight: 500; color: var(--text-secondary); flex: 1; }
+.ft-text.active { color: var(--navy); font-weight: 600; }
+.ft-connector {
+  position: absolute;
+  left: 18px;
+  top: 100%;
+  width: 1.5px;
+  height: 52px;
+  background: var(--border);
+  z-index: 1;
+}
+
+/* OTP input */
+.otp-row {
+  display: flex;
+  gap: 12px;
+}
+.otp-box {
+  width: 56px; height: 64px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 700;
+  font-family: 'Poppins';
+  background: var(--white);
+  color: var(--navy);
+  transition: all var(--fast);
+  cursor: text;
+  position: relative;
+}
+.otp-box.filled {
+  background: rgba(255,107,0,0.07);
+  border-color: var(--saffron);
+  color: var(--saffron);
+}
+.otp-box.active {
+  border-color: var(--saffron);
+  box-shadow: 0 0 0 3px rgba(255,107,0,0.12);
+}
+.otp-box.active::after {
+  content: '';
+  position: absolute;
+  width: 2px; height: 24px;
+  background: var(--saffron);
+  animation: cursor-blink 1s infinite;
+}
+@keyframes cursor-blink { 0%,100% { opacity:1; } 50% { opacity:0; } }
+
+/* Upload zone */
+.upload-zone {
+  border: 2px dashed rgba(255,107,0,0.35);
+  border-radius: var(--r-md);
+  height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(255,107,0,0.03);
+  cursor: pointer;
+  transition: all var(--fast);
+}
+.upload-zone:hover {
+  border-color: var(--saffron);
+  background: rgba(255,107,0,0.07);
+}
+.upload-zone.uploaded {
+  border-color: var(--green);
+  background: rgba(46,204,113,0.06);
+  border-style: solid;
+}
+.upload-icon { font-size: 28px; }
+.upload-label { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+.upload-sub { font-size: 11px; color: var(--text-secondary); }
+
+/* Toggle switch */
+.toggle-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-screen);
+  cursor: pointer;
+  transition: border-color var(--fast);
+}
+.toggle-wrap:hover { border-color: var(--saffron); }
+.toggle-info { display: flex; flex-direction: column; gap: 2px; }
+.toggle-title { font-size: 14px; font-weight: 600; color: var(--navy); }
+.toggle-sub { font-size: 11px; color: var(--text-secondary); }
+.toggle-switch {
+  width: 44px; height: 24px;
+  background: var(--border);
+  border-radius: 12px;
+  position: relative;
+  transition: background var(--normal) var(--ease-out);
+  flex-shrink: 0;
+}
+.toggle-switch.on { background: var(--saffron); }
+.toggle-knob {
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 20px; height: 20px;
+  background: white;
+  border-radius: 50%;
+  box-shadow: var(--sh-sm);
+  transition: left var(--normal) var(--ease-spring);
+}
+.toggle-switch.on .toggle-knob { left: 22px; }
+
+/* ============================================================
+   03 — CARDS
+============================================================ */
+
+/* Ride Request Card */
+.ride-request-card {
+  background: var(--white);
+  border-radius: var(--r-xl);
+  padding: 20px;
+  box-shadow: var(--sh-xl);
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.rrc-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.rrc-fare {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--navy);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -1px;
+  line-height: 1;
+}
+.rrc-fare-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.rrc-route {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+.rrc-customer {
+  background: var(--bg-screen);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.rrc-avatar {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--blue), #2D5FA8);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.rrc-name { font-size: 15px; font-weight: 700; color: var(--navy); }
+.rrc-meta { font-size: 12px; color: var(--text-secondary); margin-top: 3px; display: flex; gap: 8px; }
+.rrc-btns { display: flex; gap: 10px; }
+.rrc-divider { height: 1px; background: var(--border); }
+
+/* Rider Found Card */
+.rider-found-card {
+  background: var(--white);
+  border-radius: var(--r-xl);
+  padding: 20px;
+  box-shadow: var(--sh-lg);
+  width: 320px;
+  animation: slide-spring 0.4s var(--ease-spring) both;
+}
+@keyframes slide-spring {
+  from { transform: translateY(40px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.rfc-label {
+  font-size: 13px; font-weight: 700;
+  color: var(--green);
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 16px;
+}
+.rfc-row {
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: 16px;
+}
+.rfc-avatar {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--navy), var(--navy-mid));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; flex-shrink: 0;
+  border: 2px solid white;
+  box-shadow: var(--sh-sm);
+}
+.rfc-name { font-size: 16px; font-weight: 700; color: var(--navy); }
+.rfc-meta { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.rfc-rating { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.rfc-plate {
+  font-size: 12px; color: var(--text-secondary);
+  background: var(--bg-screen);
+  padding: 2px 8px; border-radius: var(--r-xs);
+  font-weight: 600; font-family: 'JetBrains Mono';
+}
+.eta-chip {
+  background: var(--green-10);
+  color: var(--green);
+  border: 1px solid var(--green-30);
+  border-radius: var(--r-full);
+  padding: 6px 14px;
+  font-size: 13px; font-weight: 700;
+  flex-shrink: 0;
+}
+.rfc-contact { display: flex; gap: 10px; }
+.rfc-contact-btn {
+  flex: 1; height: 40px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--white);
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  font-size: 13px; font-weight: 600; color: var(--text-primary);
+  cursor: pointer;
+  transition: all var(--fast);
+  font-family: 'Poppins';
+}
+.rfc-contact-btn:hover { background: var(--bg-screen); border-color: var(--border-mid); }
+
+/* History Card */
+.history-card {
+  background: var(--white);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  box-shadow: var(--sh-sm);
+  width: 100%;
+  cursor: pointer;
+  transition: box-shadow var(--fast), transform var(--fast);
+}
+.history-card:hover {
+  box-shadow: var(--sh-md);
+  transform: translateY(-1px);
+}
+.hc-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.hc-route { font-size: 14px; font-weight: 700; color: var(--navy); }
+.hc-fare { font-size: 16px; font-weight: 800; color: var(--saffron); }
+.hc-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.hc-date { font-size: 12px; color: var(--text-secondary); }
+.hc-expanded {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: none;
+  gap: 8px;
+  flex-direction: column;
+}
+.hc-expanded.open { display: flex; }
+.hc-expand-row { display: flex; justify-content: space-between; }
+.dispute-link { font-size: 12px; font-weight: 600; color: var(--amber); display: flex; align-items: center; gap: 4px; cursor: pointer; }
+
+/* Fare Summary Card */
+.fare-summary-card {
+  background: var(--bg-screen);
+  border-radius: var(--r-md);
+  padding: 16px;
+  width: 280px;
+}
+.fsc-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; }
+.fsc-label { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+.fsc-value { font-size: 15px; font-weight: 700; }
+.fsc-value.fare { color: var(--saffron); }
+.fsc-value.net { color: var(--green); font-size: 18px; }
+.fsc-value.deduct { color: var(--red); font-size: 13px; }
+.fsc-divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+/* Earnings Card */
+.earnings-card {
+  background: var(--green-10);
+  border: 1.5px solid var(--green-30);
+  border-radius: var(--r-md);
+  padding: 16px;
+  width: 280px;
+}
+
+/* ============================================================
+   04 — NAVIGATION
+============================================================ */
+
+.bottom-nav-demo {
+  width: 360px;
+  height: 64px;
+  background: var(--white);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+  display: flex;
+  border-radius: 0 0 16px 16px;
+}
+.nav-tab-demo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  position: relative;
+  transition: color var(--fast);
+}
+.nav-tab-demo.active-s { color: var(--saffron); }
+.nav-tab-demo.active-g { color: var(--green); }
+.nav-tab-demo.active-s::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 20%; right: 20%;
+  height: 2px;
+  background: var(--saffron);
+  border-radius: 0 0 2px 2px;
+}
+.nav-tab-demo.active-g::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 20%; right: 20%;
+  height: 2px;
+  background: var(--green);
+  border-radius: 0 0 2px 2px;
+}
+.nav-tab-icon { font-size: 20px; line-height: 1; }
+
+/* Profile Header */
+.profile-header-demo {
+  width: 360px;
+  background: linear-gradient(160deg, var(--navy), var(--navy-mid));
+  padding: 32px 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-radius: 16px 16px 0 0;
+}
+.ph-avatar {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  border: 2px solid rgba(255,255,255,0.25);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+}
+.ph-name { font-size: 20px; font-weight: 700; color: white; }
+.ph-phone { font-size: 13px; color: rgba(255,255,255,0.65); margin-top: 2px; }
+.ph-badge {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(46,204,113,0.2);
+  border: 1px solid rgba(46,204,113,0.3);
+  border-radius: var(--r-full);
+  padding: 3px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--green);
+}
+
+/* Splash header (saffron) */
+.splash-header {
+  width: 360px;
+  background: linear-gradient(160deg, var(--saffron), #FF8C00);
+  padding: 32px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  border-radius: 16px;
+  box-shadow: var(--glow-s);
+}
+.splash-logo {
+  width: 72px; height: 72px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px;
+  border: 1.5px solid rgba(255,255,255,0.3);
+}
+.splash-title {
+  font-family: 'Fraunces', serif;
+  font-size: 32px; font-weight: 700;
+  color: white; line-height: 1;
+}
+.splash-gurmukhi {
+  font-family: 'Noto Sans Gurmukhi';
+  font-size: 22px; color: rgba(255,255,255,0.8);
+}
+.splash-tagline { font-size: 13px; color: rgba(255,255,255,0.7); text-align: center; }
+
+/* ============================================================
+   05 — COUNTDOWN RING
+============================================================ */
+
+.countdown-demo {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+.ring-wrap {
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+}
+.ring-wrap svg { transform: rotate(-90deg); }
+.ring-number {
+  position: absolute;
+  font-size: 20px; font-weight: 800;
+  font-family: 'Poppins';
+  line-height: 1;
+}
+.ring-label { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
+
+/* Animated ring */
+.ring-track { fill: none; stroke: var(--border); }
+.ring-progress {
+  fill: none;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s linear, stroke 0.5s;
+  animation: none;
+}
+.ring-saffron { stroke: var(--saffron); color: var(--saffron); }
+.ring-amber   { stroke: var(--amber);   color: var(--amber); }
+.ring-red     { stroke: var(--red);     color: var(--red); }
+.ring-pulse { animation: ring-urgency 0.5s ease-in-out infinite alternate; }
+@keyframes ring-urgency { from { opacity: 1; } to { opacity: 0.5; } }
+
+/* ============================================================
+   06 — SOS BUTTON
+============================================================ */
+
+.sos-demo { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.sos-btn {
+  width: 56px; height: 56px;
+  background: var(--red);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: var(--glow-d), var(--sh-md);
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.1s;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.sos-btn:active { transform: scale(0.92); }
+.sos-text { font-size: 11px; font-weight: 800; color: white; letter-spacing: 0.5px; }
+.sos-ring {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid rgba(231,76,60,0.4);
+  animation: sos-pulse 2s ease-in-out infinite;
+}
+.sos-ring-2 {
+  position: absolute;
+  inset: -14px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(231,76,60,0.2);
+  animation: sos-pulse 2s ease-in-out 0.5s infinite;
+}
+@keyframes sos-pulse {
+  0%,100% { transform: scale(1); opacity: 0.8; }
+  50%      { transform: scale(1.15); opacity: 0; }
+}
+
+/* SOS Active state */
+.sos-active-banner {
+  background: var(--red);
+  border-radius: var(--r-sm);
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 320px;
+  animation: banner-drop 0.3s var(--ease-out) both;
+}
+@keyframes banner-drop {
+  from { transform: translateY(-8px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.sos-active-icon { font-size: 20px; }
+.sos-active-title { font-size: 14px; font-weight: 800; color: white; }
+.sos-active-sub { font-size: 11px; color: rgba(255,255,255,0.85); margin-top: 2px; }
+
+/* SOS hold progress overlay */
+.sos-hold-ring {
+  position: absolute;
+  inset: 0; border-radius: 50%;
+  background: conic-gradient(rgba(255,255,255,0.3) 0%, transparent 0%);
+  transition: background 0.05s linear;
+}
+
+/* I'm Safe button */
+.btn-safe {
+  height: 48px; padding: 0 24px;
+  background: var(--green); color: #0A0C14;
+  border-radius: var(--r-sm);
+  font-size: 14px; font-weight: 700;
+  box-shadow: var(--glow-g);
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  cursor: pointer;
+  transition: all var(--fast);
+}
+.btn-safe:hover { background: #27AE60; }
+
+/* ============================================================
+   07 — CHIPS & BADGES
+============================================================ */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: var(--r-full);
+  padding: 5px 14px;
+  white-space: nowrap;
+}
+.chip-sm {
+  font-size: 10px;
+  padding: 3px 10px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.chip-square {
+  border-radius: var(--r-xs);
+}
+
+/* Chip variants */
+.chip-online   { background: var(--green-15); border: 1.5px solid var(--green-30); color: var(--green); }
+.chip-offline  { background: rgba(107,114,128,0.12); border: 1.5px solid rgba(107,114,128,0.25); color: var(--text-secondary); }
+.chip-verified { background: var(--green-15); border: 1px solid var(--green-30); color: var(--green); }
+.chip-review   { background: var(--amber-15); border: 1px solid rgba(243,156,18,0.3); color: var(--amber); }
+.chip-action   { background: var(--red-10); border: 1px solid rgba(231,76,60,0.25); color: var(--red); }
+.chip-eta      { background: var(--green-10); border: 1px solid var(--green-30); color: var(--green); }
+.chip-manual   { background: rgba(59,130,246,0.10); border: 1px solid rgba(59,130,246,0.2); color: var(--blue); }
+.chip-scheduled{ background: rgba(147,51,234,0.10); border: 1px solid rgba(147,51,234,0.2); color: var(--purple); }
+.chip-cash     { background: rgba(74,144,217,0.10); border: 1px solid rgba(74,144,217,0.2); color: var(--blue); }
+.chip-upi      { background: var(--green-10); border: 1px solid var(--green-30); color: var(--green); }
+.chip-cancelled{ background: var(--red-10); border: 1px solid rgba(231,76,60,0.2); color: var(--red); }
+.chip-pending  { background: var(--amber-10); border: 1px solid rgba(243,156,18,0.25); color: var(--amber); }
+
+/* Earnings chip (dark) */
+.chip-earnings {
+  background: rgba(26,31,60,0.88);
+  border: none;
+  color: white;
+  border-radius: var(--r-full);
+  padding: 6px 14px;
+  font-size: 13px; font-weight: 700;
+  display: inline-flex; align-items: center; gap: 6px;
+  box-shadow: var(--sh-md);
+}
+
+/* Quick chips (home screen) */
+.quick-chip {
+  background: var(--saffron-10);
+  border: 1px solid rgba(255,107,0,0.18);
+  border-radius: var(--r-full);
+  color: var(--saffron);
+  padding: 7px 16px;
+  font-size: 13px; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 6px;
+  cursor: pointer;
+  transition: all var(--fast);
+}
+.quick-chip:hover { background: rgba(255,107,0,0.15); }
+
+/* Status dots */
+.status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.dot-online { background: var(--green); box-shadow: 0 0 6px rgba(46,204,113,0.6); }
+.dot-offline { background: var(--text-secondary); }
+.dot-pending { background: var(--amber); }
+
+/* Filter chips */
+.filter-chip {
+  height: 30px; padding: 0 14px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--border);
+  font-size: 12px; font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--white);
+  cursor: pointer;
+  transition: all var(--fast);
+  display: inline-flex; align-items: center;
+}
+.filter-chip.active {
+  background: var(--saffron-10);
+  border-color: rgba(255,107,0,0.3);
+  color: var(--saffron);
+}
+.filter-chip:hover:not(.active) { border-color: var(--border-mid); }
+
+/* Cancellation chip (square corners, warning) */
+.chip-cancel-count {
+  background: var(--red-10);
+  color: var(--red);
+  border: 1px solid rgba(231,76,60,0.2);
+  border-radius: var(--r-xs);
+  padding: 3px 10px;
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+
+/* ============================================================
+   08 — TOASTS & ALERTS
+============================================================ */
+
+/* Toast */
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--r-md);
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 280px;
+  max-width: 340px;
+  box-shadow: var(--sh-lg);
+  animation: toast-up 0.3s var(--ease-out) both;
+  position: relative;
+  overflow: hidden;
+}
+@keyframes toast-up {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.toast::before {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 3px;
+  animation: toast-timer 3s linear forwards;
+}
+@keyframes toast-timer { from { width: 100%; } to { width: 0; } }
+.toast-success { background: #F0FDF4; color: #166534; }
+.toast-success::before { background: var(--green); }
+.toast-danger  { background: #FEF2F2; color: #991B1B; }
+.toast-danger::before  { background: var(--red); }
+.toast-warning { background: #FFFBEB; color: #92400E; }
+.toast-warning::before { background: var(--amber); }
+.toast-info    { background: #EFF6FF; color: #1E40AF; }
+.toast-info::before    { background: var(--blue); }
+.toast-icon { font-size: 18px; flex-shrink: 0; }
+.toast-dismiss {
+  margin-left: auto;
+  font-size: 16px; color: currentColor;
+  opacity: 0.5; cursor: pointer;
+  background: none; border: none;
+  flex-shrink: 0;
+}
+
+/* Inline alert */
+.alert {
+  padding: 12px 16px;
+  border-radius: var(--r-sm);
+  border-left: 4px solid;
+  font-size: 13px;
+  font-weight: 500;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+}
+.alert-success { background: #F0FDF4; border-color: var(--green); color: #166534; }
+.alert-warning { background: #FFFBEB; border-color: var(--amber); color: #92400E; }
+.alert-danger  { background: #FEF2F2; border-color: var(--red);   color: #991B1B; }
+.alert-info    { background: #EFF6FF; border-color: var(--blue);  color: #1E40AF; }
+.alert-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+/* Connectivity banner */
+.connectivity-banner {
+  background: #FFFBEB;
+  border-bottom: 1px solid rgba(243,156,18,0.3);
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #92400E;
+  width: 100%;
+}
+
+/* ============================================================
+   09 — LOADING STATES & SKELETONS
+============================================================ */
+
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, #F3F4F6 25%, #E5E7EB 50%, #F3F4F6 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+  border-radius: var(--r-xs);
+}
+.skeleton-circle {
+  border-radius: 50%;
+}
+.skeleton-text { height: 14px; border-radius: 4px; }
+.skeleton-text.sm { height: 12px; }
+.skeleton-text.lg { height: 18px; }
+
+/* Ride card skeleton */
+.skeleton-card {
+  background: var(--white);
+  border-radius: var(--r-md);
+  padding: 14px;
+  box-shadow: var(--sh-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 300px;
+}
+.skeleton-row { display: flex; gap: 10px; align-items: center; }
+
+/* ============================================================
+   10 — STEP PROGRESS BAR
+============================================================ */
+
+.step-bar {
+  display: flex;
+  gap: 4px;
+}
+.step-seg {
+  height: 4px;
+  flex: 1;
+  border-radius: 2px;
+  background: var(--border);
+  transition: background var(--normal);
+}
+.step-seg.done    { background: var(--saffron); }
+.step-seg.current { background: var(--amber); }
+
+/* ============================================================
+   LAYOUT UTILITIES
+============================================================ */
+
+.flex-row  { display: flex; flex-direction: row;    gap: 12px; align-items: center; flex-wrap: wrap; }
+.flex-col  { display: flex; flex-direction: column; gap: 10px; }
+.flex-between { display: flex; justify-content: space-between; align-items: center; }
+.divider-h { height: 1px; background: #1E2030; margin: 4px 0; width: 100%; }
+.divider-v { width: 1px;  background: #1E2030; align-self: stretch; }
+.showcase-bg {
+  background: var(--bg-screen);
+  border-radius: var(--r-md);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.dark-bg {
+  background: var(--navy);
+  border-radius: var(--r-md);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.w-full { width: 100%; }
+
+/* ============================================================
+   INTERACTIVE DEMO HELPERS
+============================================================ */
+.demo-note {
+  font-size: 10px;
+  font-family: 'JetBrains Mono';
+  color: #374151;
+  background: #0A0C14;
+  border: 1px solid #1E2030;
+  padding: 4px 10px;
+  border-radius: 4px;
+  margin-top: 4px;
+}
+.interactive-label {
+  font-size: 10px; font-weight: 600;
+  color: #4B5563;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-name">Chalo ਚਲੋ</div>
+    <div class="logo-sub">Component Library v1.0</div>
+  </div>
+  <div class="nav-section-title">Foundation</div>
+  <a class="nav-item active" href="#buttons"><span class="nav-dot"></span>01 Buttons</a>
+  <a class="nav-item" href="#inputs"><span class="nav-dot"></span>02 Inputs</a>
+  <div class="nav-section-title">Components</div>
+  <a class="nav-item" href="#cards"><span class="nav-dot"></span>03 Cards</a>
+  <a class="nav-item" href="#navigation"><span class="nav-dot"></span>04 Navigation</a>
+  <a class="nav-item" href="#countdown"><span class="nav-dot"></span>05 Countdown Ring</a>
+  <a class="nav-item" href="#sos"><span class="nav-dot"></span>06 SOS Button</a>
+  <a class="nav-item" href="#chips"><span class="nav-dot"></span>07 Chips & Badges</a>
+  <a class="nav-item" href="#toasts"><span class="nav-dot"></span>08 Toasts & Alerts</a>
+  <div class="nav-section-title">States</div>
+  <a class="nav-item" href="#skeletons"><span class="nav-dot"></span>09 Skeletons</a>
+  <a class="nav-item" href="#progress"><span class="nav-dot"></span>10 Progress</a>
+</nav>
+
+<!-- Main -->
+<main class="main">
+
+  <div class="page-header">
+    <h1>Component Library</h1>
+    <div class="tagline">ਚਲੋ ਐਪ ਦਾ ਡਿਜ਼ਾਈਨ ਸਿਸਟਮ</div>
+    <div class="meta">Chalo v1.0 · 10 Groups · 60+ Variants · All Interactive</div>
+  </div>
+
+  <!-- ==================== 01 BUTTONS ==================== -->
+  <div id="buttons">
+    <div class="section-header">
+      <h2>Buttons</h2>
+      <span class="section-id">01</span>
+    </div>
+
+    <!-- Primary row -->
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">Primary Actions</span>
+        <span class="spec-tag">height: 54dp · Poppins 16/Bold</span>
+      </div>
+      <div class="comp-group-body">
+        <div class="comp-frame">
+          <div class="comp-label">Customer · Primary</div>
+          <button class="btn-primary">ਰਾਈਡ ਬੁੱਕ ਕਰੋ</button>
+          <div class="demo-note">#FF6B00 · glow-saffron shadow</div>
+        </div>
+        <div class="comp-frame">
+          <div class="comp-label">Driver · Primary</div>
+          <button class="btn-driver">▶ Start Ride</button>
+          <div class="demo-note">#2ECC71 · dark text · glow-green</div>
+        </div>
+        <div class="comp-frame">
+          <div class="comp-label">Accept · 60dp (Driver)</div>
+          <button class="btn-accept">✓ ਸਵੀਕਾਰ — Accept</button>
+          <div class="demo-note">height: 60dp · 18sp ExtraBold · designed for thumb pressure</div>
+        </div>
+        <div class="comp-frame">
+          <div class="comp-label">Disabled State</div>
+          <button class="btn-disabled">ਓਟੀਪੀ ਭੇਜੋ — Get OTP</button>
+          <div class="demo-note">45% opacity · pointer-events: none</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Secondary + Ghost -->
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">Secondary & Ghost</span>
+        <span class="spec-tag">height: 54dp / 48dp</span>
+      </div>
+      <div class="comp-group-body">
+        <div class="comp-frame">
+          <div class="comp-label">Secondary · Outlined</div>
+          <button class="btn-secondary">Schedule for Later</button>
+          <div class="demo-note">Transparent fill · 1.5dp saffron border</div>
+        </div>
+        <div class="comp-frame">
+          <div class="comp-label">Ghost · No border</div>
+          <button class="btn-ghost">✕ Cancel Search</button>
+          <div class="demo-note">Used for Skip, Cancel Search — never hidden</div>
+        </div>
+        <div class="comp-frame">
+          <div class="comp-label">Skip · Ghost (Rating)</div>
+          <button class="btn-ghost" style="border:1.5px solid var(--border);height:54px;width:180px;">Skip</button>
+          <div class="demo-note">Same size as Submit — no dark patterns</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Danger + Dark + Offline -->
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">Danger · Dark · Offline</span>
+        <span class="spec-tag">Context-specific actions</span>
+      </div>
+      <div class="comp-group-body">
+        <div class="comp-frame">
+          <div class="comp-label">Danger · Reject / Cancel</div>
+          <button class="btn-danger">✕ Cancel Ride</button>
+          <div class="demo-note">#E74C3C · white text · glow-danger</div>
+        </div>
+        <div class="comp-frame">
+          <div class="comp-label">Reject (outlined)</div>
+          <button class="btn-reject">✕ Reject</button>
+          <div class="demo-note">Paired with Accept · 60dp height</div>
+        </div>
+        <div class="comp-frame">
+          <div class="comp-label">Go Offline</div>
+          <button class="btn-offline">⏻ Go Offline</button>
+          <div class="demo-note">Red-tinted · requires confirmation dialog</div>
+        </div>
+        <div class="comp-frame">
+          <div class="comp-label">Dark · Navy</div>
+          <button class="btn-dark">🗺️ Navigate</button>
+          <div class="demo-note">#1A1F3C fill · white text</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Icon buttons -->
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">Icon Buttons</span>
+        <span class="spec-tag">44dp tap target minimum</span>
+      </div>
+      <div class="comp-group-body" style="background:var(--navy);border-radius:var(--r-md);padding:20px;">
+        <div class="comp-frame">
+          <div class="comp-label" style="color:#4B5563;">Back</div>
+          <button class="btn-icon">←</button>
+        </div>
+        <div class="comp-frame">
+          <div class="comp-label" style="color:#4B5563;">Call</div>
+          <button class="btn-icon">📞</button>
+        </div>
+        <div class="comp-frame">
+          <div class="comp-label" style="color:#4B5563;">Message</div>
+          <button class="btn-icon">💬</button>
+        </div>
+        <div class="comp-frame">
+          <div class="comp-label" style="color:#4B5563;">Navigate</div>
+          <button class="btn-icon">🗺️</button>
+        </div>
+        <div class="comp-frame">
+          <div class="comp-label" style="color:#4B5563;">Share</div>
+          <button class="btn-icon">📤</button>
+        </div>
+        <div class="demo-note" style="color:#4B5563;margin-left:auto;">44px visual · 44px touch target · rgba(white,0.08) bg</div>
+      </div>
+    </div>
+
+    <!-- Accept + Reject side by side (ride request) -->
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">Accept + Reject Pair (Ride Request)</span>
+        <span class="spec-tag">flex: 2 accept · flex: 1 reject</span>
+      </div>
+      <div class="comp-group-body">
+        <div style="display:flex;gap:12px;width:340px;">
+          <button class="btn-accept" style="flex:2;">✓ ਸਵੀਕਾਰ</button>
+          <button class="btn-reject" style="flex:1;">✕</button>
+        </div>
+        <div class="demo-note">Accept is 2× wider — designed for fast thumb tap under urgency</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 02 INPUTS ==================== -->
+  <div id="inputs">
+    <div class="section-header">
+      <h2>Inputs</h2>
+      <span class="section-id">02</span>
+    </div>
+
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">Text Fields</span>
+        <span class="spec-tag">height: 52dp · border-radius: 8dp</span>
+      </div>
+      <div class="comp-group-body vertical" style="max-width:360px;">
+        <div class="comp-frame" style="width:100%;">
+          <div class="comp-label">Default State</div>
+          <div class="input-group" style="width:100%;">
+            <label class="input-label">DESTINATION</label>
+            <input class="input-field" placeholder="ਮੰਜ਼ਿਲ ਟਾਈਪ ਕਰੋ..." type="text">
+          </div>
+          <div class="demo-note">Click to see focus state → saffron border + ring</div>
+        </div>
+        <div class="comp-frame" style="width:100%;">
+          <div class="comp-label">Focus State</div>
+          <div class="input-group" style="width:100%;">
+            <label class="input-label">DESTINATION</label>
+            <input class="input-field" value="ESIC Hospital, NIT Faridabad" type="text" style="border-color:var(--saffron);box-shadow:0 0 0 3px rgba(255,107,0,0.12);">
+          </div>
+          <div class="demo-note">border: 1.5dp #FF6B00 · ring: 3dp rgba(255,107,0,0.12)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">Phone Input</span>
+        <span class="spec-tag">+91 non-editable prefix · numeric keyboard</span>
+      </div>
+      <div class="comp-group-body vertical" style="max-width:360px;">
+        <div class="comp-frame" style="width:100%;">
+          <div class="comp-label">Empty</div>
+          <div class="phone-wrap">
+            <div class="phone-prefix">🇮🇳 +91</div>
+            <input class="phone-input" placeholder="Enter mobile number" type="tel" maxlength="10">
+          </div>
+        </div>
+        <div class="comp-frame" style="width:100%;">
+          <div class="comp-label">Filled · Focus</div>
+          <div class="phone-wrap" style="border-color:var(--saffron);box-shadow:0 0 0 3px rgba(255,107,0,0.12);">
+            <div class="phone-prefix">🇮🇳 +91</div>
+            <input class="phone-input" value="98765 43210" type="tel">
+          </div>
+          <div class="demo-note">Prefix locked — grey background · 1.5dp border between prefix and field</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">OTP Input</span>
+        <span class="spec-tag">4× boxes · 56×64dp · auto-advance · SMS auto-read</span>
+      </div>
+      <div class="comp-group-body vertical">
+        <div class="comp-frame">
+          <div class="comp-label">Partially Filled (active on box 3)</div>
+          <div class="otp-row" id="otp-demo">
+            <div class="otp-box filled">3</div>
+            <div class="otp-box filled">7</div>
+            <div class="otp-box active"></div>
+            <div class="otp-box"></div>
+          </div>
+          <div class="demo-note">Cursor blink on active · Saffron fill on entered · Auto-advance on input</div>
+        </div>
+        <div class="comp-frame">
+          <div class="comp-label">All Filled</div>
+          <div class="otp-row">
+            <div class="otp-box filled">3</div>
+            <div class="otp-box filled">7</div>
+            <div class="otp-box filled">8</div>
+            <div class="otp-box filled">1</div>
+          </div>
+          <div class="demo-note">All saffron → triggers auto-submit</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">Search Bar</span>
+        <span class="spec-tag">height: 52dp · border-radius: 9999dp (pill)</span>
+      </div>
+      <div class="comp-group-body vertical" style="max-width:360px;">
+        <div class="comp-frame" style="width:100%;">
+          <div class="comp-label">Default · Punjabi Placeholder</div>
+          <div class="search-bar">
+            <span class="search-icon">🔍</span>
+            <input class="search-input" placeholder="ਕਿੱਥੇ ਜਾਣਾ ਹੈ?" style="font-family:'Noto Sans Gurmukhi',sans-serif;">
+          </div>
+        </div>
+        <div class="comp-frame" style="width:100%;">
+          <div class="comp-label">Focus · Searching</div>
+          <div class="search-bar" style="border-color:var(--saffron);box-shadow:0 0 0 3px rgba(255,107,0,0.12);background:white;">
+            <span class="search-icon">🔍</span>
+            <input class="search-input" value="ESIC Hospit..." style="font-family:'Noto Sans Gurmukhi';">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">From-To Route Card</span>
+        <span class="spec-tag">Navy dot origin · Saffron dot destination</span>
+      </div>
+      <div class="comp-group-body" style="max-width:360px;">
+        <div class="from-to-card" style="width:100%;">
+          <div class="ft-row from-row">
+            <div class="ft-dot origin"></div>
+            <span class="ft-text">📍 Sector 15, Faridabad (Current)</span>
+          </div>
+          <div class="ft-row" style="background:white;">
+            <div class="ft-dot dest"></div>
+            <span class="ft-text active">ESIC Hospital, NIT Faridabad</span>
+          </div>
+        </div>
+        <div class="demo-note" style="width:100%;">FROM: GPS auto-filled (grey bg, uneditable feel) · TO: active typing state</div>
+      </div>
+    </div>
+
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">Document Upload Zone</span>
+        <span class="spec-tag">2dp dashed border · saffron · 120dp height</span>
+      </div>
+      <div class="comp-group-body" style="max-width:360px;flex-direction:column;gap:16px;">
+        <div class="comp-frame" style="width:100%;">
+          <div class="comp-label">Empty State (hover me)</div>
+          <div class="upload-zone" style="width:100%;">
+            <div class="upload-icon">📷</div>
+            <div class="upload-label">Tap to upload Driving License</div>
+            <div class="upload-sub">JPG or PNG · Max 5MB</div>
+          </div>
+        </div>
+        <div class="comp-frame" style="width:100%;">
+          <div class="comp-label">Uploaded ✓</div>
+          <div class="upload-zone uploaded" style="width:100%;flex-direction:row;gap:12px;">
+            <div style="font-size:28px;">✅</div>
+            <div>
+              <div style="font-size:14px;font-weight:700;color:var(--green);">License Uploaded</div>
+              <div style="font-size:12px;color:var(--text-secondary);">dl_front.jpg · 1.8 MB</div>
+            </div>
+          </div>
+          <div class="demo-note">Solid green border · green tint bg · thumbnail + ✓</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">Toggle Switch</span>
+        <span class="spec-tag">Schedule for Later · click to toggle</span>
+      </div>
+      <div class="comp-group-body vertical" style="max-width:360px;">
+        <div class="toggle-wrap" style="width:100%;" id="toggle1" onclick="toggleSwitch('toggle1')">
+          <div class="toggle-info">
+            <div class="toggle-title">📅 Schedule for Later</div>
+            <div class="toggle-sub">Book up to 7 days in advance</div>
+          </div>
+          <div class="toggle-switch" id="ts1"><div class="toggle-knob"></div></div>
+        </div>
+        <div class="toggle-wrap" style="width:100%;" id="toggle2" onclick="toggleSwitch('toggle2')">
+          <div class="toggle-info">
+            <div class="toggle-title">🌐 Punjabi Primary</div>
+            <div class="toggle-sub">Toggle app language</div>
+          </div>
+          <div class="toggle-switch on" id="ts2"><div class="toggle-knob"></div></div>
+        </div>
+        <div class="demo-note">Click either toggle to interact · ease-spring knob animation</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 03 CARDS ==================== -->
+  <div id="cards">
+    <div class="section-header">
+      <h2>Cards</h2>
+      <span class="section-id">03</span>
+    </div>
+
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">Ride Request Card — Driver</span>
+        <span class="spec-tag">Most time-critical · Fare = LARGEST element</span>
+      </div>
+      <div class="comp-group-body">
+        <div class="ride-request-card">
+          <div class="rrc-top">
+            <!-- Countdown ring inline -->
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+              <div class="ring-wrap">
+                <svg width="52" height="52" viewBox="0 0 52 52">
+                  <circle class="ring-track" cx="26" cy="26" r="22" stroke-width="4"/>
+                  <circle class="ring-progress ring-saffron" cx="26" cy="26" r="22" stroke-width="4"
+                    stroke-dasharray="138.2" stroke-dashoffset="34.5" id="demo-ring"/>
+                </svg>
+                <div class="ring-number ring-saffron" style="font-size:16px;" id="demo-timer">42</div>
+              </div>
+              <div class="ring-label">sec</div>
+            </div>
+            <!-- Fare — LARGEST -->
+            <div style="text-align:right;">
+              <div class="rrc-fare-label">FARE</div>
+              <div class="rrc-fare">₹ 52</div>
+              <div class="rrc-route">4.2 km · ~12 min</div>
+            </div>
+          </div>
+          <div class="rrc-divider"></div>
+          <div style="font-size:12px;font-weight:600;color:var(--text-secondary);">Sec 15 → ESIC Hospital, NIT</div>
+          <div class="rrc-customer">
+            <div class="rrc-avatar">👤</div>
+            <div>
+              <div class="rrc-name">Amrit K.</div>
+              <div class="rrc-meta">
+                <span>💵 Cash</span>
+                <span>📍 0.8 km</span>
+              </div>
+            </div>
+            <div class="chip-cancel-count" style="margin-left:auto;">2 cancels</div>
+          </div>
+          <div class="rrc-btns">
+            <button class="btn-accept" style="flex:2;">✓ ਸਵੀਕਾਰ</button>
+            <button class="btn-reject" style="flex:1;">✕</button>
+          </div>
+          <div style="font-size:10px;color:var(--text-secondary);text-align:center;">Expire = silent pass · no penalty shown</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;max-width:200px;">
+          <div class="demo-note">↑ LIVE — countdown ticks every second</div>
+          <div class="demo-note">Fare: 28sp ExtraBold = LARGEST element by design spec</div>
+          <div class="demo-note">Customer: first name + last initial only (privacy pre-accept)</div>
+          <div class="demo-note">Cancel chip: only shown if count > 0</div>
+          <div class="demo-note">Accept: 60dp height · 2× width · designed for thumb pressure</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">Rider Found Card — Customer</span>
+        <span class="spec-tag">ease-spring slide-up animation</span>
+      </div>
+      <div class="comp-group-body">
+        <div id="rider-found-demo">
+          <div class="rider-found-card">
+            <div class="rfc-label">✓ ਰਾਈਡਰ ਮਿਲ ਗਿਆ — Rider Found</div>
+            <div class="rfc-row">
+              <div class="rfc-avatar">👨</div>
+              <div style="flex:1;">
+                <div class="rfc-name">Gurpreet Singh</div>
+                <div class="rfc-meta">
+                  <span class="rfc-rating">★ 4.8</span>
+                  <span class="rfc-plate">HR29BC4521</span>
+                </div>
+              </div>
+              <div class="eta-chip">4 min</div>
+            </div>
+            <div class="rfc-contact">
+              <button class="rfc-contact-btn">📞 Call</button>
+              <button class="rfc-contact-btn">💬 Message</button>
+            </div>
+          </div>
+          <div style="margin-top:12px;">
+            <button onclick="replayCardAnim()" style="height:36px;padding:0 16px;background:rgba(255,107,0,0.1);border:1px solid rgba(255,107,0,0.2);border-radius:var(--r-sm);font-size:12px;font-weight:600;color:var(--saffron);cursor:pointer;font-family:Poppins;">↺ Replay animation</button>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;max-width:200px;">
+          <div class="demo-note">Slide-up with ease-spring (slight bounce)</div>
+          <div class="demo-note">Avatar: 52dp circle · navy gradient</div>
+          <div class="demo-note">ETA chip: green background + border</div>
+          <div class="demo-note">Contact buttons: 40dp · grey border</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">History Card — Expandable</span>
+        <span class="spec-tag">click to expand · dispute link inside</span>
+      </div>
+      <div class="comp-group-body vertical" style="max-width:400px;">
+        <div class="history-card" onclick="toggleHistory(this)">
+          <div class="hc-top">
+            <div class="hc-route">Sec 15 → ESIC Hospital</div>
+            <div class="hc-fare">₹50</div>
+          </div>
+          <div class="hc-meta">
+            <div class="hc-date">Today · 9:41 AM · 4.2 km</div>
+            <span class="chip chip-sm chip-square chip-cash">💵 Cash</span>
+            <span>⭐ 4</span>
+          </div>
+          <div class="hc-expanded">
+            <div class="hc-expand-row"><span>From</span><span style="font-weight:600;color:var(--text-primary);">Sector 15, Faridabad</span></div>
+            <div class="hc-expand-row"><span>To</span><span style="font-weight:600;color:var(--text-primary);">ESIC Hospital, NIT Faridabad</span></div>
+            <div class="hc-expand-row"><span>Driver</span><span style="font-weight:600;color:var(--text-primary);">Gurpreet Singh</span></div>
+            <div class="hc-expand-row"><span>Duration</span><span style="font-weight:600;color:var(--text-primary);">14 min</span></div>
+            <div class="dispute-link">⚠️ Report Issue</div>
+          </div>
+        </div>
+        <div class="history-card" onclick="toggleHistory(this)">
+          <div class="hc-top">
+            <div class="hc-route">NIT → Faridabad Rly Station</div>
+            <div class="hc-fare">₹38</div>
+          </div>
+          <div class="hc-meta">
+            <div class="hc-date">Yesterday · 8:15 AM</div>
+            <span class="chip chip-sm chip-square chip-upi">📱 UPI</span>
+            <span class="chip chip-sm chip-square chip-scheduled">📅 Scheduled</span>
+          </div>
+          <div class="hc-expanded">
+            <div class="hc-expand-row"><span>From</span><span style="font-weight:600;color:var(--text-primary);">NIT Faridabad</span></div>
+            <div class="hc-expand-row"><span>To</span><span style="font-weight:600;color:var(--text-primary);">Old Faridabad Railway Station</span></div>
+            <div class="hc-expand-row"><span>Driver</span><span style="font-weight:600;color:var(--text-primary);">Rajveer Kaur</span></div>
+            <div class="dispute-link">⚠️ Report Issue</div>
+          </div>
+        </div>
+        <div class="demo-note">Click card to expand · Dispute link inside expanded state</div>
+      </div>
+    </div>
+
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">Fare Summary Cards</span>
+        <span class="spec-tag">Commission vs Subscription — different views</span>
+      </div>
+      <div class="comp-group-body">
+        <div class="comp-frame">
+          <div class="comp-label">Commission Plan</div>
+          <div class="fare-summary-card">
+            <div class="fsc-row">
+              <span class="fsc-label">💰 Fare Earned</span>
+              <span class="fsc-value">₹52</span>
+            </div>
+            <div class="fsc-divider"></div>
+            <div class="fsc-row">
+              <span class="fsc-label">🔻 Commission</span>
+              <span class="fsc-value deduct">−₹7.80</span>
+            </div>
+            <div class="fsc-divider"></div>
+            <div class="fsc-row">
+              <span class="fsc-label" style="font-weight:700;color:var(--navy);">✓ Net Earned</span>
+              <span class="fsc-value net">₹44.20</span>
+            </div>
+          </div>
+          <div class="demo-note">3-row breakdown · Full transparency</div>
+        </div>
+        <div class="comp-frame">
+          <div class="comp-label">Subscription Plan</div>
+          <div class="earnings-card">
+            <div style="font-size:11px;font-weight:700;color:var(--text-secondary);letter-spacing:1px;margin-bottom:4px;">YOU EARNED (FULL FARE)</div>
+            <div style="font-size:32px;font-weight:800;color:var(--green);font-variant-numeric:tabular-nums;letter-spacing:-1px;">₹52</div>
+            <div style="font-size:12px;color:var(--text-secondary);">No commission deducted</div>
+          </div>
+          <div class="demo-note">Single row only · No deduction shown · UI adapts to plan</div>
+        </div>
+        <div class="comp-frame">
+          <div class="comp-label">Customer Fare (saffron)</div>
+          <div class="fare-summary-card">
+            <div class="fsc-row">
+              <span class="fsc-label">Total Fare</span>
+              <span class="fsc-value fare">₹50</span>
+            </div>
+            <div class="fsc-divider"></div>
+            <div class="fsc-row">
+              <span class="fsc-label" style="font-size:12px;">📍 4.2 km · 14 min</span>
+              <span class="fsc-label" style="font-size:12px;">💵 Cash</span>
+            </div>
+          </div>
+          <div class="demo-note">Fare in saffron · distance + payment meta</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 04 NAVIGATION ==================== -->
+  <div id="navigation">
+    <div class="section-header">
+      <h2>Navigation</h2>
+      <span class="section-id">04</span>
+    </div>
+
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">Bottom Navigation Bar — Customer (Saffron)</span>
+        <span class="spec-tag">64dp height · active indicator at TOP · click to switch</span>
+      </div>
+      <div class="comp-group-body">
+        <div style="display:flex;flex-direction:column;gap:0;">
+          <div class="bottom-nav-demo" id="customer-nav">
+            <div class="nav-tab-demo active-s" onclick="switchNav('customer-nav',0,'s')">
+              <span class="nav-tab-icon">🏠</span><span>Home</span>
+            </div>
+            <div class="nav-tab-demo" onclick="switchNav('customer-nav',1,'s')">
+              <span class="nav-tab-icon">🏍️</span><span>Rides</span>
+            </div>
+            <div class="nav-tab-demo" onclick="switchNav('customer-nav',2,'s')">
+              <span class="nav-tab-icon">📅</span><span>Schedule</span>
+            </div>
+            <div class="nav-tab-demo" onclick="switchNav('customer-nav',3,'s')">
+              <span class="nav-tab-icon">👤</span><span>Profile</span>
+            </div>
+          </div>
+          <div class="demo-note" style="border-radius:0 0 var(--r-sm) var(--r-sm);">Click tabs to switch · 2dp saffron line at TOP (not bottom) · spanning 60% of tab</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">Bottom Navigation Bar — Driver (Green)</span>
+        <span class="spec-tag">Same structure · Green accent</span>
+      </div>
+      <div class="comp-group-body">
+        <div style="display:flex;flex-direction:column;gap:0;">
+          <div class="bottom-nav-demo" id="driver-nav">
+            <div class="nav-tab-demo active-g" onclick="switchNav('driver-nav',0,'g')">
+              <span class="nav-tab-icon">🏠</span><span>Dashboard</span>
+            </div>
+            <div class="nav-tab-demo" onclick="switchNav('driver-nav',1,'g')">
+              <span class="nav-tab-icon">💰</span><span>Earnings</span>
+            </div>
+            <div class="nav-tab-demo" onclick="switchNav('driver-nav',2,'g')">
+              <span class="nav-tab-icon">📅</span><span>Schedule</span>
+            </div>
+            <div class="nav-tab-demo" onclick="switchNav('driver-nav',3,'g')">
+              <span class="nav-tab-icon">👤</span><span>Profile</span>
+            </div>
+          </div>
+          <div class="demo-note" style="border-radius:0 0 var(--r-sm) var(--r-sm);">Driver nav is green — visually distinct from customer</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">Screen Headers</span>
+        <span class="spec-tag">Splash · Profile · Driver Splash</span>
+      </div>
+      <div class="comp-group-body" style="flex-wrap:wrap;gap:20px;">
+        <div class="comp-frame">
+          <div class="comp-label">Customer Splash Header</div>
+          <div class="splash-header">
+            <div class="splash-logo">🏍️</div>
+            <div class="splash-title">Chalo</div>
+            <div class="splash-gurmukhi">ਚਲੋ</div>
+            <div class="splash-tagline">ਫਰੀਦਾਬਾਦ ਦਾ ਆਪਣਾ ਸਫ਼ਰ</div>
+          </div>
+          <div class="demo-note">Saffron gradient · Fraunces 32sp · Gurmukhi sub</div>
+        </div>
+        <div class="comp-frame">
+          <div class="comp-label">Driver / Profile Header</div>
+          <div class="profile-header-demo">
+            <div class="ph-avatar">👨</div>
+            <div>
+              <div class="ph-name">Gurpreet Singh</div>
+              <div class="ph-phone">+91 98765 43210</div>
+              <div class="ph-badge">✓ Verified Driver</div>
+            </div>
+          </div>
+          <div class="demo-note">Navy gradient · Verified chip (green) · changes to Amber if under review</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 05 COUNTDOWN RING ==================== -->
+  <div id="countdown">
+    <div class="section-header">
+      <h2>Countdown Ring</h2>
+      <span class="section-id">05</span>
+    </div>
+
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">60-Second Countdown Ring — All States</span>
+        <span class="spec-tag">SVG circle · stroke-dashoffset · requestAnimationFrame</span>
+      </div>
+      <div class="comp-group-body" style="background:var(--bg-screen);border-radius:var(--r-md);padding:24px;gap:32px;">
+
+        <!-- Full timer demo -->
+        <div class="comp-frame" style="align-items:center;">
+          <div class="comp-label" style="text-align:center;">Live Demo (click Start)</div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
+            <div class="ring-wrap" style="width:80px;height:80px;">
+              <svg width="80" height="80" viewBox="0 0 80 80">
+                <circle class="ring-track" cx="40" cy="40" r="34" stroke-width="5"/>
+                <circle class="ring-progress" id="live-ring" cx="40" cy="40" r="34" stroke-width="5"
+                  stroke-dasharray="213.6" stroke-dashoffset="0" stroke="var(--saffron)" stroke-linecap="round"/>
+              </svg>
+              <div class="ring-number" id="live-timer" style="font-size:22px;color:var(--saffron);">60</div>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button onclick="startCountdown()" style="height:36px;padding:0 16px;background:var(--saffron);color:white;border:none;border-radius:var(--r-sm);font-size:12px;font-weight:700;cursor:pointer;font-family:Poppins;">▶ Start</button>
+              <button onclick="resetCountdown()" style="height:36px;padding:0 16px;background:rgba(255,255,255,0.08);color:white;border:1px solid #2D3148;border-radius:var(--r-sm);font-size:12px;font-weight:700;cursor:pointer;font-family:Poppins;">↺ Reset</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="divider-v"></div>
+
+        <!-- State snapshots -->
+        <div style="display:flex;gap:28px;align-items:center;">
+          <div class="countdown-demo">
+            <div class="comp-label" style="text-align:center;">50s · Saffron</div>
+            <div class="ring-wrap" style="width:64px;height:64px;">
+              <svg width="64" height="64" viewBox="0 0 64 64">
+                <circle class="ring-track" cx="32" cy="32" r="27" stroke-width="5"/>
+                <circle class="ring-progress ring-saffron" cx="32" cy="32" r="27" stroke-width="5"
+                  stroke-dasharray="169.6" stroke-dashoffset="28.3"/>
+              </svg>
+              <div class="ring-number ring-saffron" style="font-size:17px;">50</div>
+            </div>
+            <div class="ring-label">0–20s: Saffron</div>
+          </div>
+          <div class="countdown-demo">
+            <div class="comp-label" style="text-align:center;">15s · Amber</div>
+            <div class="ring-wrap" style="width:64px;height:64px;">
+              <svg width="64" height="64" viewBox="0 0 64 64">
+                <circle class="ring-track" cx="32" cy="32" r="27" stroke-width="5"/>
+                <circle class="ring-progress ring-amber" cx="32" cy="32" r="27" stroke-width="5"
+                  stroke-dasharray="169.6" stroke-dashoffset="127.2"/>
+              </svg>
+              <div class="ring-number ring-amber" style="font-size:17px;">15</div>
+            </div>
+            <div class="ring-label">&lt;20s: Amber</div>
+          </div>
+          <div class="countdown-demo">
+            <div class="comp-label" style="text-align:center;">7s · Red · Pulse</div>
+            <div class="ring-wrap" style="width:64px;height:64px;">
+              <svg width="64" height="64" viewBox="0 0 64 64">
+                <circle class="ring-track" cx="32" cy="32" r="27" stroke-width="5"/>
+                <circle class="ring-progress ring-red ring-pulse" cx="32" cy="32" r="27" stroke-width="5"
+                  stroke-dasharray="169.6" stroke-dashoffset="150.2"/>
+              </svg>
+              <div class="ring-number ring-red" style="font-size:17px;" id="pulse-num">7</div>
+            </div>
+            <div class="ring-label">&lt;10s: Red + Pulse</div>
+          </div>
+          <div class="countdown-demo">
+            <div class="comp-label" style="text-align:center;">Expired</div>
+            <div class="ring-wrap" style="width:64px;height:64px;">
+              <svg width="64" height="64" viewBox="0 0 64 64">
+                <circle class="ring-track" cx="32" cy="32" r="27" stroke-width="5"/>
+                <circle class="ring-progress" cx="32" cy="32" r="27" stroke-width="5"
+                  stroke-dasharray="169.6" stroke-dashoffset="169.6" stroke="#E5E7EB"/>
+              </svg>
+              <div class="ring-number" style="font-size:17px;color:var(--text-secondary);">0</div>
+            </div>
+            <div class="ring-label">Silent pass · no blame</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 06 SOS BUTTON ==================== -->
+  <div id="sos">
+    <div class="section-header">
+      <h2>SOS Button</h2>
+      <span class="section-id">06</span>
+    </div>
+
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">SOS Button — All States</span>
+        <span class="spec-tag">56dp circle · 2s hold to trigger · 5s auto-confirm</span>
+      </div>
+      <div class="comp-group-body" style="gap:40px;align-items:flex-start;">
+
+        <!-- Resting state -->
+        <div class="comp-frame" style="align-items:center;gap:12px;">
+          <div class="comp-label">Resting · Pulse Ring</div>
+          <div class="sos-demo">
+            <div class="sos-btn">
+              <div class="sos-ring"></div>
+              <div class="sos-ring-2"></div>
+              <div class="sos-text">SOS</div>
+            </div>
+          </div>
+          <div class="demo-note">2 pulse rings · staggered delay · 2s infinite</div>
+        </div>
+
+        <!-- Hold demo -->
+        <div class="comp-frame" style="align-items:center;gap:12px;">
+          <div class="comp-label">Hold Demo (press & hold)</div>
+          <div class="sos-demo">
+            <div class="sos-btn" id="sos-interactive" onmousedown="startSOSHold()" onmouseup="cancelSOSHold()" onmouseleave="cancelSOSHold()" ontouchstart="startSOSHold()" ontouchend="cancelSOSHold()">
+              <div class="sos-hold-ring" id="sos-hold-progress"></div>
+              <div class="sos-ring"></div>
+              <div class="sos-text">SOS</div>
+            </div>
+          </div>
+          <div id="sos-hint" class="demo-note">Press and hold for 2 seconds</div>
+        </div>
+
+        <!-- Active state -->
+        <div class="comp-frame" style="align-items:center;gap:12px;">
+          <div class="comp-label">Active State</div>
+          <div style="display:flex;flex-direction:column;gap:12px;align-items:center;">
+            <div class="sos-active-banner">
+              <div class="sos-active-icon">🚨</div>
+              <div>
+                <div class="sos-active-title">SOS ACTIVE — ਐਮਰਜੈਂਸੀ</div>
+                <div class="sos-active-sub">Alert sent · Live GPS shared</div>
+              </div>
+            </div>
+            <button class="btn-safe">✓ I'm Safe — Cancel Alert</button>
+          </div>
+          <div class="demo-note">Red banner slides down · "I'm Safe" to dismiss · auto-clears on ride end</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Confirmation dialog -->
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">SOS Confirmation Dialog</span>
+        <span class="spec-tag">5-second auto-confirm · for genuine emergencies where user cannot tap</span>
+      </div>
+      <div class="comp-group-body">
+        <div style="background:var(--bg-screen);border-radius:var(--r-2xl);padding:24px;width:300px;box-shadow:var(--sh-xl);position:relative;">
+          <div style="text-align:center;margin-bottom:16px;">
+            <div style="font-size:40px;margin-bottom:8px;">🚨</div>
+            <div style="font-size:18px;font-weight:800;color:var(--navy);">Send SOS Alert?</div>
+            <div style="font-size:13px;color:var(--text-secondary);margin-top:6px;line-height:1.5;">
+              This will send your live GPS location, rider name, and vehicle number to all saved emergency contacts.
+            </div>
+          </div>
+          <div style="background:var(--red-10);border-radius:var(--r-sm);padding:10px;margin-bottom:16px;text-align:center;">
+            <div style="font-size:12px;font-weight:700;color:var(--red);">Auto-confirming in <span id="auto-confirm-timer">5</span>s if you cannot tap</div>
+            <div style="height:4px;background:rgba(231,76,60,0.2);border-radius:2px;margin-top:8px;overflow:hidden;">
+              <div id="auto-confirm-bar" style="height:100%;background:var(--red);width:100%;transition:width 5s linear;border-radius:2px;"></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;">
+            <button class="btn-danger" style="flex:2;height:48px;font-size:14px;">🚨 Send Alert</button>
+            <button class="btn-ghost" style="flex:1;height:48px;border:1.5px solid var(--border);">Cancel</button>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;max-width:200px;">
+          <div class="demo-note">2s hold → this dialog</div>
+          <div class="demo-note">5s auto-confirm bar animates (click to trigger)</div>
+          <button onclick="startAutoConfirm()" style="height:32px;padding:0 12px;background:rgba(255,107,0,0.1);border:1px solid rgba(255,107,0,0.2);border-radius:var(--r-sm);font-size:11px;font-weight:700;color:var(--saffron);cursor:pointer;font-family:Poppins;">▶ Demo auto-confirm</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 07 CHIPS & BADGES ==================== -->
+  <div id="chips">
+    <div class="section-header">
+      <h2>Chips & Badges</h2>
+      <span class="section-id">07</span>
+    </div>
+
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">Status Chips — Online / Offline / Verification</span>
+        <span class="spec-tag">border-radius: 9999dp (pill) · colored fill + border</span>
+      </div>
+      <div class="comp-group-body" style="flex-wrap:wrap;gap:12px;background:var(--navy);border-radius:var(--r-md);padding:20px;">
+        <div class="comp-frame">
+          <div class="comp-label" style="color:#4B5563;">Online</div>
+          <div class="chip chip-online"><span class="status-dot dot-online"></span>ONLINE</div>
+        </div>
+        <div class="comp-frame">
+          <div class="comp-label" style="color:#4B5563;">Offline</div>
+          <div class="chip chip-offline"><span class="status-dot dot-offline"></span>OFFLINE</div>
+        </div>
+        <div class="comp-frame">
+          <div class="comp-label" style="color:#4B5563;">Verified</div>
+          <div class="chip chip-verified">✓ Verified Driver</div>
+        </div>
+        <div class="comp-frame">
+          <div class="comp-label" style="color:#4B5563;">Under Review</div>
+          <div class="chip chip-review">⏳ Under Review</div>
+        </div>
+        <div class="comp-frame">
+          <div class="comp-label" style="color:#4B5563;">Action Required</div>
+          <div class="chip chip-action">⚠ Action Required</div>
+        </div>
+        <div class="comp-frame">
+          <div class="comp-label" style="color:#4B5563;">Earnings</div>
+          <div class="chip-earnings">💰 ₹384 today</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">Trip Type Chips</span>
+        <span class="spec-tag">Square corners (r-xs) · shown in history + request cards</span>
+      </div>
+      <div class="comp-group-body" style="flex-wrap:wrap;gap:12px;">
+        <div class="comp-frame">
+          <div class="comp-label">ETA</div>
+          <div class="chip eta-chip">4 min</div>
+        </div>
+        <div class="comp-frame">
+          <div class="comp-label">Cash</div>
+          <div class="chip chip-sm chip-square chip-cash">💵 Cash</div>
+        </div>
+        <div class="comp-frame">
+          <div class="comp-label">UPI</div>
+          <div class="chip chip-sm chip-square chip-upi">📱 UPI</div>
+        </div>
+        <div class="comp-frame">
+          <div class="comp-label">Manual</div>
+          <div class="chip chip-sm chip-square chip-manual">✋ Manual</div>
+        </div>
+        <div class="comp-frame">
+          <div class="comp-label">Scheduled</div>
+          <div class="chip chip-sm chip-square chip-scheduled">📅 Scheduled</div>
+        </div>
+        <div class="comp-frame">
+          <div class="comp-label">Cancelled</div>
+          <div class="chip chip-sm chip-square chip-cancelled">Cancelled</div>
+        </div>
+        <div class="comp-frame">
+          <div class="comp-label">Pending (T+2)</div>
+          <div class="chip chip-pending">⏳ Pending</div>
+        </div>
+        <div class="comp-frame">
+          <div class="comp-label">Cancellation count</div>
+          <div class="chip-cancel-count">2 cancels</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">Quick Chips (Home Screen) · Filter Chips</span>
+        <span class="spec-tag">Saffron tint · interactive</span>
+      </div>
+      <div class="comp-group-body" style="flex-direction:column;gap:16px;">
+        <div>
+          <div class="comp-label" style="margin-bottom:8px;">Quick Chips</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <div class="quick-chip">🏠 Home</div>
+            <div class="quick-chip">💼 Work</div>
+            <div class="quick-chip">🏥 Civil Hospital</div>
+            <div class="quick-chip">🚌 Bus Stand</div>
+          </div>
+        </div>
+        <div>
+          <div class="comp-label" style="margin-bottom:8px;">Filter Chips (History)</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <div class="filter-chip active" onclick="toggleFilter(this)">All</div>
+            <div class="filter-chip" onclick="toggleFilter(this)">This Week</div>
+            <div class="filter-chip" onclick="toggleFilter(this)">This Month</div>
+            <div class="filter-chip" onclick="toggleFilter(this)">Cash</div>
+            <div class="filter-chip" onclick="toggleFilter(this)">UPI</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 08 TOASTS & ALERTS ==================== -->
+  <div id="toasts">
+    <div class="section-header">
+      <h2>Toasts & Alerts</h2>
+      <span class="section-id">08</span>
+    </div>
+
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">Toast Notifications</span>
+        <span class="spec-tag">3s auto-dismiss · bottom of screen · slide-up + fade · progress bar</span>
+      </div>
+      <div class="comp-group-body vertical" style="max-width:360px;">
+        <div class="toast toast-success">
+          <span class="toast-icon">✅</span>
+          <span>ਤੁਹਾਡਾ ਖਾਤਾ ਮਨਜ਼ੂਰ ਹੋ ਗਿਆ! — Account Approved!</span>
+          <button class="toast-dismiss">✕</button>
+        </div>
+        <div class="toast toast-danger" style="animation-delay:0.1s;">
+          <span class="toast-icon">🚫</span>
+          <span>No riders available nearby. Try again in 3 min.</span>
+          <button class="toast-dismiss">✕</button>
+        </div>
+        <div class="toast toast-warning" style="animation-delay:0.2s;">
+          <span class="toast-icon">⚡</span>
+          <span>Weak connection — using cached location</span>
+          <button class="toast-dismiss">✕</button>
+        </div>
+        <div class="toast toast-info" style="animation-delay:0.3s;">
+          <span class="toast-icon">ℹ️</span>
+          <span>Ride reminder: your booking is in 30 minutes</span>
+          <button class="toast-dismiss">✕</button>
+        </div>
+        <button onclick="replayToasts()" style="height:36px;padding:0 16px;background:rgba(255,107,0,0.1);border:1px solid rgba(255,107,0,0.2);border-radius:var(--r-sm);font-size:12px;font-weight:700;color:var(--saffron);cursor:pointer;font-family:Poppins;align-self:flex-start;">↺ Replay animations</button>
+      </div>
+    </div>
+
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">Inline Alerts</span>
+        <span class="spec-tag">Persistent · left border stripe · 4 variants</span>
+      </div>
+      <div class="comp-group-body vertical" style="max-width:500px;">
+        <div class="alert alert-success">
+          <span class="alert-icon">✅</span>
+          <span>Documents verified! You're ready to start accepting rides.</span>
+        </div>
+        <div class="alert alert-warning">
+          <span class="alert-icon">⚠️</span>
+          <span>Weak GPS signal. Your position is being estimated.</span>
+        </div>
+        <div class="alert alert-danger">
+          <span class="alert-icon">❌</span>
+          <span>Driving License rejected — please re-upload a clearer photo.</span>
+        </div>
+        <div class="alert alert-info">
+          <span class="alert-icon">ℹ️</span>
+          <span>Your UPI payment failed. You can retry or switch to Cash — your ride will not be blocked.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">Connectivity Banner</span>
+        <span class="spec-tag">Yellow · fixed at top of screen during weak signal</span>
+      </div>
+      <div class="comp-group-body">
+        <div style="width:360px;">
+          <div class="connectivity-banner">
+            <span>⚡</span>
+            <span>Weak connection — cached location active</span>
+          </div>
+          <div class="demo-note">Full-width banner · slides from top · auto-hides on reconnect</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FCM Push notification templates -->
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">FCM Push Notification Templates</span>
+        <span class="spec-tag">Full-screen intent on ride request — wakes screen-off devices</span>
+      </div>
+      <div class="comp-group-body" style="flex-direction:column;gap:12px;max-width:360px;">
+        <div style="background:#1C1C1E;border-radius:var(--r-md);padding:14px 16px;display:flex;align-items:center;gap:12px;">
+          <div style="width:40px;height:40px;border-radius:var(--r-sm);background:var(--saffron);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🏍️</div>
+          <div style="flex:1;">
+            <div style="font-size:14px;font-weight:700;color:white;">New Ride · ₹52</div>
+            <div style="font-size:12px;color:#9CA3AF;margin-top:2px;">Sec 15 → ESIC Hospital · Cash · 4.2 km</div>
+          </div>
+          <div style="font-size:11px;color:#6B7280;">now</div>
+        </div>
+        <div style="background:#1C1C1E;border-radius:var(--r-md);padding:14px 16px;display:flex;align-items:center;gap:12px;">
+          <div style="width:40px;height:40px;border-radius:var(--r-sm);background:var(--green);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">✅</div>
+          <div style="flex:1;">
+            <div style="font-size:14px;font-weight:700;color:white;">ਤੁਹਾਡਾ ਖਾਤਾ ਮਨਜ਼ੂਰ ਹੋ ਗਿਆ!</div>
+            <div style="font-size:12px;color:#9CA3AF;margin-top:2px;">Account Approved — Start earning now</div>
+          </div>
+        </div>
+        <div style="background:#1C1C1E;border-radius:var(--r-md);padding:14px 16px;display:flex;align-items:center;gap:12px;border:1px solid rgba(231,76,60,0.3);">
+          <div style="width:40px;height:40px;border-radius:var(--r-sm);background:var(--red);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🚨</div>
+          <div style="flex:1;">
+            <div style="font-size:14px;font-weight:700;color:white;">SOS Alert — Amrit Kaur</div>
+            <div style="font-size:12px;color:#F87171;margin-top:2px;">Live location link · HR 29 BC 4521 · Gurpreet S.</div>
+          </div>
+        </div>
+        <div class="demo-note">Ride Request: full-screen intent even when screen off (FCM). SOS: red border. Account Approved: Punjabi first line.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 09 SKELETONS ==================== -->
+  <div id="skeletons">
+    <div class="section-header">
+      <h2>Loading States & Skeletons</h2>
+      <span class="section-id">09</span>
+    </div>
+
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">Shimmer Skeletons</span>
+        <span class="spec-tag">Never a blank screen · shimmer animation</span>
+      </div>
+      <div class="comp-group-body" style="gap:24px;">
+        <div class="comp-frame">
+          <div class="comp-label">Ride History Card Skeleton</div>
+          <div class="skeleton-card">
+            <div class="skeleton-row">
+              <div class="skeleton skeleton-circle" style="width:40px;height:40px;flex-shrink:0;"></div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
+                <div class="skeleton skeleton-text lg" style="width:70%;"></div>
+                <div class="skeleton skeleton-text sm" style="width:50%;"></div>
+              </div>
+              <div class="skeleton skeleton-text" style="width:48px;height:20px;"></div>
+            </div>
+            <div class="skeleton skeleton-text" style="width:90%;"></div>
+            <div class="skeleton skeleton-text sm" style="width:60%;"></div>
+          </div>
+        </div>
+        <div class="comp-frame">
+          <div class="comp-label">Earnings Row Skeleton</div>
+          <div class="skeleton-card">
+            <div class="skeleton skeleton-text lg" style="width:40%;margin-bottom:4px;"></div>
+            <div class="skeleton-row">
+              <div class="skeleton" style="flex:1;height:60px;border-radius:var(--r-sm);"></div>
+              <div class="skeleton" style="flex:1;height:60px;border-radius:var(--r-sm);"></div>
+            </div>
+            <div class="skeleton skeleton-text" style="width:100%;"></div>
+            <div class="skeleton skeleton-text" style="width:100%;"></div>
+          </div>
+        </div>
+        <div class="comp-frame">
+          <div class="comp-label">Empty State — No Riders</div>
+          <div style="background:var(--white);border-radius:var(--r-md);padding:24px;text-align:center;width:240px;border:1.5px dashed rgba(231,76,60,0.2);background:rgba(231,76,60,0.02);">
+            <div style="font-size:40px;margin-bottom:12px;">🏍️</div>
+            <div style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:6px;">No Riders Nearby</div>
+            <div style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;line-height:1.5;">All riders are busy right now. Try again in a few minutes.</div>
+            <button class="btn-danger" style="height:44px;font-size:14px;width:100%;">↺ Try Again</button>
+            <button class="btn-ghost" style="width:100%;font-size:14px;margin-top:8px;">📅 Schedule Instead</button>
+          </div>
+          <div class="demo-note">Red-tinted · illustration emoji · "Try Again" + "Schedule" CTAs</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 10 PROGRESS BAR ==================== -->
+  <div id="progress">
+    <div class="section-header">
+      <h2>Step Progress Bar</h2>
+      <span class="section-id">10</span>
+    </div>
+
+    <div class="comp-group">
+      <div class="comp-group-header">
+        <span class="comp-group-title">Document Upload Wizard Progress</span>
+        <span class="spec-tag">4 segments · done (saffron) · current (amber) · remaining (grey)</span>
+      </div>
+      <div class="comp-group-body vertical" style="max-width:360px;">
+        <div class="comp-frame" style="width:100%;">
+          <div class="comp-label">Step 1 · Driving License</div>
+          <div class="step-bar" style="width:100%;">
+            <div class="step-seg current"></div>
+            <div class="step-seg"></div>
+            <div class="step-seg"></div>
+            <div class="step-seg"></div>
+          </div>
+        </div>
+        <div class="comp-frame" style="width:100%;">
+          <div class="comp-label">Step 2 · Vehicle RC</div>
+          <div class="step-bar" style="width:100%;">
+            <div class="step-seg done"></div>
+            <div class="step-seg current"></div>
+            <div class="step-seg"></div>
+            <div class="step-seg"></div>
+          </div>
+        </div>
+        <div class="comp-frame" style="width:100%;">
+          <div class="comp-label">Step 3 · Aadhar</div>
+          <div class="step-bar" style="width:100%;">
+            <div class="step-seg done"></div>
+            <div class="step-seg done"></div>
+            <div class="step-seg current"></div>
+            <div class="step-seg"></div>
+          </div>
+        </div>
+        <div class="comp-frame" style="width:100%;">
+          <div class="comp-label">Step 4 · Bike Photo (Final)</div>
+          <div class="step-bar" style="width:100%;">
+            <div class="step-seg done"></div>
+            <div class="step-seg done"></div>
+            <div class="step-seg done"></div>
+            <div class="step-seg current"></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:16px;margin-top:4px;">
+          <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6B7280;"><div style="width:24px;height:4px;background:var(--saffron);border-radius:2px;"></div>Done</div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6B7280;"><div style="width:24px;height:4px;background:var(--amber);border-radius:2px;"></div>Current</div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#6B7280;"><div style="width:24px;height:4px;background:var(--border);border-radius:2px;"></div>Remaining</div>
+        </div>
+        <!-- Interactive demo -->
+        <div style="display:flex;gap:8px;margin-top:4px;">
+          <button onclick="stepBack()" style="height:36px;padding:0 16px;background:rgba(255,255,255,0.05);border:1px solid #2D3148;border-radius:var(--r-sm);font-size:12px;font-weight:700;color:#9CA3AF;cursor:pointer;font-family:Poppins;">← Back</button>
+          <button onclick="stepForward()" style="height:36px;padding:0 16px;background:var(--saffron);border:none;border-radius:var(--r-sm);font-size:12px;font-weight:700;color:white;cursor:pointer;font-family:Poppins;">Next →</button>
+          <div class="demo-note" style="margin-top:0;align-self:center;">Click to step through</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div style="margin-top:80px;padding-top:32px;border-top:1px solid #1E2030;text-align:center;">
+    <div style="font-family:'Fraunces',serif;font-size:24px;color:var(--saffron);">Chalo ਚਲੋ</div>
+    <div style="font-size:12px;color:#374151;margin-top:6px;letter-spacing:2px;text-transform:uppercase;">Component Library v1.0 · 10 Groups · 60+ Variants · All Interactive</div>
+  </div>
+
+</main>
+
+<script>
+// ============================
+// NAVIGATION SIDEBAR
+// ============================
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', function() {
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+
+// Scroll spy
+const sections = ['buttons','inputs','cards','navigation','countdown','sos','chips','toasts','skeletons','progress'];
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && el.getBoundingClientRect().top < 120) current = id;
+  });
+  if (current) {
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.classList.toggle('active', item.getAttribute('href') === '#' + current);
+    });
+  }
+});
+
+// ============================
+// TOGGLE SWITCH
+// ============================
+function toggleSwitch(wrapId) {
+  const ts = document.getElementById(wrapId.replace('toggle','ts'));
+  ts.classList.toggle('on');
+}
+
+// ============================
+// BOTTOM NAV
+// ============================
+function switchNav(navId, idx, color) {
+  const nav = document.getElementById(navId);
+  nav.querySelectorAll('.nav-tab-demo').forEach((tab, i) => {
+    tab.classList.remove('active-s', 'active-g');
+    if (i === idx) tab.classList.add(color === 's' ? 'active-s' : 'active-g');
+  });
+}
+
+// ============================
+// COUNTDOWN RING LIVE
+// ============================
+let countdownInterval = null;
+let countdownVal = 60;
+const circumference = 2 * Math.PI * 34; // 213.6
+
+function updateRing(val) {
+  const ring = document.getElementById('live-ring');
+  const timerEl = document.getElementById('live-timer');
+  if (!ring || !timerEl) return;
+  const offset = circumference - (val / 60) * circumference;
+  ring.style.strokeDashoffset = offset;
+  timerEl.textContent = val;
+  if (val > 20) {
+    ring.style.stroke = 'var(--saffron)';
+    timerEl.style.color = 'var(--saffron)';
+  } else if (val > 10) {
+    ring.style.stroke = 'var(--amber)';
+    timerEl.style.color = 'var(--amber)';
+  } else {
+    ring.style.stroke = 'var(--red)';
+    timerEl.style.color = 'var(--red)';
+  }
+}
+
+function startCountdown() {
+  if (countdownInterval) return;
+  countdownInterval = setInterval(() => {
+    countdownVal--;
+    updateRing(countdownVal);
+    if (countdownVal <= 0) {
+      clearInterval(countdownInterval);
+      countdownInterval = null;
+      const timerEl = document.getElementById('live-timer');
+      if (timerEl) timerEl.textContent = '—';
+    }
+  }, 1000);
+}
+
+function resetCountdown() {
+  clearInterval(countdownInterval);
+  countdownInterval = null;
+  countdownVal = 60;
+  updateRing(60);
+}
+
+// Ride request card countdown
+let rrcVal = 42;
+setInterval(() => {
+  if (rrcVal <= 0) return;
+  rrcVal--;
+  const ring = document.getElementById('demo-ring');
+  const timer = document.getElementById('demo-timer');
+  if (!ring || !timer) return;
+  const c = 2 * Math.PI * 22;
+  const offset = c - (rrcVal / 60) * c;
+  ring.style.strokeDashoffset = offset;
+  timer.textContent = rrcVal;
+  if (rrcVal <= 10) {
+    ring.classList.remove('ring-saffron','ring-amber');
+    ring.classList.add('ring-red');
+    timer.className = 'ring-number ring-red';
+  } else if (rrcVal <= 20) {
+    ring.classList.remove('ring-saffron','ring-red');
+    ring.classList.add('ring-amber');
+    timer.className = 'ring-number ring-amber';
+  }
+}, 1000);
+
+// ============================
+// SOS BUTTON HOLD
+// ============================
+let sosHoldTimer = null;
+let sosHoldStart = null;
+let sosAnimFrame = null;
+
+function startSOSHold() {
+  sosHoldStart = Date.now();
+  const hint = document.getElementById('sos-hint');
+  if (hint) hint.textContent = 'Keep holding...';
+
+  sosAnimFrame = requestAnimationFrame(function tick() {
+    const elapsed = Date.now() - sosHoldStart;
+    const pct = Math.min(elapsed / 2000, 1) * 100;
+    const bar = document.getElementById('sos-hold-progress');
+    if (bar) bar.style.background = `conic-gradient(rgba(255,255,255,0.35) ${pct * 3.6}deg, transparent 0deg)`;
+    if (pct < 100) {
+      sosAnimFrame = requestAnimationFrame(tick);
+    } else {
+      triggerSOS();
+    }
+  });
+}
+
+function cancelSOSHold() {
+  if (sosAnimFrame) cancelAnimationFrame(sosAnimFrame);
+  sosHoldStart = null;
+  const bar = document.getElementById('sos-hold-progress');
+  if (bar) bar.style.background = 'conic-gradient(rgba(255,255,255,0.3) 0%, transparent 0%)';
+  const hint = document.getElementById('sos-hint');
+  if (hint) hint.textContent = 'Press and hold for 2 seconds';
+}
+
+function triggerSOS() {
+  cancelSOSHold();
+  const hint = document.getElementById('sos-hint');
+  if (hint) {
+    hint.textContent = '🚨 SOS Triggered! Showing confirmation dialog...';
+    hint.style.color = 'var(--red)';
+    setTimeout(() => {
+      hint.textContent = 'Press and hold for 2 seconds';
+      hint.style.color = '';
+    }, 2000);
+  }
+}
+
+// Auto confirm demo
+function startAutoConfirm() {
+  const bar = document.getElementById('auto-confirm-bar');
+  const timerEl = document.getElementById('auto-confirm-timer');
+  if (!bar || !timerEl) return;
+  bar.style.transition = 'none';
+  bar.style.width = '100%';
+  setTimeout(() => {
+    bar.style.transition = 'width 5s linear';
+    bar.style.width = '0%';
+  }, 50);
+  let t = 5;
+  timerEl.textContent = t;
+  const iv = setInterval(() => {
+    t--;
+    if (timerEl) timerEl.textContent = Math.max(0, t);
+    if (t <= 0) {
+      clearInterval(iv);
+      if (timerEl) { timerEl.textContent = '🚨'; }
+      setTimeout(() => {
+        bar.style.transition = 'none';
+        bar.style.width = '100%';
+        if (timerEl) timerEl.textContent = 5;
+      }, 1000);
+    }
+  }, 1000);
+}
+
+// ============================
+// HISTORY CARD EXPAND
+// ============================
+function toggleHistory(card) {
+  const expanded = card.querySelector('.hc-expanded');
+  if (expanded) expanded.classList.toggle('open');
+}
+
+// ============================
+// RIDER FOUND ANIMATION REPLAY
+// ============================
+function replayCardAnim() {
+  const card = document.querySelector('.rider-found-card');
+  if (!card) return;
+  card.style.animation = 'none';
+  card.offsetHeight; // reflow
+  card.style.animation = 'slide-spring 0.4s var(--ease-spring) both';
+}
+
+// ============================
+// TOAST DISMISS + REPLAY
+// ============================
+document.querySelectorAll('.toast-dismiss').forEach(btn => {
+  btn.addEventListener('click', function() {
+    this.closest('.toast').style.opacity = '0';
+    this.closest('.toast').style.transform = 'translateY(8px)';
+    this.closest('.toast').style.transition = 'all 0.25s var(--ease-in)';
+  });
+});
+
+function replayToasts() {
+  document.querySelectorAll('.toast').forEach((t, i) => {
+    t.style.animation = 'none';
+    t.style.opacity = '';
+    t.style.transform = '';
+    t.offsetHeight;
+    t.style.animation = `toast-up 0.3s var(--ease-out) ${i * 0.1}s both`;
+  });
+}
+
+// ============================
+// FILTER CHIPS
+// ============================
+function toggleFilter(el) {
+  const siblings = el.parentElement.querySelectorAll('.filter-chip');
+  siblings.forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ============================
+// STEP PROGRESS BAR
+// ============================
+let currentStep = 2; // 0-indexed
+function renderStepBar() {
+  document.querySelectorAll('.step-bar').forEach((bar, barIdx) => {
+    if (barIdx === 4) return; // skip the legend bars
+    const segs = bar.querySelectorAll('.step-seg');
+    segs.forEach((seg, i) => {
+      seg.classList.remove('done','current');
+      if (i < currentStep) seg.classList.add('done');
+      else if (i === currentStep) seg.classList.add('current');
+    });
+  });
+}
+function stepForward() { if (currentStep < 3) { currentStep++; renderStepBar(); } }
+function stepBack()    { if (currentStep > 0) { currentStep--; renderStepBar(); } }
+</script>
+</body>
+</html>
