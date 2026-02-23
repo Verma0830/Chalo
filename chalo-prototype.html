@@ -1,0 +1,2430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chalo ਚਲੋ — Clickable Prototype</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Noto+Sans+Gurmukhi:wght@400;500;600;700&family=Fraunces:ital,wght@0,700;1,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   TOKENS
+============================================================ */
+:root {
+  --saffron: #FF6B00;  --saffron-d: #CC4A00;
+  --saffron-10: rgba(255,107,0,0.10);
+  --saffron-15: rgba(255,107,0,0.15);
+  --saffron-25: rgba(255,107,0,0.25);
+  --navy: #1A1F3C;     --navy-mid: #2D3461;
+  --green: #2ECC71;    --green-d: #27AE60;
+  --green-10: rgba(46,204,113,0.10);
+  --green-15: rgba(46,204,113,0.15);
+  --green-30: rgba(46,204,113,0.30);
+  --red: #E74C3C;
+  --red-10: rgba(231,76,60,0.10);
+  --amber: #F39C12;
+  --amber-10: rgba(243,156,18,0.10);
+  --bg: #F8F9FA;
+  --white: #FFFFFF;
+  --tp: #374151;  --ts: #6B7280;
+  --border: #E5E7EB;
+
+  --sh-sm:  0 1px 4px rgba(0,0,0,0.28);
+  --sh-md:  0 4px 16px rgba(0,0,0,0.38);
+  --sh-lg:  0 8px 32px rgba(0,0,0,0.48);
+  --sh-xl:  0 16px 48px rgba(0,0,0,0.55);
+  --glow-s: 0 0 32px rgba(255,107,0,0.28);
+  --glow-g: 0 0 24px rgba(46,204,113,0.32);
+  --glow-d: 0 4px 20px rgba(231,76,60,0.45);
+
+  --ease-out:    cubic-bezier(0.16,1,0.3,1);
+  --ease-spring: cubic-bezier(0.34,1.56,0.64,1);
+  --ease-in:     cubic-bezier(0.55,0,1,0.45);
+}
+
+/* ============================================================
+   SHELL LAYOUT
+============================================================ */
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: #0A0C14;
+  font-family: 'Poppins', sans-serif;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* Outer wrapper */
+.proto-shell {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+/* Left sidebar */
+.proto-sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  background: #0F1117;
+  border-right: 1px solid #1E2030;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+.sidebar-top {
+  padding: 24px 20px 18px;
+  border-bottom: 1px solid #1E2030;
+}
+.sidebar-logo {
+  font-family: 'Fraunces', serif;
+  font-size: 22px;
+  color: var(--saffron);
+}
+.sidebar-sub {
+  font-size: 10px;
+  color: #3D4560;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-top: 3px;
+}
+.sidebar-doc {
+  font-size: 10px;
+  color: #4B5563;
+  margin-top: 6px;
+}
+
+.flow-group {
+  padding: 16px 0 8px;
+  border-bottom: 1px solid #1E2030;
+}
+.flow-group-title {
+  font-size: 9px;
+  font-weight: 700;
+  color: #3D4560;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 0 20px 8px;
+}
+.flow-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 20px;
+  cursor: pointer;
+  transition: background 120ms;
+  border-left: 2px solid transparent;
+}
+.flow-item:hover { background: rgba(255,255,255,0.03); }
+.flow-item.active {
+  border-left-color: var(--saffron);
+  background: rgba(255,107,0,0.06);
+}
+.flow-item.active .flow-label { color: var(--saffron); }
+.flow-num {
+  font-family: 'JetBrains Mono';
+  font-size: 10px;
+  color: #3D4560;
+  min-width: 18px;
+}
+.flow-item.active .flow-num { color: rgba(255,107,0,0.6); }
+.flow-label { font-size: 12px; font-weight: 600; color: #6B7280; line-height: 1.3; }
+
+.app-toggle {
+  padding: 16px 20px;
+  border-bottom: 1px solid #1E2030;
+}
+.toggle-pills {
+  display: flex;
+  background: #1A1D2E;
+  border-radius: 8px;
+  padding: 3px;
+  gap: 3px;
+}
+.toggle-pill {
+  flex: 1;
+  height: 30px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4B5563;
+  transition: all 200ms;
+}
+.toggle-pill.active-c { background: var(--saffron); color: white; }
+.toggle-pill.active-d { background: var(--green); color: #0A0C14; }
+
+/* Screen steps in sidebar */
+.step-list {
+  padding: 12px 0;
+}
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 20px;
+  cursor: pointer;
+  transition: all 120ms;
+}
+.step-item:hover .step-label { color: #9CA3AF; }
+.step-item.done .step-dot { background: var(--saffron); }
+.step-item.done .step-label { color: #6B7280; }
+.step-item.current .step-dot { background: var(--saffron); box-shadow: 0 0 8px rgba(255,107,0,0.6); }
+.step-item.current .step-label { color: white; font-weight: 600; }
+.step-item.current-d .step-dot { background: var(--green); box-shadow: 0 0 8px rgba(46,204,113,0.5); }
+.step-item.current-d .step-label { color: white; font-weight: 600; }
+.step-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #2D3148;
+  flex-shrink: 0;
+  transition: all 200ms;
+}
+.step-label {
+  font-size: 11px;
+  color: #374151;
+  line-height: 1.3;
+}
+.step-connector {
+  width: 1px; height: 14px;
+  background: #1E2030;
+  margin-left: 23px;
+}
+
+/* Sidebar footer */
+.sidebar-footer {
+  margin-top: auto;
+  padding: 16px 20px;
+  border-top: 1px solid #1E2030;
+  font-size: 10px;
+  color: #2D3148;
+  line-height: 1.6;
+}
+
+/* ============================================================
+   PHONE FRAME
+============================================================ */
+.proto-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Ambient glow behind phone */
+.phone-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 50% 60% at 50% 50%, rgba(255,107,0,0.06) 0%, transparent 70%);
+  pointer-events: none;
+  transition: background 600ms;
+}
+.phone-glow.driver-glow {
+  background: radial-gradient(ellipse 50% 60% at 50% 50%, rgba(46,204,113,0.06) 0%, transparent 70%);
+}
+
+.phone-frame {
+  position: relative;
+  width: 360px;
+  height: 780px;
+  background: var(--bg);
+  border-radius: 40px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 10px #111218,
+    0 0 0 11px #1E2030,
+    0 40px 100px rgba(0,0,0,0.8);
+  flex-shrink: 0;
+}
+
+/* Dynamic island */
+.dynamic-island {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120px; height: 34px;
+  background: #0A0C14;
+  border-radius: 20px;
+  z-index: 100;
+}
+
+/* Status bar */
+.status-bar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 52px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 28px 8px;
+  z-index: 50;
+  pointer-events: none;
+}
+.status-time {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--navy);
+}
+.status-icons { font-size: 13px; color: var(--navy); display: flex; gap: 4px; align-items: center; }
+.status-bar.light .status-time,
+.status-bar.light .status-icons { color: rgba(255,255,255,0.9); }
+
+/* Screen container */
+.screen-wrap {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 40px;
+}
+
+/* Individual screens */
+.screen {
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+  border-radius: 40px;
+  overflow: hidden;
+  transform: translateX(100%);
+  transition: transform 320ms var(--ease-out);
+  will-change: transform;
+}
+.screen.active {
+  transform: translateX(0);
+}
+.screen.prev {
+  transform: translateX(-30%);
+}
+
+/* Bottom nav */
+.bottom-nav {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 64px;
+  background: var(--white);
+  border-top: 1px solid var(--border);
+  display: flex;
+  z-index: 30;
+  border-radius: 0 0 40px 40px;
+}
+.nav-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--ts);
+  cursor: pointer;
+  position: relative;
+  transition: color 150ms;
+}
+.nav-tab.active-s { color: var(--saffron); }
+.nav-tab.active-g { color: var(--green); }
+.nav-tab.active-s::before,
+.nav-tab.active-g::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 20%; right: 20%;
+  height: 2px;
+  border-radius: 0 0 2px 2px;
+}
+.nav-tab.active-s::before { background: var(--saffron); }
+.nav-tab.active-g::before { background: var(--green); }
+.nav-icon { font-size: 19px; line-height: 1; }
+
+/* Content area (below status, above nav) */
+.screen-content {
+  position: absolute;
+  top: 52px;
+  bottom: 64px;
+  left: 0; right: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+.screen-content::-webkit-scrollbar { display: none; }
+.screen-content.no-nav { bottom: 0; }
+.screen-content.no-status { top: 0; }
+
+/* ============================================================
+   RIGHT PANEL — CTA / ANNOTATIONS
+============================================================ */
+.proto-right {
+  width: 280px;
+  flex-shrink: 0;
+  background: #0F1117;
+  border-left: 1px solid #1E2030;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 20px;
+  overflow-y: auto;
+}
+.panel-title {
+  font-family: 'Fraunces', serif;
+  font-size: 16px;
+  color: var(--saffron);
+  margin-bottom: 4px;
+}
+.panel-screen-name {
+  font-size: 11px;
+  color: #4B5563;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+/* Annotation cards */
+.annot-card {
+  background: #1A1D2E;
+  border: 1px solid #1E2030;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.annot-key {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--saffron);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.annot-val {
+  font-size: 11px;
+  color: #9CA3AF;
+  line-height: 1.5;
+}
+.annot-card.green .annot-key { color: var(--green); }
+.annot-card.red   .annot-key { color: var(--red); }
+.annot-card.amber .annot-key { color: var(--amber); }
+
+.panel-divider { height: 1px; background: #1E2030; margin: 14px 0; }
+
+/* Nav arrows */
+.nav-arrows {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid #1E2030;
+  flex-shrink: 0;
+}
+.nav-arr {
+  flex: 1;
+  height: 40px;
+  background: #1A1D2E;
+  border: 1px solid #1E2030;
+  border-radius: 8px;
+  color: #6B7280;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 150ms;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Poppins;
+}
+.nav-arr:hover { background: #21253A; color: #9CA3AF; }
+.nav-arr.primary {
+  background: var(--saffron);
+  border-color: var(--saffron);
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+}
+.nav-arr.primary:hover { background: var(--saffron-d); }
+.nav-arr.primary.green-btn { background: var(--green); border-color: var(--green); color: #0A0C14; }
+.nav-arr.primary.green-btn:hover { background: var(--green-d); }
+.nav-arr:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* ============================================================
+   SCREEN COMPONENTS (app UI elements)
+============================================================ */
+
+/* Map area */
+.map-area {
+  width: 100%; height: 100%;
+  position: relative;
+  overflow: hidden;
+  background: #E8EFDA;
+}
+.map-bg {
+  position: absolute; inset: 0;
+  background:
+    repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(200,210,180,0.5) 39px, rgba(200,210,180,0.5) 40px),
+    repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(200,210,180,0.5) 39px, rgba(200,210,180,0.5) 40px),
+    #E8F0D5;
+}
+/* Roads */
+.road {
+  position: absolute;
+  background: rgba(255,255,255,0.9);
+}
+.road-h { height: 12px; left: 0; right: 0; border-radius: 0; }
+.road-v { width: 12px; top: 0; bottom: 0; }
+.road-main { background: rgba(255,255,255,1); }
+/* Location pins */
+.map-pin {
+  position: absolute;
+  display: flex; flex-direction: column; align-items: center;
+  transform: translate(-50%, -100%);
+  z-index: 10;
+}
+.map-pin-icon {
+  width: 36px; height: 36px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: var(--sh-md);
+}
+.map-pin-icon span { transform: rotate(45deg); font-size: 16px; }
+.map-pin-dot { width: 8px; height: 8px; background: rgba(0,0,0,0.2); border-radius: 50%; margin-top: 2px; }
+/* Rider marker */
+.rider-marker {
+  position: absolute;
+  transform: translate(-50%,-50%);
+  z-index: 10;
+}
+.rider-dot {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  background: white;
+  box-shadow: var(--sh-md);
+  border: 2px solid var(--navy);
+  animation: rider-bob 2s ease-in-out infinite;
+}
+@keyframes rider-bob {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+/* Route line */
+.route-line {
+  position: absolute;
+  background: var(--saffron);
+  height: 3px;
+  border-radius: 2px;
+  transform-origin: left center;
+}
+/* Accuracy circle */
+.gps-circle {
+  position: absolute;
+  transform: translate(-50%,-50%);
+  border-radius: 50%;
+  background: rgba(255,107,0,0.08);
+  border: 1.5px solid rgba(255,107,0,0.2);
+  animation: gps-pulse 3s ease-in-out infinite;
+}
+@keyframes gps-pulse {
+  0%,100% { transform: translate(-50%,-50%) scale(1); opacity: 0.8; }
+  50%      { transform: translate(-50%,-50%) scale(1.1); opacity: 0.5; }
+}
+
+/* Bottom sheet (home, search, etc) */
+.bottom-sheet {
+  position: absolute;
+  bottom: 64px; left: 0; right: 0;
+  background: var(--white);
+  border-radius: 24px 24px 0 0;
+  padding: 12px 0 0;
+  box-shadow: 0 -4px 32px rgba(0,0,0,0.15);
+}
+.sheet-handle {
+  width: 36px; height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 0 auto 14px;
+}
+
+/* Search bar in map */
+.map-search-bar {
+  margin: 12px 16px 0;
+  height: 48px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  cursor: text;
+  transition: all 150ms;
+}
+.map-search-bar:hover {
+  border-color: rgba(255,107,0,0.3);
+  background: white;
+}
+.search-ph {
+  font-family: 'Noto Sans Gurmukhi';
+  font-size: 13px;
+  color: var(--ts);
+}
+
+/* Fare estimate strip */
+.fare-strip {
+  padding: 16px 16px 8px;
+}
+.fare-big {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--navy);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -1px;
+  line-height: 1;
+}
+.fare-meta {
+  font-size: 12px;
+  color: var(--ts);
+  margin-top: 4px;
+}
+
+/* Payment row */
+.payment-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+}
+.payment-chip {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(74,144,217,0.08);
+  border: 1px solid rgba(74,144,217,0.2);
+  border-radius: 9999px;
+  padding: 4px 12px;
+  font-size: 12px; font-weight: 700;
+  color: #4A90D9;
+  cursor: pointer;
+}
+.change-link { font-size: 11px; color: var(--saffron); font-weight: 600; cursor: pointer; }
+
+/* Customer card */
+.customer-strip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg);
+  margin: 0 16px;
+  border-radius: 12px;
+}
+.cust-avatar {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4A90D9, #2D5FA8);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+  border: 2px solid white;
+}
+.cust-name { font-size: 15px; font-weight: 700; color: var(--navy); }
+.cust-meta { font-size: 11px; color: var(--ts); margin-top: 2px; display: flex; gap: 8px; }
+
+/* ETA chip */
+.eta-chip {
+  background: var(--green-10);
+  border: 1px solid var(--green-30);
+  border-radius: 9999px;
+  padding: 4px 12px;
+  font-size: 12px; font-weight: 700;
+  color: var(--green);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* Ripple animation (searching) */
+.ripple-wrap {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+}
+.ripple {
+  position: absolute;
+  top: 50%; left: 50%;
+  border-radius: 50%;
+  border: 2px solid rgba(255,107,0,0.25);
+  transform: translate(-50%,-50%) scale(0);
+  animation: ripple-out 2.4s ease-out infinite;
+}
+.ripple:nth-child(1) { animation-delay: 0s; }
+.ripple:nth-child(2) { animation-delay: 0.6s; }
+.ripple:nth-child(3) { animation-delay: 1.2s; }
+.ripple:nth-child(4) { animation-delay: 1.8s; }
+@keyframes ripple-out {
+  0%   { width:0; height:0; opacity:1; }
+  100% { width:280px; height:280px; opacity:0; }
+}
+
+/* Stars rating */
+.stars { display: flex; gap: 4px; }
+.star {
+  font-size: 28px;
+  cursor: pointer;
+  transition: transform 150ms var(--ease-spring);
+  color: var(--border);
+}
+.star.lit { color: var(--amber); }
+.star:hover { transform: scale(1.2); }
+
+/* Countdown ring */
+.ring-wrap {
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+}
+.ring-wrap svg { transform: rotate(-90deg); }
+.ring-number {
+  position: absolute;
+  font-weight: 800;
+  font-family: 'Poppins';
+  line-height: 1;
+}
+
+/* Buttons */
+.btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  font-family: 'Poppins'; font-weight: 700; border: none; cursor: pointer;
+  border-radius: 8px; transition: all 120ms var(--ease-out);
+}
+.btn:active { transform: scale(0.97); }
+.btn-p    { background: var(--saffron); color: white; height: 54px; font-size: 16px; box-shadow: var(--glow-s), var(--sh-md); }
+.btn-p:hover { background: var(--saffron-d); }
+.btn-g    { background: var(--green); color: #0A0C14; height: 54px; font-size: 16px; box-shadow: var(--glow-g); }
+.btn-g:hover { background: var(--green-d); }
+.btn-acc  { background: var(--green); color: #0A0C14; height: 60px; font-size: 18px; font-weight: 800; box-shadow: var(--glow-g); }
+.btn-acc:hover { background: var(--green-d); }
+.btn-rej  { background: transparent; color: var(--red); height: 60px; font-size: 14px; font-weight: 700; border: 1.5px solid var(--red); }
+.btn-sec  { background: transparent; color: var(--saffron); height: 48px; font-size: 14px; font-weight: 600; border: 1.5px solid var(--saffron); }
+.btn-ghost { background: transparent; color: var(--ts); height: 48px; font-size: 14px; font-weight: 600; border: 1.5px solid var(--border); }
+.btn-safe  { background: var(--green); color: #0A0C14; height: 48px; font-size: 14px; font-weight: 700; box-shadow: var(--glow-g); }
+.btn-danger { background: var(--red); color: white; height: 48px; font-size: 14px; font-weight: 700; box-shadow: var(--glow-d); }
+.btn-dark  { background: var(--navy); color: white; height: 44px; font-size: 13px; font-weight: 700; }
+.btn-nav   { background: var(--navy); color: white; height: 54px; font-size: 15px; font-weight: 700; box-shadow: var(--sh-md); }
+.btn-w { width: 100%; }
+.full-pad { padding: 0 16px; }
+
+/* Section header in screens */
+.scr-header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 16px 14px;
+}
+.back-btn {
+  width: 36px; height: 36px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; cursor: pointer; flex-shrink: 0;
+  transition: all 120ms;
+}
+.back-btn:hover { background: var(--border); }
+.scr-title { font-size: 17px; font-weight: 700; color: var(--navy); }
+
+/* Chip inline */
+.chip-inline {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 700;
+  padding: 3px 10px; border-radius: 4px;
+}
+.chip-cash { background: rgba(74,144,217,0.10); color: #4A90D9; }
+.chip-upi  { background: var(--green-10); color: var(--green); }
+.chip-sched{ background: rgba(147,51,234,0.10); color: #9333EA; }
+.chip-green-pill {
+  background: var(--green-10);
+  border: 1px solid var(--green-30);
+  color: var(--green);
+  border-radius: 9999px;
+  padding: 4px 12px;
+  font-size: 12px; font-weight: 700;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.chip-amber-pill {
+  background: rgba(243,156,18,0.12);
+  border: 1px solid rgba(243,156,18,0.3);
+  color: var(--amber);
+  border-radius: 9999px;
+  padding: 4px 12px;
+  font-size: 12px; font-weight: 700;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+
+/* Earnings hero */
+.earnings-hero {
+  background: linear-gradient(160deg, var(--navy), var(--navy-mid));
+  padding: 24px 20px 20px;
+}
+.earn-label { font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.5); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 4px; }
+.earn-amount { font-size: 40px; font-weight: 800; color: var(--green); font-variant-numeric: tabular-nums; letter-spacing: -2px; line-height: 1; }
+.earn-sub { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 4px; }
+
+/* Row items */
+.list-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 120ms;
+}
+.list-row:hover { background: rgba(255,107,0,0.03); }
+.list-icon {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+}
+.list-label { font-size: 13px; font-weight: 600; color: var(--tp); }
+.list-sub { font-size: 11px; color: var(--ts); margin-top: 2px; }
+.list-right { margin-left: auto; font-size: 12px; color: var(--ts); display: flex; align-items: center; gap: 6px; }
+
+/* SOS button */
+.sos-btn-wrap {
+  position: absolute;
+  top: 16px; right: 16px;
+  z-index: 20;
+}
+.sos-btn {
+  width: 52px; height: 52px;
+  background: var(--red);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 800; color: white; letter-spacing: 0.3px;
+  box-shadow: var(--glow-d), var(--sh-md);
+  cursor: pointer; position: relative;
+}
+.sos-ring {
+  position: absolute; inset: -5px;
+  border-radius: 50%;
+  border: 2px solid rgba(231,76,60,0.35);
+  animation: sos-pulse 2s ease-in-out infinite;
+}
+@keyframes sos-pulse {
+  0%,100% { transform:scale(1); opacity:0.7; }
+  50%      { transform:scale(1.15); opacity:0; }
+}
+
+/* FAB */
+.fab {
+  position: absolute;
+  bottom: 80px; right: 16px;
+  width: 52px; height: 52px;
+  background: var(--green);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  box-shadow: var(--glow-g), var(--sh-lg);
+  cursor: pointer;
+  transition: all 150ms var(--ease-spring);
+}
+.fab:hover { transform: scale(1.08); }
+
+/* commission row */
+.comm-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 16px;
+}
+.comm-label { font-size: 13px; color: var(--ts); font-weight: 500; }
+.comm-value { font-size: 15px; font-weight: 700; }
+
+/* Success state */
+.success-anim {
+  animation: pop-in 0.4s var(--ease-spring) both;
+}
+@keyframes pop-in {
+  from { transform: scale(0.6); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+/* Ripple found */
+.found-slide {
+  animation: found-up 0.35s var(--ease-spring) both;
+}
+@keyframes found-up {
+  from { transform: translateY(60px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* Driver splash */
+.driver-splash {
+  background: linear-gradient(160deg, var(--navy) 0%, var(--navy-mid) 100%);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 40px 24px;
+}
+
+/* Green pill status */
+.status-pill-wrap {
+  position: absolute;
+  top: 60px; left: 12px;
+  z-index: 20;
+}
+.online-pill {
+  background: var(--navy);
+  border-radius: 9999px;
+  padding: 6px 14px;
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 700;
+  box-shadow: var(--sh-md);
+}
+.earn-pill {
+  background: rgba(26,31,60,0.92);
+  border-radius: 9999px;
+  padding: 6px 14px;
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 700; color: white;
+  box-shadow: var(--sh-md);
+  margin-top: 6px;
+}
+
+/* Document step */
+.doc-step {
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  margin: 0 16px 10px;
+  display: flex; align-items: center; gap: 12px;
+}
+.doc-step-num {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 2px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 800;
+  color: var(--ts); flex-shrink: 0;
+}
+.doc-step.done .doc-step-num { background: var(--green-10); border-color: var(--green); color: var(--green); }
+.doc-step.active .doc-step-num { background: var(--saffron-10); border-color: var(--saffron); color: var(--saffron); }
+.doc-step-label { font-size: 13px; font-weight: 700; color: var(--navy); }
+.doc-step-sub   { font-size: 11px; color: var(--ts); margin-top: 2px; }
+
+/* Progress step bar */
+.step-bar {
+  display: flex; gap: 4px;
+  margin: 0 16px 12px;
+}
+.seg { flex:1; height:4px; border-radius:2px; }
+.seg-done { background: var(--saffron); }
+.seg-curr { background: var(--amber); }
+.seg-rem  { background: var(--border); }
+
+/* Upload zone */
+.upload-zone {
+  border: 2px dashed rgba(255,107,0,0.35);
+  border-radius: 12px;
+  height: 100px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  background: rgba(255,107,0,0.03);
+  cursor: pointer; transition: all 150ms;
+  margin: 0 16px;
+}
+.upload-zone:hover { border-color: var(--saffron); background: rgba(255,107,0,0.07); }
+
+/* Connectivity warning */
+.conn-warn {
+  background: #FFFBEB;
+  border-bottom: 1px solid rgba(243,156,18,0.3);
+  padding: 6px 16px;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 600; color: #92400E;
+}
+
+/* Modal overlay */
+.modal-overlay {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex; align-items: flex-end;
+  z-index: 60;
+  border-radius: 40px;
+  opacity: 0; pointer-events: none;
+  transition: opacity 300ms;
+}
+.modal-overlay.visible { opacity: 1; pointer-events: all; }
+.modal-card {
+  background: white;
+  border-radius: 24px 24px 0 0;
+  padding: 20px;
+  width: 100%;
+  transform: translateY(100%);
+  transition: transform 320ms var(--ease-out);
+}
+.modal-overlay.visible .modal-card { transform: translateY(0); }
+
+/* Search result list */
+.search-result {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 100ms;
+}
+.search-result:hover { background: rgba(255,107,0,0.04); }
+.result-icon {
+  width: 36px; height: 36px;
+  border-radius: 8px;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+.result-name { font-size: 13px; font-weight: 700; color: var(--tp); }
+.result-address { font-size: 11px; color: var(--ts); margin-top: 2px; }
+
+/* Profile header */
+.profile-header {
+  background: linear-gradient(160deg, var(--navy), var(--navy-mid));
+  padding: 20px 20px 24px;
+  display: flex; align-items: center; gap: 14px;
+}
+.profile-avatar {
+  width: 60px; height: 60px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+  border: 2px solid rgba(255,255,255,0.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px;
+}
+.profile-name { font-size: 18px; font-weight: 700; color: white; }
+.profile-phone { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+
+/* Driver verification pending */
+.pending-badge {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: rgba(243,156,18,0.15);
+  border: 2px solid rgba(243,156,18,0.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px;
+  margin: 20px auto 0;
+}
+</style>
+</head>
+<body>
+<div class="proto-shell">
+
+  <!-- LEFT SIDEBAR -->
+  <nav class="proto-sidebar">
+    <div class="sidebar-top">
+      <div class="sidebar-logo">Chalo ਚਲੋ</div>
+      <div class="sidebar-sub">Clickable Prototype · v1.0</div>
+      <div class="sidebar-doc">5 Critical Flows · 38 Screens</div>
+    </div>
+
+    <div class="app-toggle">
+      <div style="font-size:9px;font-weight:700;color:#3D4560;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">VIEWING APP</div>
+      <div class="toggle-pills">
+        <div class="toggle-pill active-c" id="pill-c" onclick="switchApp('customer')">🏍️ Customer</div>
+        <div class="toggle-pill" id="pill-d" onclick="switchApp('driver')">👨 Driver</div>
+      </div>
+    </div>
+
+    <div id="flow-list">
+      <!-- Populated by JS -->
+    </div>
+
+    <div class="sidebar-footer">
+      ← → or click steps to navigate<br>
+      Click hotspots on phone to advance<br>
+      <br>
+      <span style="color:#3D4560;">All screens: 360 × 780dp</span>
+    </div>
+  </nav>
+
+  <!-- PHONE FRAME -->
+  <div class="proto-main">
+    <div class="phone-glow" id="phone-glow"></div>
+    <div class="phone-frame" id="phone-frame">
+      <div class="dynamic-island"></div>
+      <!-- Status bar -->
+      <div class="status-bar" id="status-bar">
+        <span class="status-time">9:41</span>
+        <span class="status-icons">📶 🔋</span>
+      </div>
+
+      <!-- Screen container -->
+      <div class="screen-wrap" id="screen-wrap">
+        <!-- Screens injected by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="proto-right" id="right-panel">
+    <div class="panel-title" id="panel-title">Flow 1</div>
+    <div class="panel-screen-name" id="panel-screen">Loading...</div>
+    <div id="panel-annotations"></div>
+    <div class="panel-divider"></div>
+    <div style="font-size:10px;color:#2D3148;line-height:1.5;" id="panel-progress"></div>
+    <div class="nav-arrows">
+      <button class="nav-arr" id="btn-prev" onclick="navigate(-1)">←</button>
+      <button class="nav-arr primary" id="btn-next" onclick="navigate(1)">Next →</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   FLOW DATA
+============================================================ */
+const FLOWS = {
+  customer: [
+    {
+      id: 'F1', name: 'Core Booking Flow',
+      desc: 'Login → Home → Search → Fare → Searching → Rider Found → Active Ride → Complete',
+      steps: [
+        {
+          id: 'C1-S1', label: 'Splash Screen',
+          annotations: [
+            { key: 'First impression', val: 'Saffron gradient — identity before login. Fraunces serif + Gurmukhi pair.', color: '' },
+            { key: 'Animation', val: 'Logo scales in · Gurmukhi fades up · 0.4s ease-spring', color: '' },
+            { key: 'Auto-advance', val: '2.5s → Phone login screen', color: 'amber' },
+          ],
+          statusLight: false,
+          render: () => `
+            <div style="height:100%;background:linear-gradient(160deg,#FF6B00,#FF8C00);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:40px 24px;border-radius:40px;">
+              <div style="width:84px;height:84px;background:rgba(255,255,255,0.15);border-radius:50%;border:2px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;font-size:36px;margin-bottom:8px;animation:pop-in 0.5s var(--ease-spring) 0.3s both;">🏍️</div>
+              <div style="font-family:'Fraunces',serif;font-size:44px;font-weight:700;color:white;letter-spacing:-2px;line-height:1;">Chalo</div>
+              <div style="font-family:'Noto Sans Gurmukhi';font-size:26px;color:rgba(255,255,255,0.8);">ਚਲੋ</div>
+              <div style="font-size:13px;color:rgba(255,255,255,0.65);text-align:center;line-height:1.5;margin-top:4px;">ਫਰੀਦਾਬਾਦ ਦਾ ਆਪਣਾ ਸਫ਼ਰ<br>Faridabad's own ride</div>
+              <div style="position:absolute;bottom:120px;display:flex;flex-direction:column;align-items:center;gap:8px;">
+                <div style="width:28px;height:28px;border:2px solid rgba(255,255,255,0.4);border-radius:50%;display:flex;align-items:center;justify-content:center;animation:bounce 1.4s ease-in-out infinite;">
+                  <div style="width:6px;height:6px;background:rgba(255,255,255,0.7);border-radius:50%;"></div>
+                </div>
+              </div>
+            </div>
+          `
+        },
+        {
+          id: 'C1-S2', label: 'Phone Login',
+          annotations: [
+            { key: 'Input: Phone field', val: '+91 prefix locked. Numeric keyboard. CTA disabled until 10 digits entered.', color: '' },
+            { key: 'Tap target', val: 'Get OTP button: 54dp · full-width · saffron glow shadow', color: '' },
+            { key: 'Trust builder', val: 'WhatsApp OTP option below — familiar trust signal for Haryana users.', color: 'green' },
+          ],
+          render: () => `
+            <div style="padding:24px 20px 20px;height:100%;background:var(--bg);">
+              <div style="margin-bottom:28px;">
+                <div style="font-family:'Fraunces',serif;font-size:28px;color:var(--navy);letter-spacing:-0.5px;">ਚਲੋ ਸ਼ੁਰੂ ਕਰੋ</div>
+                <div style="font-size:14px;color:var(--ts);margin-top:4px;">Enter your mobile number to continue</div>
+              </div>
+              <div style="font-size:10px;font-weight:700;color:var(--ts);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">MOBILE NUMBER</div>
+              <div style="display:flex;height:54px;border:1.5px solid var(--saffron);border-radius:8px;overflow:hidden;box-shadow:0 0 0 3px rgba(255,107,0,0.12);background:white;margin-bottom:20px;">
+                <div style="padding:0 14px;background:#F3F4F6;display:flex;align-items:center;font-size:13px;font-weight:600;color:var(--tp);border-right:1.5px solid var(--border);flex-shrink:0;">🇮🇳 +91</div>
+                <div style="flex:1;display:flex;align-items:center;padding:0 14px;font-size:16px;font-weight:700;color:var(--navy);letter-spacing:2px;">98765 43210</div>
+              </div>
+              <button class="btn btn-p btn-w" onclick="navigate(1)" style="margin-bottom:14px;">ਓਟੀਪੀ ਭੇਜੋ — Get OTP</button>
+              <button class="btn btn-ghost btn-w" style="height:44px;font-size:13px;">📱 WhatsApp ਤੇ OTP ਭੇਜੋ</button>
+              <div style="position:absolute;bottom:90px;left:0;right:0;text-align:center;font-size:11px;color:var(--ts);">By continuing you agree to our Terms & Privacy Policy</div>
+            </div>
+          `
+        },
+        {
+          id: 'C1-S3', label: 'OTP Verification',
+          annotations: [
+            { key: 'OTP boxes', val: '4 boxes · 56×64dp each · saffron fill on entered · auto-advance', color: '' },
+            { key: 'SMS auto-read', val: 'requestAutoFill() on Android — auto-fills OTP from SMS if granted', color: 'green' },
+            { key: 'Security', val: 'Max 3 attempts · Resend timer: 30s → 60s → blocked 10min', color: 'amber' },
+          ],
+          render: () => `
+            <div style="padding:24px 20px 20px;height:100%;background:var(--bg);">
+              <button class="back-btn" style="margin-bottom:20px;" onclick="navigate(-1)">←</button>
+              <div style="font-family:'Fraunces',serif;font-size:26px;color:var(--navy);letter-spacing:-0.5px;margin-bottom:6px;">ਓਟੀਪੀ ਦਰਜ ਕਰੋ</div>
+              <div style="font-size:13px;color:var(--ts);margin-bottom:28px;">Sent to +91 98765 43210 via SMS</div>
+              <div style="display:flex;gap:12px;justify-content:center;margin-bottom:28px;">
+                <div style="width:58px;height:68px;border:1.5px solid var(--saffron);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;color:var(--saffron);background:rgba(255,107,0,0.07);">3</div>
+                <div style="width:58px;height:68px;border:1.5px solid var(--saffron);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;color:var(--saffron);background:rgba(255,107,0,0.07);">7</div>
+                <div style="width:58px;height:68px;border:1.5px solid var(--saffron);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;color:var(--saffron);background:rgba(255,107,0,0.07);box-shadow:0 0 0 3px rgba(255,107,0,0.12);">8</div>
+                <div style="width:58px;height:68px;border:1.5px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;color:var(--ts);background:white;"></div>
+              </div>
+              <button class="btn btn-p btn-w" onclick="navigate(1)">✓ ਤਸਦੀਕ ਕਰੋ — Verify</button>
+              <div style="text-align:center;margin-top:16px;font-size:12px;color:var(--ts);">Didn't receive? <span style="color:var(--saffron);font-weight:600;cursor:pointer;">Resend in 23s</span></div>
+            </div>
+          `
+        },
+        {
+          id: 'C1-S4', label: 'Home — Map',
+          annotations: [
+            { key: 'Layout split', val: 'Map: 55% top · Bottom sheet: 45% — thumb zone for search', color: '' },
+            { key: 'GPS pin', val: 'Auto-detected on first load. Falls back to manual entry if denied.', color: '' },
+            { key: 'Quick chips', val: 'Saved as Home / Work — one-tap booking for daily commuters', color: 'green' },
+            { key: 'Map performance', val: 'OSM tiles cached offline. Only delta updates on 2G.', color: 'amber' },
+          ],
+          statusLight: false,
+          render: () => `
+            <div style="position:relative;height:100%;">
+              <!-- Map 55% -->
+              <div class="map-area" style="height:57%;">
+                <div class="map-bg"></div>
+                <div class="road road-h road-main" style="top:45%;"></div>
+                <div class="road road-h" style="top:60%;opacity:0.7;"></div>
+                <div class="road road-v road-main" style="left:40%;"></div>
+                <div class="road road-v" style="left:65%;opacity:0.7;"></div>
+                <div class="road road-v" style="left:20%;opacity:0.5;"></div>
+                <!-- GPS location -->
+                <div style="position:absolute;top:50%;left:42%;transform:translate(-50%,-50%);">
+                  <div class="gps-circle" style="width:80px;height:80px;"></div>
+                  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:14px;height:14px;background:var(--saffron);border-radius:50%;border:2px solid white;box-shadow:var(--sh-sm);"></div>
+                </div>
+                <!-- Rider nearby -->
+                <div class="rider-marker" style="top:35%;left:62%;">
+                  <div class="rider-dot">🏍️</div>
+                </div>
+                <div class="rider-marker" style="top:62%;left:28%;">
+                  <div class="rider-dot" style="width:36px;height:36px;font-size:18px;">🏍️</div>
+                </div>
+              </div>
+              <!-- Bottom sheet -->
+              <div style="position:absolute;bottom:64px;left:0;right:0;background:white;border-radius:24px 24px 0 0;box-shadow:0 -4px 24px rgba(0,0,0,0.1);padding:12px 0 0;">
+                <div class="sheet-handle"></div>
+                <!-- Search -->
+                <div class="map-search-bar" onclick="navigate(1)" style="cursor:pointer;">
+                  <span style="font-size:16px;">🔍</span>
+                  <span class="search-ph">ਕਿੱਥੇ ਜਾਣਾ ਹੈ?</span>
+                </div>
+                <!-- Quick chips -->
+                <div style="display:flex;gap:8px;padding:12px 16px 8px;overflow-x:auto;">
+                  <div style="background:rgba(255,107,0,0.08);border:1px solid rgba(255,107,0,0.15);border-radius:9999px;padding:7px 14px;font-size:12px;font-weight:600;color:var(--saffron);white-space:nowrap;cursor:pointer;display:flex;align-items:center;gap:5px;">🏠 Home</div>
+                  <div style="background:rgba(255,107,0,0.08);border:1px solid rgba(255,107,0,0.15);border-radius:9999px;padding:7px 14px;font-size:12px;font-weight:600;color:var(--saffron);white-space:nowrap;cursor:pointer;display:flex;align-items:center;gap:5px;">💼 Work</div>
+                  <div style="background:rgba(255,107,0,0.08);border:1px solid rgba(255,107,0,0.15);border-radius:9999px;padding:7px 14px;font-size:12px;font-weight:600;color:var(--saffron);white-space:nowrap;cursor:pointer;display:flex;align-items:center;gap:5px;">🏥 Civil Hospital</div>
+                  <div style="background:rgba(255,107,0,0.08);border:1px solid rgba(255,107,0,0.15);border-radius:9999px;padding:7px 14px;font-size:12px;font-weight:600;color:var(--saffron);white-space:nowrap;cursor:pointer;display:flex;align-items:center;gap:5px;">🚌 Bus Stand</div>
+                </div>
+                <div style="padding:4px 16px 12px;border-top:1px solid var(--border);margin-top:4px;display:flex;align-items:center;justify-content:space-between;">
+                  <div style="font-size:12px;color:var(--ts);">📍 Sector 15, Faridabad</div>
+                  <div style="font-size:12px;font-weight:600;color:var(--saffron);cursor:pointer;">📅 Schedule</div>
+                </div>
+              </div>
+              <!-- Bottom nav -->
+              <div class="bottom-nav">
+                <div class="nav-tab active-s"><span class="nav-icon">🏠</span>Home</div>
+                <div class="nav-tab"><span class="nav-icon">🏍️</span>Rides</div>
+                <div class="nav-tab"><span class="nav-icon">📅</span>Schedule</div>
+                <div class="nav-tab"><span class="nav-icon">👤</span>Profile</div>
+              </div>
+            </div>
+          `
+        },
+        {
+          id: 'C1-S5', label: 'Destination Search',
+          annotations: [
+            { key: 'Recent places', val: 'Top 5 from local history — no API call needed for quick re-booking', color: '' },
+            { key: 'From-To card', val: 'FROM auto-filled from GPS. TO is the active search field.', color: '' },
+            { key: 'Results', val: 'Fuzzy match on Faridabad POI database. Distance shown in km.', color: 'green' },
+          ],
+          render: () => `
+            <div style="height:100%;background:var(--bg);">
+              <div style="background:white;padding:12px 16px;border-bottom:1px solid var(--border);">
+                <div style="display:flex;height:44px;border:1.5px solid var(--saffron);border-radius:9999px;align-items:center;padding:0 14px;gap:10px;box-shadow:0 0 0 3px rgba(255,107,0,0.10);background:white;">
+                  <span>🔍</span>
+                  <input style="flex:1;border:none;outline:none;font-size:13px;font-family:Poppins;color:var(--navy);background:transparent;" placeholder="Search destination..." value="ESIC">
+                </div>
+                <div style="display:flex;border:1.5px solid var(--border);border-radius:12px;overflow:hidden;margin-top:10px;background:white;">
+                  <div style="display:flex;align-items:center;height:42px;padding:0 12px;gap:10px;background:#F9FAFB;border-bottom:1px solid var(--border);">
+                    <div style="width:8px;height:8px;border-radius:50%;background:var(--navy);flex-shrink:0;"></div>
+                    <span style="font-size:12px;color:var(--ts);">Sec 15, Faridabad (GPS)</span>
+                  </div>
+                </div>
+              </div>
+              <div style="background:white;margin-top:1px;">
+                <div style="padding:10px 16px;font-size:10px;font-weight:700;color:var(--ts);letter-spacing:1.5px;text-transform:uppercase;">NEARBY</div>
+                <div class="search-result" onclick="navigate(1)">
+                  <div class="result-icon">🏥</div>
+                  <div><div class="result-name">ESIC Hospital, NIT Faridabad</div><div class="result-address">Neelam Bata Road · 4.2 km</div></div>
+                  <div style="margin-left:auto;font-size:11px;color:var(--ts);">4.2 km</div>
+                </div>
+                <div class="search-result">
+                  <div class="result-icon">🏫</div>
+                  <div><div class="result-name">ESIC Medical College</div><div class="result-address">Sector 56, Faridabad · 5.8 km</div></div>
+                  <div style="margin-left:auto;font-size:11px;color:var(--ts);">5.8 km</div>
+                </div>
+                <div style="padding:10px 16px;font-size:10px;font-weight:700;color:var(--ts);letter-spacing:1.5px;text-transform:uppercase;border-top:1px solid var(--border);">RECENT</div>
+                <div class="search-result">
+                  <div class="result-icon" style="background:rgba(255,107,0,0.08);">🕐</div>
+                  <div><div class="result-name">Faridabad Railway Station</div><div class="result-address">Old Faridabad · 6.1 km</div></div>
+                </div>
+                <div class="search-result">
+                  <div class="result-icon" style="background:rgba(255,107,0,0.08);">🕐</div>
+                  <div><div class="result-name">Sector 10 Market</div><div class="result-address">Sector 10 · 2.3 km</div></div>
+                </div>
+              </div>
+            </div>
+          `
+        },
+        {
+          id: 'C1-S6', label: 'Fare Estimate',
+          annotations: [
+            { key: 'Fare prominence', val: '28sp ExtraBold — largest element on screen. Non-negotiable design spec.', color: '' },
+            { key: 'Payment toggle', val: 'Cash default (Faridabad market reality). UPI optional. Clear change link.', color: '' },
+            { key: 'GPS-locked CTA', val: '"Confirm" is enabled immediately — GPS lock only required for arrival/complete', color: 'green' },
+          ],
+          render: () => `
+            <div style="height:100%;background:var(--bg);">
+              <div class="scr-header">
+                <button class="back-btn" onclick="navigate(-1)">←</button>
+                <span class="scr-title">ਤੁਹਾਡੀ ਰਾਈਡ — Your Ride</span>
+              </div>
+              <!-- Map thumbnail -->
+              <div class="map-area" style="height:160px;flex-shrink:0;">
+                <div class="map-bg"></div>
+                <div class="road road-h road-main" style="top:50%;"></div>
+                <div class="road road-v" style="left:40%;"></div>
+                <div class="map-pin" style="top:52%;left:40%;">
+                  <div class="map-pin-icon" style="background:var(--navy);"><span>📍</span></div>
+                  <div class="map-pin-dot"></div>
+                </div>
+                <div class="map-pin" style="top:52%;left:72%;">
+                  <div class="map-pin-icon" style="background:var(--saffron);"><span>🏥</span></div>
+                  <div class="map-pin-dot"></div>
+                </div>
+                <div class="route-line" style="top:calc(52% - 1.5px);left:42%;width:88px;"></div>
+              </div>
+              <div style="background:white;padding:16px 16px 0;margin-top:-1px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                  <div>
+                    <div style="font-size:11px;font-weight:700;color:var(--ts);letter-spacing:1px;text-transform:uppercase;">FARE ESTIMATE</div>
+                    <div style="font-size:36px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;letter-spacing:-2px;line-height:1.1;margin-top:2px;">₹ 50</div>
+                    <div style="font-size:12px;color:var(--ts);margin-top:4px;">4.2 km · approx 14 min · ±₹5</div>
+                  </div>
+                  <div style="text-align:right;">
+                    <div style="font-size:11px;color:var(--ts);margin-bottom:6px;">Riders nearby</div>
+                    <div style="display:flex;gap:4px;justify-content:flex-end;">
+                      <div style="width:28px;height:28px;border-radius:50%;background:var(--bg);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;">🏍️</div>
+                      <div style="width:28px;height:28px;border-radius:50%;background:var(--bg);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;">🏍️</div>
+                      <div style="width:28px;height:28px;border-radius:50%;background:var(--bg);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--ts);font-weight:700;">+2</div>
+                    </div>
+                    <div style="font-size:11px;color:var(--green);font-weight:600;margin-top:4px;">● 4 available</div>
+                  </div>
+                </div>
+                <div style="height:1px;background:var(--border);margin:12px 0;"></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;">
+                  <div style="font-size:13px;color:var(--ts);">📍 Sector 15 → ESIC Hospital</div>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;">
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <div class="chip-inline chip-cash">💵 Cash</div>
+                    <span style="font-size:12px;color:var(--saffron);font-weight:600;cursor:pointer;">Change →</span>
+                  </div>
+                  <div style="font-size:12px;color:var(--ts);">No surge</div>
+                </div>
+              </div>
+              <div style="padding:14px 16px;">
+                <button class="btn btn-p btn-w" onclick="navigate(1)">ਰਾਈਡ ਬੁੱਕ ਕਰੋ — Confirm</button>
+                <button class="btn btn-ghost btn-w" onclick="navigate(-1)" style="margin-top:10px;height:44px;font-size:13px;">📅 Schedule Instead</button>
+              </div>
+            </div>
+          `
+        },
+        {
+          id: 'C1-S7', label: 'Searching for Rider',
+          annotations: [
+            { key: 'Ripple animation', val: '4 rings · staggered 0.6s · ease-out 2.4s infinite · CSS only', color: '' },
+            { key: 'Cancel visibility', val: '"Cancel Search" ghost button always visible — never hidden. No friction.', color: '' },
+            { key: 'Timeout behavior', val: 'After 3 min: toast "No riders near you" + Retry / Schedule options', color: 'amber' },
+          ],
+          render: () => `
+            <div style="height:100%;background:linear-gradient(180deg,#fff 0%,var(--bg) 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;position:relative;">
+              <!-- Ripple -->
+              <div style="position:relative;width:160px;height:160px;display:flex;align-items:center;justify-content:center;">
+                <div class="ripple"></div>
+                <div class="ripple"></div>
+                <div class="ripple"></div>
+                <div class="ripple"></div>
+                <div style="width:64px;height:64px;background:white;border-radius:50%;box-shadow:var(--sh-lg);display:flex;align-items:center;justify-content:center;font-size:28px;z-index:2;border:2px solid rgba(255,107,0,0.15);">🏍️</div>
+              </div>
+              <div style="text-align:center;">
+                <div style="font-family:'Fraunces',serif;font-size:22px;color:var(--navy);">ਰਾਈਡਰ ਲੱਭ ਰਹੇ ਹਾਂ...</div>
+                <div style="font-size:13px;color:var(--ts);margin-top:4px;">Finding your rider nearby</div>
+              </div>
+              <div style="display:flex;gap:12px;align-items:center;">
+                <div style="width:8px;height:8px;border-radius:50%;background:var(--saffron);animation:dot-blink 1.2s 0s infinite;"></div>
+                <div style="width:8px;height:8px;border-radius:50%;background:var(--saffron);animation:dot-blink 1.2s 0.3s infinite;"></div>
+                <div style="width:8px;height:8px;border-radius:50%;background:var(--saffron);animation:dot-blink 1.2s 0.6s infinite;"></div>
+              </div>
+              <div style="position:absolute;bottom:80px;left:16px;right:16px;text-align:center;">
+                <div style="font-size:12px;color:var(--ts);margin-bottom:10px;">📍 Sec 15, Faridabad · 4 riders nearby</div>
+                <button class="btn btn-ghost btn-w" onclick="navigate(-1)" style="height:44px;font-size:13px;">✕ Cancel Search</button>
+              </div>
+            </div>
+            <div class="bottom-nav">
+              <div class="nav-tab active-s"><span class="nav-icon">🏠</span>Home</div>
+              <div class="nav-tab"><span class="nav-icon">🏍️</span>Rides</div>
+              <div class="nav-tab"><span class="nav-icon">📅</span>Schedule</div>
+              <div class="nav-tab"><span class="nav-icon">👤</span>Profile</div>
+            </div>
+            <style>@keyframes dot-blink{0%,80%,100%{opacity:0.2}40%{opacity:1}}</style>
+          `
+        },
+        {
+          id: 'C1-S8', label: 'Rider Found',
+          annotations: [
+            { key: 'Spring animation', val: 'Card slides up with ease-spring (overshoot bounce). Unforgettable delight moment.', color: 'green' },
+            { key: 'Privacy', val: 'Only first name + last initial shown pre-ride. Full name hidden until in vehicle.', color: '' },
+            { key: 'Contact buttons', val: 'Call and Message: 40dp each. System dialer / SMS — no in-app chat V1.', color: '' },
+          ],
+          render: () => `
+            <div style="height:100%;position:relative;">
+              <div class="map-area" style="height:100%;">
+                <div class="map-bg"></div>
+                <div class="road road-h road-main" style="top:45%;"></div>
+                <div class="road road-v road-main" style="left:40%;"></div>
+                <div class="rider-marker" style="top:38%;left:58%;">
+                  <div class="rider-dot">🏍️</div>
+                </div>
+                <div style="position:absolute;top:48%;left:42%;transform:translate(-50%,-50%);width:12px;height:12px;background:var(--saffron);border-radius:50%;border:2px solid white;box-shadow:var(--sh-sm);"></div>
+              </div>
+              <!-- Rider card - slide up -->
+              <div style="position:absolute;bottom:64px;left:0;right:0;background:white;border-radius:24px 24px 0 0;box-shadow:0 -8px 32px rgba(0,0,0,0.15);padding:16px;animation:found-up 0.38s var(--ease-spring) both;">
+                <div class="sheet-handle"></div>
+                <div style="display:flex;align-items:center;gap:6px;color:var(--green);font-size:13px;font-weight:700;margin-bottom:14px;">
+                  <span style="font-size:16px;">✓</span>ਰਾਈਡਰ ਮਿਲ ਗਿਆ — Rider Found!
+                </div>
+                <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
+                  <div style="width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,var(--navy),var(--navy-mid));display:flex;align-items:center;justify-content:center;font-size:22px;border:2px solid white;box-shadow:var(--sh-sm);flex-shrink:0;">👨</div>
+                  <div style="flex:1;">
+                    <div style="font-size:16px;font-weight:700;color:var(--navy);">Gurpreet S.</div>
+                    <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+                      <span style="font-size:13px;font-weight:600;color:var(--tp);">★ 4.8</span>
+                      <span style="font-family:'JetBrains Mono';font-size:12px;color:var(--ts);background:var(--bg);padding:2px 8px;border-radius:4px;font-weight:600;">HR29BC4521</span>
+                    </div>
+                  </div>
+                  <div class="eta-chip">4 min</div>
+                </div>
+                <div style="display:flex;gap:10px;margin-bottom:14px;">
+                  <button class="btn btn-ghost" style="flex:1;height:40px;font-size:13px;gap:6px;">📞 Call</button>
+                  <button class="btn btn-ghost" style="flex:1;height:40px;font-size:13px;gap:6px;">💬 Message</button>
+                </div>
+                <button class="btn btn-p btn-w" onclick="navigate(1)">Track Rider</button>
+              </div>
+              <div class="bottom-nav">
+                <div class="nav-tab active-s"><span class="nav-icon">🏠</span>Home</div>
+                <div class="nav-tab"><span class="nav-icon">🏍️</span>Rides</div>
+                <div class="nav-tab"><span class="nav-icon">📅</span>Schedule</div>
+                <div class="nav-tab"><span class="nav-icon">👤</span>Profile</div>
+              </div>
+            </div>
+          `
+        },
+        {
+          id: 'C1-S9', label: 'Active Ride + SOS',
+          annotations: [
+            { key: 'SOS placement', val: 'Top-right · 52dp · always visible during ride. 2s hold to trigger.', color: 'red' },
+            { key: 'Live tracking', val: 'Rider marker updates every 3s via WebSocket. Cached on weak signal.', color: '' },
+            { key: 'GPS-locked CTA', val: '"I\'ve Arrived" button shows at ~200m from destination. Geofence-locked.', color: 'green' },
+          ],
+          render: () => `
+            <div style="height:100%;position:relative;">
+              <div class="map-area" style="height:100%;">
+                <div class="map-bg"></div>
+                <div class="road road-h road-main" style="top:45%;"></div>
+                <div class="road road-v road-main" style="left:40%;"></div>
+                <div class="road road-v" style="left:70%;"></div>
+                <div class="rider-marker" style="top:50%;left:50%;">
+                  <div class="rider-dot">🏍️</div>
+                </div>
+                <div class="map-pin" style="top:48%;left:70%;">
+                  <div class="map-pin-icon" style="background:var(--saffron);"><span>🏥</span></div>
+                  <div class="map-pin-dot"></div>
+                </div>
+                <div class="route-line" style="top:calc(48% - 1.5px);left:52%;width:80px;"></div>
+              </div>
+              <!-- SOS button -->
+              <div class="sos-btn-wrap" style="top:62px;">
+                <div class="sos-btn">
+                  <div class="sos-ring"></div>
+                  SOS
+                </div>
+              </div>
+              <!-- Connectivity warning (edge case) -->
+              <div class="conn-warn" style="position:absolute;top:52px;left:0;right:0;">
+                <span>⚡</span> Weak signal · cached location active
+              </div>
+              <!-- Bottom card -->
+              <div style="position:absolute;bottom:64px;left:0;right:0;background:white;border-radius:24px 24px 0 0;box-shadow:0 -4px 24px rgba(0,0,0,0.15);padding:14px;">
+                <div class="sheet-handle"></div>
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                  <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--navy),var(--navy-mid));display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">👨</div>
+                  <div style="flex:1;">
+                    <div style="font-size:14px;font-weight:700;color:var(--navy);">Gurpreet S.</div>
+                    <div style="font-size:11px;color:var(--ts);">HR29BC4521 · En route to ESIC Hospital</div>
+                  </div>
+                  <div class="chip-green-pill">● Live</div>
+                </div>
+                <div style="background:var(--bg);border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">
+                  <div><div style="font-size:10px;font-weight:700;color:var(--ts);letter-spacing:1px;text-transform:uppercase;">ETA</div><div style="font-size:18px;font-weight:800;color:var(--navy);">~6 min</div></div>
+                  <div><div style="font-size:10px;font-weight:700;color:var(--ts);letter-spacing:1px;text-transform:uppercase;">FARE</div><div style="font-size:18px;font-weight:800;color:var(--saffron);">₹50</div></div>
+                  <div><div style="font-size:10px;font-weight:700;color:var(--ts);letter-spacing:1px;text-transform:uppercase;">DIST LEFT</div><div style="font-size:18px;font-weight:800;color:var(--navy);">2.1 km</div></div>
+                </div>
+                <button class="btn btn-ghost btn-w" onclick="navigate(1)" style="height:44px;font-size:13px;">✓ ਤੁਸੀਂ ਪਹੁੰਚ ਗਏ — I've Arrived</button>
+              </div>
+              <div class="bottom-nav">
+                <div class="nav-tab active-s"><span class="nav-icon">🏠</span>Home</div>
+                <div class="nav-tab"><span class="nav-icon">🏍️</span>Rides</div>
+                <div class="nav-tab"><span class="nav-icon">📅</span>Schedule</div>
+                <div class="nav-tab"><span class="nav-icon">👤</span>Profile</div>
+              </div>
+            </div>
+          `
+        },
+        {
+          id: 'C1-S10', label: 'Ride Complete + Rating',
+          annotations: [
+            { key: 'No dark patterns', val: '"Skip" button is same size and prominence as "Submit". Equal visibility.', color: 'green' },
+            { key: 'Rating UX', val: 'Stars: 28px · saffron on selection · spring scale animation on tap', color: '' },
+            { key: 'Tip option', val: 'Optional tip row — shown after 5-star selection only. Never pushed.', color: 'amber' },
+          ],
+          render: () => `
+            <div style="height:100%;background:var(--bg);display:flex;flex-direction:column;align-items:center;padding:24px 20px 0;">
+              <div style="font-size:52px;margin-bottom:8px;animation:pop-in 0.4s var(--ease-spring) 0.1s both;">🎉</div>
+              <div style="font-family:'Fraunces',serif;font-size:26px;color:var(--navy);text-align:center;margin-bottom:4px;">ਤੁਸੀਂ ਪਹੁੰਚ ਗਏ!</div>
+              <div style="font-size:14px;color:var(--ts);text-align:center;margin-bottom:20px;">ESIC Hospital, NIT Faridabad</div>
+              <div style="background:white;border-radius:16px;padding:18px;width:100%;box-shadow:var(--sh-md);margin-bottom:16px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                  <div><div style="font-size:11px;font-weight:700;color:var(--ts);letter-spacing:1px;text-transform:uppercase;">FARE PAID</div><div style="font-size:28px;font-weight:800;color:var(--saffron);font-variant-numeric:tabular-nums;letter-spacing:-1px;">₹50</div></div>
+                  <div style="text-align:right;"><div style="font-size:11px;font-weight:700;color:var(--ts);letter-spacing:1px;text-transform:uppercase;">DISTANCE</div><div style="font-size:18px;font-weight:700;color:var(--navy);">4.2 km</div></div>
+                  <div style="text-align:right;"><div style="font-size:11px;font-weight:700;color:var(--ts);letter-spacing:1px;text-transform:uppercase;">TIME</div><div style="font-size:18px;font-weight:700;color:var(--navy);">14 min</div></div>
+                </div>
+                <div style="height:1px;background:var(--border);margin-bottom:12px;"></div>
+                <div style="text-align:center;">
+                  <div style="font-size:13px;font-weight:600;color:var(--tp);margin-bottom:10px;">Rate your ride with Gurpreet S.</div>
+                  <div class="stars" style="justify-content:center;margin-bottom:8px;">
+                    <span class="star lit" onclick="rateStar(1)">★</span>
+                    <span class="star lit" onclick="rateStar(2)">★</span>
+                    <span class="star lit" onclick="rateStar(3)">★</span>
+                    <span class="star lit" onclick="rateStar(4)">★</span>
+                    <span class="star" onclick="rateStar(5)">★</span>
+                  </div>
+                  <div style="font-size:11px;color:var(--ts);">Tap a star to rate</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:10px;width:100%;">
+                <button class="btn btn-p" style="flex:1;height:52px;font-size:15px;" onclick="navigate(1)">Submit ★★★★</button>
+                <button class="btn btn-ghost" style="flex:1;height:52px;font-size:15px;" onclick="navigate(1)">Skip</button>
+              </div>
+            </div>
+          `
+        },
+      ]
+    },
+    {
+      id: 'F2', name: 'SOS Emergency Flow',
+      desc: 'Active ride → 2s hold → Confirmation → Active alert → I\'m Safe',
+      steps: [
+        {
+          id: 'C2-S1', label: 'Active Ride (SOS)',
+          annotations: [
+            { key: 'SOS trigger', val: '2s continuous press-and-hold — prevents accidental trigger', color: 'red' },
+            { key: 'Visual feedback', val: 'Conic gradient fills the button during hold. Progress ring shows time remaining.', color: '' },
+          ],
+          render: () => `
+            <div style="height:100%;position:relative;">
+              <div class="map-area" style="height:100%;"><div class="map-bg"></div>
+                <div class="road road-h road-main" style="top:45%;"></div>
+                <div class="road road-v road-main" style="left:40%;"></div>
+                <div class="rider-marker" style="top:48%;left:46%;"><div class="rider-dot">🏍️</div></div>
+              </div>
+              <div class="sos-btn-wrap" style="top:62px;">
+                <div class="sos-btn" style="cursor:pointer;" title="Press and hold 2s">
+                  <div class="sos-ring"></div>
+                  SOS
+                </div>
+                <div style="font-size:9px;color:rgba(255,255,255,0.7);text-align:center;margin-top:4px;text-shadow:0 1px 4px rgba(0,0,0,0.8);">Hold 2s</div>
+              </div>
+              <div style="position:absolute;bottom:64px;left:0;right:0;background:white;border-radius:24px 24px 0 0;padding:14px;box-shadow:0 -4px 24px rgba(0,0,0,0.15);">
+                <div class="sheet-handle"></div>
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                  <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--navy),var(--navy-mid));display:flex;align-items:center;justify-content:center;font-size:18px;">👨</div>
+                  <div><div style="font-size:14px;font-weight:700;color:var(--navy);">Gurpreet S.</div><div style="font-size:11px;color:var(--ts);">En route · ESIC Hospital</div></div>
+                  <div class="chip-green-pill" style="margin-left:auto;">● Live</div>
+                </div>
+                <button class="btn btn-nav btn-w" onclick="navigate(1)">Press & Hold SOS to continue →</button>
+              </div>
+              <div class="bottom-nav">
+                <div class="nav-tab active-s"><span class="nav-icon">🏠</span>Home</div>
+                <div class="nav-tab"><span class="nav-icon">🏍️</span>Rides</div>
+                <div class="nav-tab"><span class="nav-icon">📅</span>Schedule</div>
+                <div class="nav-tab"><span class="nav-icon">👤</span>Profile</div>
+              </div>
+            </div>
+          `
+        },
+        {
+          id: 'C2-S2', label: 'SOS Confirmation',
+          annotations: [
+            { key: '5s auto-confirm', val: 'Bar counts down. Alert fires automatically if user cannot tap — designed for real emergencies.', color: 'red' },
+            { key: 'What is sent', val: 'Live GPS link · rider name + number · vehicle plate · timestamp · emergency contacts notified via SMS + WhatsApp.', color: '' },
+            { key: 'Cancel path', val: '"Cancel" is visible but not prominent — emergency intent should be the default path.', color: 'amber' },
+          ],
+          render: () => `
+            <div style="height:100%;background:rgba(0,0,0,0.6);display:flex;align-items:flex-end;border-radius:40px;">
+              <div style="background:white;border-radius:24px 24px 0 0;padding:20px;width:100%;">
+                <div style="text-align:center;margin-bottom:16px;">
+                  <div style="font-size:48px;margin-bottom:8px;">🚨</div>
+                  <div style="font-size:20px;font-weight:800;color:var(--navy);">Send SOS Alert?</div>
+                  <div style="font-size:12px;color:var(--ts);margin-top:8px;line-height:1.6;">This will share your live GPS location, rider name, and vehicle number with all saved emergency contacts via SMS and WhatsApp.</div>
+                </div>
+                <div style="background:rgba(231,76,60,0.07);border:1px solid rgba(231,76,60,0.2);border-radius:10px;padding:12px;margin-bottom:16px;">
+                  <div style="font-size:11px;font-weight:700;color:var(--red);text-align:center;margin-bottom:8px;">Auto-sending in 5s if you can't tap</div>
+                  <div style="height:4px;background:rgba(231,76,60,0.15);border-radius:2px;overflow:hidden;">
+                    <div style="height:100%;width:60%;background:var(--red);border-radius:2px;"></div>
+                  </div>
+                </div>
+                <div style="background:var(--bg);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--ts);">
+                  <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span>Rider</span><span style="font-weight:600;color:var(--tp);">Gurpreet Singh · HR29BC4521</span></div>
+                  <div style="display:flex;justify-content:space-between;"><span>Location</span><span style="font-weight:600;color:var(--saffron);">Live GPS · maps.google.com/...</span></div>
+                </div>
+                <div style="display:flex;gap:10px;">
+                  <button class="btn btn-danger" style="flex:2;height:52px;font-size:15px;" onclick="navigate(1)">🚨 Send Alert Now</button>
+                  <button class="btn btn-ghost" style="flex:1;height:52px;font-size:14px;" onclick="navigate(-1)">Cancel</button>
+                </div>
+              </div>
+            </div>
+          `
+        },
+        {
+          id: 'C2-S3', label: 'SOS Active State',
+          annotations: [
+            { key: 'Active banner', val: 'Full-width red banner · slide-down animation. Persists for entire ride.', color: 'red' },
+            { key: '"I\'m Safe" CTA', val: 'Green button — clear exit from SOS mode. Sends "false alarm" note to contacts.', color: 'green' },
+            { key: 'Contacts notified', val: 'Badge shows how many contacts received the alert. Retry if delivery fails.', color: '' },
+          ],
+          render: () => `
+            <div style="height:100%;position:relative;">
+              <div style="background:var(--red);padding:12px 16px;display:flex;align-items:center;gap:12px;animation:banner-drop 0.3s var(--ease-out) both;">
+                <span style="font-size:22px;">🚨</span>
+                <div>
+                  <div style="font-size:14px;font-weight:800;color:white;">SOS ACTIVE — ਐਮਰਜੈਂਸੀ</div>
+                  <div style="font-size:11px;color:rgba(255,255,255,0.85);margin-top:2px;">Alert sent · 2 contacts notified · Live GPS shared</div>
+                </div>
+              </div>
+              <div class="map-area" style="flex:1;height:calc(100% - 330px);">
+                <div class="map-bg"></div>
+                <div class="road road-h road-main" style="top:45%;"></div>
+                <div class="road road-v road-main" style="left:40%;"></div>
+                <div class="rider-marker" style="top:48%;left:46%;"><div class="rider-dot">🏍️</div></div>
+                <div style="position:absolute;top:10px;left:10px;background:rgba(231,76,60,0.15);border:1.5px solid rgba(231,76,60,0.3);border-radius:10px;padding:8px 12px;">
+                  <div style="font-size:11px;font-weight:700;color:var(--red);">📍 Live location shared</div>
+                </div>
+              </div>
+              <div style="position:absolute;bottom:64px;left:0;right:0;background:white;border-radius:24px 24px 0 0;padding:16px;box-shadow:0 -4px 24px rgba(0,0,0,0.15);">
+                <div class="sheet-handle"></div>
+                <div style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:8px;">Emergency contacts notified:</div>
+                <div style="background:rgba(231,76,60,0.06);border-radius:10px;padding:10px 14px;margin-bottom:14px;">
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:14px;">✅</span><span style="font-size:13px;font-weight:600;color:var(--tp);">Manjeet Singh (Father) · +91 98765 12345</span></div>
+                  <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:14px;">✅</span><span style="font-size:13px;font-weight:600;color:var(--tp);">Harpreet Kaur (Sister) · +91 87654 98765</span></div>
+                </div>
+                <button class="btn btn-safe btn-w" onclick="navigate(1)" style="margin-bottom:10px;">✓ I'm Safe — Cancel Alert</button>
+                <button class="btn btn-ghost btn-w" style="height:40px;font-size:12px;">📞 Call Police (100)</button>
+              </div>
+              <div class="bottom-nav">
+                <div class="nav-tab active-s"><span class="nav-icon">🏠</span>Home</div>
+                <div class="nav-tab"><span class="nav-icon">🏍️</span>Rides</div>
+                <div class="nav-tab"><span class="nav-icon">📅</span>Schedule</div>
+                <div class="nav-tab"><span class="nav-icon">👤</span>Profile</div>
+              </div>
+            </div>
+            <style>@keyframes banner-drop{from{transform:translateY(-100%);opacity:0}to{transform:translateY(0);opacity:1}}</style>
+          `
+        },
+      ]
+    },
+  ],
+  driver: [
+    {
+      id: 'F3', name: 'Driver Onboarding',
+      desc: 'Driver Splash → Doc Upload Wizard → Verification Pending → Dashboard',
+      steps: [
+        {
+          id: 'D1-S1', label: 'Driver Splash',
+          annotations: [
+            { key: 'Visual identity', val: 'Navy gradient — deliberately distinct from customer saffron. Two separate apps in one codebase.', color: '' },
+            { key: 'CTA size', val: '54dp · full-width · green accent (driver language). "Driver Partner" not just "Driver".', color: 'green' },
+          ],
+          statusLight: true,
+          render: () => `
+            <div class="driver-splash" style="border-radius:40px;">
+              <div style="width:88px;height:88px;background:rgba(255,255,255,0.08);border-radius:50%;border:2px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;font-size:38px;margin-bottom:8px;">🏍️</div>
+              <div style="font-family:'Fraunces',serif;font-size:38px;font-weight:700;color:white;letter-spacing:-1.5px;">Chalo</div>
+              <div style="font-family:'Noto Sans Gurmukhi';font-size:22px;color:rgba(255,255,255,0.6);">ਚਲੋ</div>
+              <div style="font-size:13px;color:rgba(255,255,255,0.5);text-align:center;margin-bottom:4px;margin-top:4px;">ਡਰਾਈਵਰ ਪਾਰਟਨਰ / Driver Partner</div>
+              <div style="height:1px;background:rgba(255,255,255,0.1);width:80%;margin:20px 0;"></div>
+              <button class="btn btn-g" style="width:300px;" onclick="navigate(1)">Register as Driver Partner →</button>
+              <button class="btn" style="width:300px;height:48px;font-size:14px;color:rgba(255,255,255,0.6);background:transparent;border:1px solid rgba(255,255,255,0.15);margin-top:10px;">Already registered? Log in</button>
+              <div style="font-size:11px;color:rgba(255,255,255,0.25);text-align:center;margin-top:20px;">Faridabad & NIT · More cities coming soon</div>
+            </div>
+          `
+        },
+        {
+          id: 'D1-S2', label: 'Doc Upload — Step 1',
+          annotations: [
+            { key: '4-step wizard', val: 'Driving License → Vehicle RC → Aadhar → Bike Photo. Can\'t skip steps — sequential upload.', color: '' },
+            { key: 'Camera primary', val: 'Camera icon is primary CTA. Gallery is secondary. Better photo quality from camera.', color: 'green' },
+            { key: 'File limit', val: 'Max 5MB per doc. JPG or PNG only. Automatic quality suggestion if image too dark/blurry.', color: 'amber' },
+          ],
+          render: () => `
+            <div style="height:100%;background:var(--bg);overflow-y:auto;">
+              <div style="background:var(--navy);padding:20px 16px 24px;">
+                <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">STEP 1 OF 4</div>
+                <div style="font-size:18px;font-weight:700;color:white;margin-bottom:12px;">Upload Documents</div>
+                <div class="step-bar" style="margin:0;">
+                  <div class="seg seg-curr"></div>
+                  <div class="seg seg-rem"></div>
+                  <div class="seg seg-rem"></div>
+                  <div class="seg seg-rem"></div>
+                </div>
+              </div>
+              <div style="padding:20px 16px;">
+                <div style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:4px;">🪪 Driving License</div>
+                <div style="font-size:12px;color:var(--ts);margin-bottom:16px;">Upload front side of your valid license</div>
+                <div class="upload-zone">
+                  <span style="font-size:32px;">📷</span>
+                  <div style="font-size:13px;font-weight:700;color:var(--saffron);">Take Photo</div>
+                  <div style="font-size:11px;color:var(--ts);">or tap to choose from gallery</div>
+                </div>
+                <div style="margin-top:12px;padding:10px 14px;background:rgba(243,156,18,0.08);border-radius:8px;border-left:3px solid var(--amber);">
+                  <div style="font-size:11px;color:#92400E;line-height:1.5;">📋 License must be valid and not expired. Both front and name sides required.</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:10px;padding:0 16px 20px;">
+                <button class="btn btn-ghost" style="flex:1;height:48px;font-size:13px;" onclick="navigate(-1)">← Back</button>
+                <button class="btn btn-g" style="flex:2;height:54px;" onclick="navigate(1)">📷 Take Photo →</button>
+              </div>
+            </div>
+          `
+        },
+        {
+          id: 'D1-S3', label: 'Doc Upload — Step 3 Uploaded',
+          annotations: [
+            { key: 'Uploaded state', val: 'Solid green border + green tint bg. Filename + filesize shown. "Re-upload" available.', color: 'green' },
+            { key: 'Steps 1 & 2 done', val: 'Show as ✓ checkmarks in progress bar. Driver can tap to re-upload specific doc only.', color: '' },
+            { key: 'Rejection flow', val: 'If rejected later, only that specific doc needs re-upload — not full wizard restart.', color: 'amber' },
+          ],
+          render: () => `
+            <div style="height:100%;background:var(--bg);overflow-y:auto;">
+              <div style="background:var(--navy);padding:20px 16px 24px;">
+                <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.4);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">STEP 3 OF 4</div>
+                <div style="font-size:18px;font-weight:700;color:white;margin-bottom:12px;">Upload Documents</div>
+                <div class="step-bar" style="margin:0;">
+                  <div class="seg seg-done"></div>
+                  <div class="seg seg-done"></div>
+                  <div class="seg seg-curr"></div>
+                  <div class="seg seg-rem"></div>
+                </div>
+              </div>
+              <div style="padding:16px;">
+                <div class="doc-step done" style="margin:0 0 8px;">
+                  <div class="doc-step-num">✓</div>
+                  <div><div class="doc-step-label">Driving License</div><div class="doc-step-sub">dl_front.jpg · 1.8 MB · ✓ Uploaded</div></div>
+                </div>
+                <div class="doc-step done" style="margin:0 0 8px;">
+                  <div class="doc-step-num">✓</div>
+                  <div><div class="doc-step-label">Vehicle RC</div><div class="doc-step-sub">rc_card.jpg · 2.2 MB · ✓ Uploaded</div></div>
+                </div>
+                <div class="doc-step active" style="margin:0 0 16px;">
+                  <div class="doc-step-num">3</div>
+                  <div><div class="doc-step-label">Aadhar Card</div><div class="doc-step-sub">Upload front side</div></div>
+                </div>
+                <div style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:4px;">🪪 Aadhar Card</div>
+                <div style="font-size:12px;color:var(--ts);margin-bottom:14px;">Upload front side with name and DOB visible</div>
+                <div style="border:2px solid var(--green);border-radius:12px;height:90px;display:flex;align-items:center;gap:14px;background:rgba(46,204,113,0.05);padding:0 16px;margin-bottom:12px;">
+                  <span style="font-size:28px;">✅</span>
+                  <div><div style="font-size:14px;font-weight:700;color:var(--green);">aadhar_front.jpg</div><div style="font-size:11px;color:var(--ts);">1.6 MB · Uploaded successfully</div></div>
+                  <div style="margin-left:auto;font-size:11px;color:var(--saffron);font-weight:600;cursor:pointer;">Re-upload</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:10px;padding:0 16px 20px;">
+                <button class="btn btn-ghost" style="flex:1;height:48px;font-size:13px;" onclick="navigate(-1)">← Back</button>
+                <button class="btn btn-g" style="flex:2;height:54px;" onclick="navigate(1)">Continue: Step 4 →</button>
+              </div>
+            </div>
+          `
+        },
+        {
+          id: 'D1-S4', label: 'Verification Pending',
+          annotations: [
+            { key: 'Timeline', val: '24-hour SLA shown explicitly. Sets expectation, reduces support tickets.', color: 'amber' },
+            { key: 'Amber badge', val: '"Under Review" amber chip. Transitions to green "Verified" or red "Action Required" via push.', color: '' },
+            { key: 'No dead-end', val: 'Three useful CTAs: invite friends (earn early), check requirements, contact support.', color: 'green' },
+          ],
+          render: () => `
+            <div style="height:100%;background:var(--bg);display:flex;flex-direction:column;align-items:center;padding:32px 20px 20px;">
+              <div class="pending-badge">⏳</div>
+              <div style="font-family:'Fraunces',serif;font-size:24px;color:var(--navy);text-align:center;margin:16px 0 6px;">Documents Under Review</div>
+              <div style="font-size:13px;color:var(--ts);text-align:center;line-height:1.6;margin-bottom:16px;">Our team is verifying your documents.<br>This usually takes <strong>under 24 hours</strong>.</div>
+              <div class="chip-amber-pill" style="margin-bottom:24px;">⏳ Under Review</div>
+              <div style="background:white;border-radius:14px;padding:16px;width:100%;box-shadow:var(--sh-sm);margin-bottom:16px;">
+                <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:12px;">Documents submitted:</div>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                  <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--tp);"><span style="color:var(--green);">✓</span>Driving License</div>
+                  <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--tp);"><span style="color:var(--green);">✓</span>Vehicle RC</div>
+                  <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--tp);"><span style="color:var(--green);">✓</span>Aadhar Card</div>
+                  <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--tp);"><span style="color:var(--green);">✓</span>Bike Photo</div>
+                </div>
+              </div>
+              <button class="btn btn-g btn-w" onclick="navigate(1)" style="margin-bottom:10px;">▶ Preview Dashboard</button>
+              <button class="btn btn-ghost btn-w" style="height:44px;font-size:13px;">👥 Invite Friends (Earn ₹100)</button>
+            </div>
+          `
+        },
+        {
+          id: 'D1-S5', label: 'Driver Dashboard — Online',
+          annotations: [
+            { key: 'Map: 70% screen', val: 'More map = more spatial awareness of nearby requests. Bottom strip is minimal.', color: '' },
+            { key: 'Online chip', val: 'Green pulsing dot. Tap → Go Offline confirmation dialog (prevents accidental tap).', color: 'green' },
+            { key: 'FAB', val: '+ FAB → Manual Ride Creation. Works offline for walk-up customers.', color: 'amber' },
+          ],
+          statusLight: true,
+          render: () => `
+            <div style="height:100%;position:relative;">
+              <div class="map-area" style="height:100%;">
+                <div class="map-bg"></div>
+                <div class="road road-h road-main" style="top:40%;"></div>
+                <div class="road road-h" style="top:55%;opacity:0.7;"></div>
+                <div class="road road-v road-main" style="left:45%;"></div>
+                <div class="road road-v" style="left:25%;opacity:0.6;"></div>
+                <div class="road road-v" style="left:70%;opacity:0.6;"></div>
+                <div class="rider-marker" style="top:43%;left:47%;">
+                  <div class="rider-dot" style="border-color:var(--green);">🏍️</div>
+                </div>
+                <div style="position:absolute;top:46%;left:49%;width:12px;height:12px;background:var(--green);border-radius:50%;border:2px solid white;transform:translate(-50%,-50%);box-shadow:0 0 8px rgba(46,204,113,0.6);"></div>
+              </div>
+              <!-- Status pills -->
+              <div class="status-pill-wrap">
+                <div class="online-pill">
+                  <span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;box-shadow:0 0 6px rgba(46,204,113,0.7);"></span>
+                  <span style="font-size:12px;font-weight:700;color:white;">ONLINE</span>
+                </div>
+                <div class="earn-pill">💰 ₹384 today</div>
+              </div>
+              <!-- FAB -->
+              <div class="fab" onclick="navigate(1)" title="Create manual ride">+</div>
+              <!-- Bottom nav -->
+              <div class="bottom-nav">
+                <div class="nav-tab active-g"><span class="nav-icon">🏠</span>Dashboard</div>
+                <div class="nav-tab"><span class="nav-icon">💰</span>Earnings</div>
+                <div class="nav-tab"><span class="nav-icon">📅</span>Schedule</div>
+                <div class="nav-tab"><span class="nav-icon">👤</span>Profile</div>
+              </div>
+            </div>
+          `
+        },
+      ]
+    },
+    {
+      id: 'F4', name: 'Ride Request Flow',
+      desc: 'Incoming request → 60s countdown → Accept → Navigate → Active → Complete → Fare summary',
+      steps: [
+        {
+          id: 'D2-S1', label: 'Incoming Ride Request',
+          annotations: [
+            { key: 'Fare = LARGEST', val: '28sp ExtraBold — the driver\'s primary decision factor. Non-negotiable design spec.', color: '' },
+            { key: 'Privacy pre-accept', val: 'Customer shows first name + last initial only. Full details revealed post-accept.', color: 'amber' },
+            { key: 'Expiry = silent', val: 'If 60s expires: logged as "expired" not "rejected". No counter shown. No penalty tone.', color: '' },
+          ],
+          statusLight: true,
+          render: () => `
+            <div style="height:100%;position:relative;background:var(--navy);">
+              <div class="map-area" style="height:100%;opacity:0.5;">
+                <div class="map-bg"></div>
+                <div class="road road-h road-main" style="top:45%;"></div>
+                <div class="road road-v road-main" style="left:40%;"></div>
+              </div>
+              <!-- Full-screen request card -->
+              <div style="position:absolute;inset:0;display:flex;align-items:flex-end;padding:0;">
+                <div style="background:white;border-radius:24px 24px 0 0;padding:18px;width:100%;box-shadow:0 -8px 40px rgba(0,0,0,0.4);">
+                  <div class="sheet-handle"></div>
+                  <!-- Top: countdown + fare -->
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                    <!-- Ring -->
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                      <div style="position:relative;width:58px;height:58px;display:flex;align-items:center;justify-content:center;">
+                        <svg width="58" height="58" viewBox="0 0 58 58" style="transform:rotate(-90deg);position:absolute;">
+                          <circle cx="29" cy="29" r="24" fill="none" stroke="#E5E7EB" stroke-width="5"/>
+                          <circle cx="29" cy="29" r="24" fill="none" stroke="#FF6B00" stroke-width="5" stroke-dasharray="150.8" stroke-dashoffset="50.3" stroke-linecap="round" id="req-ring"/>
+                        </svg>
+                        <span style="font-size:16px;font-weight:800;color:var(--saffron);z-index:1;" id="req-timer">40</span>
+                      </div>
+                      <span style="font-size:10px;color:var(--ts);">seconds</span>
+                    </div>
+                    <!-- Fare -->
+                    <div style="text-align:right;">
+                      <div style="font-size:10px;font-weight:700;color:var(--ts);letter-spacing:1.5px;text-transform:uppercase;">FARE</div>
+                      <div style="font-size:34px;font-weight:800;color:var(--navy);font-variant-numeric:tabular-nums;letter-spacing:-2px;line-height:1;">₹ 52</div>
+                      <div style="font-size:12px;color:var(--ts);margin-top:2px;">4.2 km · ~12 min</div>
+                    </div>
+                  </div>
+                  <div style="height:1px;background:var(--border);margin-bottom:10px;"></div>
+                  <div style="font-size:12px;font-weight:600;color:var(--ts);margin-bottom:10px;">📍 Sec 15 → ESIC Hospital, NIT</div>
+                  <!-- Customer -->
+                  <div style="background:var(--bg);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+                    <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#4A90D9,#2D5FA8);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">👤</div>
+                    <div style="flex:1;">
+                      <div style="font-size:14px;font-weight:700;color:var(--navy);">Amrit K.</div>
+                      <div style="display:flex;gap:8px;margin-top:3px;font-size:11px;color:var(--ts);"><span>💵 Cash</span><span>📍 0.8 km pickup</span></div>
+                    </div>
+                    <div style="background:rgba(231,76,60,0.10);color:var(--red);border:1px solid rgba(231,76,60,0.2);border-radius:4px;padding:3px 8px;font-size:10px;font-weight:700;">2 cancels</div>
+                  </div>
+                  <!-- Buttons -->
+                  <div style="display:flex;gap:10px;">
+                    <button class="btn btn-acc" style="flex:2;" onclick="navigate(1)">✓ ਸਵੀਕਾਰ — Accept</button>
+                    <button class="btn btn-rej" style="flex:1;">✕</button>
+                  </div>
+                  <div style="text-align:center;font-size:10px;color:var(--ts);margin-top:8px;">Expiry = silent pass · no penalty</div>
+                </div>
+              </div>
+              <!-- Bottom nav behind card -->
+              <div class="bottom-nav" style="z-index:1;">
+                <div class="nav-tab active-g"><span class="nav-icon">🏠</span>Dashboard</div>
+                <div class="nav-tab"><span class="nav-icon">💰</span>Earnings</div>
+                <div class="nav-tab"><span class="nav-icon">📅</span>Schedule</div>
+                <div class="nav-tab"><span class="nav-icon">👤</span>Profile</div>
+              </div>
+            </div>
+          `
+        },
+        {
+          id: 'D2-S2', label: 'Customer Details + Navigate',
+          annotations: [
+            { key: 'Full details revealed', val: 'Full name + phone number shown post-accept. Navigation CTA uses system maps.', color: 'green' },
+            { key: '"I\'ve Arrived" GPS lock', val: 'Button enabled only when driver is within ~200m of pickup. Geofence locked.', color: '' },
+            { key: 'Cancel window', val: 'Driver can cancel within 2 min of accepting with no penalty. After 2 min: visible in stats.', color: 'amber' },
+          ],
+          statusLight: true,
+          render: () => `
+            <div style="height:100%;position:relative;">
+              <div class="map-area" style="height:55%;">
+                <div class="map-bg"></div>
+                <div class="road road-h road-main" style="top:45%;"></div>
+                <div class="road road-v road-main" style="left:40%;"></div>
+                <div class="rider-marker" style="top:50%;left:46%;">
+                  <div class="rider-dot" style="border-color:var(--green);">🏍️</div>
+                </div>
+                <div class="map-pin" style="top:50%;left:30%;">
+                  <div class="map-pin-icon" style="background:var(--saffron);"><span>📍</span></div>
+                  <div class="map-pin-dot"></div>
+                </div>
+                <div class="route-line" style="top:calc(48% - 1.5px);left:32%;width:72px;transform:rotate(-2deg);"></div>
+              </div>
+              <!-- Bottom sheet -->
+              <div style="position:absolute;bottom:64px;left:0;right:0;background:white;border-radius:24px 24px 0 0;padding:14px;box-shadow:0 -4px 24px rgba(0,0,0,0.15);">
+                <div class="sheet-handle"></div>
+                <!-- Customer full details (revealed post-accept) -->
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                  <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#4A90D9,#2D5FA8);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;border:2px solid white;box-shadow:var(--sh-sm);">👤</div>
+                  <div style="flex:1;">
+                    <div style="font-size:15px;font-weight:700;color:var(--navy);">Amrit Kaur</div>
+                    <div style="font-size:12px;color:var(--ts);margin-top:2px;">+91 98765 43210 · Sec 15</div>
+                  </div>
+                  <div class="eta-chip">0.8 km</div>
+                </div>
+                <div style="display:flex;gap:8px;margin-bottom:12px;">
+                  <button class="btn btn-dark" style="flex:1;height:40px;font-size:12px;">📞 Call</button>
+                  <button class="btn btn-dark" style="flex:1;height:40px;font-size:12px;">🗺️ Navigate</button>
+                  <button class="btn btn-ghost" style="flex:1;height:40px;font-size:12px;color:var(--red);border-color:rgba(231,76,60,0.3);">✕ Cancel</button>
+                </div>
+                <div style="background:rgba(46,204,113,0.07);border:1px solid rgba(46,204,113,0.2);border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+                  <span style="font-size:16px;">📍</span>
+                  <div><div style="font-size:12px;font-weight:700;color:var(--navy);">Pickup: Sector 15, Faridabad</div><div style="font-size:11px;color:var(--ts);margin-top:2px;">0.8 km away · ~3 min</div></div>
+                </div>
+                <button class="btn btn-g btn-w" onclick="navigate(1)">✓ I've Arrived at Pickup</button>
+              </div>
+              <div class="bottom-nav">
+                <div class="nav-tab active-g"><span class="nav-icon">🏠</span>Dashboard</div>
+                <div class="nav-tab"><span class="nav-icon">💰</span>Earnings</div>
+                <div class="nav-tab"><span class="nav-icon">📅</span>Schedule</div>
+                <div class="nav-tab"><span class="nav-icon">👤</span>Profile</div>
+              </div>
+            </div>
+          `
+        },
+        {
+          id: 'D2-S3', label: 'Active Ride — Driver',
+          annotations: [
+            { key: 'Minimal UI during ride', val: 'Route map + destination only. No distracting cards. Safety first.', color: '' },
+            { key: '"Complete Ride" locked', val: 'Button active only when within ~200m of destination. Geofence prevents early completion.', color: 'green' },
+            { key: 'No-show window', val: 'If customer doesn\'t arrive in 5min: "Customer No-Show" button appears. Enables next request.', color: 'amber' },
+          ],
+          statusLight: true,
+          render: () => `
+            <div style="height:100%;position:relative;">
+              <div class="map-area" style="height:100%;">
+                <div class="map-bg"></div>
+                <div class="road road-h road-main" style="top:40%;"></div>
+                <div class="road road-v road-main" style="left:45%;"></div>
+                <div class="road road-v" style="left:68%;"></div>
+                <div class="rider-marker" style="top:43%;left:48%;">
+                  <div class="rider-dot" style="border-color:var(--green);">🏍️</div>
+                </div>
+                <div class="map-pin" style="top:43%;left:70%;">
+                  <div class="map-pin-icon" style="background:var(--red);"><span>🏥</span></div>
+                  <div class="map-pin-dot"></div>
+                </div>
+                <div class="route-line" style="top:calc(40% - 1px);left:50%;width:100px;"></div>
+                <!-- ETA chip on map -->
+                <div style="position:absolute;top:14px;left:12px;background:white;border-radius:10px;padding:8px 12px;box-shadow:var(--sh-md);">
+                  <div style="font-size:10px;font-weight:700;color:var(--ts);letter-spacing:1px;text-transform:uppercase;">ETA DEST</div>
+                  <div style="font-size:18px;font-weight:800;color:var(--navy);">~6 min</div>
+                </div>
+              </div>
+              <!-- Bottom minimal card -->
+              <div style="position:absolute;bottom:64px;left:0;right:0;background:white;border-radius:24px 24px 0 0;padding:14px;box-shadow:0 -4px 24px rgba(0,0,0,0.15);">
+                <div class="sheet-handle"></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                  <div>
+                    <div style="font-size:13px;font-weight:700;color:var(--navy);">En route: ESIC Hospital, NIT</div>
+                    <div style="font-size:11px;color:var(--ts);margin-top:2px;">Amrit Kaur · 💵 Cash · ₹52</div>
+                  </div>
+                  <div class="chip-green-pill">● Active</div>
+                </div>
+                <button class="btn btn-g btn-w" onclick="navigate(1)">✓ Complete Ride (near destination)</button>
+              </div>
+              <div class="bottom-nav">
+                <div class="nav-tab active-g"><span class="nav-icon">🏠</span>Dashboard</div>
+                <div class="nav-tab"><span class="nav-icon">💰</span>Earnings</div>
+                <div class="nav-tab"><span class="nav-icon">📅</span>Schedule</div>
+                <div class="nav-tab"><span class="nav-icon">👤</span>Profile</div>
+              </div>
+            </div>
+          `
+        },
+        {
+          id: 'D2-S4', label: 'Fare Summary — Commission',
+          annotations: [
+            { key: 'Full transparency', val: '3 rows: Gross fare → Commission deduction → Net earned. No hidden math.', color: '' },
+            { key: 'Subscription variant', val: 'Subscription plan drivers see single row only — full fare, no deduction shown.', color: 'green' },
+            { key: 'Next action', val: 'Immediate CTA to go back online (tap to start earning again). No friction.', color: 'amber' },
+          ],
+          render: () => `
+            <div style="height:100%;background:var(--bg);display:flex;flex-direction:column;align-items:center;padding:28px 20px 0;">
+              <div style="font-size:48px;margin-bottom:8px;animation:pop-in 0.4s var(--ease-spring) 0.1s both;">✅</div>
+              <div style="font-family:'Fraunces',serif;font-size:24px;color:var(--navy);text-align:center;margin-bottom:4px;">ਰਾਈਡ ਪੂਰੀ ਹੋਈ!</div>
+              <div style="font-size:13px;color:var(--ts);text-align:center;margin-bottom:20px;">Ride Complete · ESIC Hospital</div>
+              <!-- Fare breakdown card -->
+              <div style="background:white;border-radius:16px;padding:18px;width:100%;box-shadow:var(--sh-md);margin-bottom:16px;">
+                <div class="comm-row" style="padding:8px 0;">
+                  <span class="comm-label">💰 Fare Collected</span>
+                  <span class="comm-value" style="color:var(--tp);">₹52</span>
+                </div>
+                <div style="height:1px;background:var(--border);"></div>
+                <div class="comm-row" style="padding:8px 0;">
+                  <span class="comm-label">🔻 Commission (15%)</span>
+                  <span class="comm-value" style="color:var(--red);font-size:13px;">−₹7.80</span>
+                </div>
+                <div style="height:1.5px;background:var(--border);margin-bottom:2px;"></div>
+                <div class="comm-row" style="padding:10px 0;">
+                  <span class="comm-label" style="font-weight:700;color:var(--navy);">✓ You Earned</span>
+                  <span class="comm-value" style="color:var(--green);font-size:20px;">₹44.20</span>
+                </div>
+              </div>
+              <!-- Today total -->
+              <div style="background:linear-gradient(160deg,var(--navy),var(--navy-mid));border-radius:14px;padding:14px 18px;width:100%;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">
+                <div>
+                  <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.5);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">TODAY'S TOTAL</div>
+                  <div style="font-size:32px;font-weight:800;color:var(--green);font-variant-numeric:tabular-nums;letter-spacing:-1.5px;">₹ 428</div>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:11px;color:rgba(255,255,255,0.5);">12 rides</div>
+                  <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px;">6 hrs online</div>
+                </div>
+              </div>
+              <button class="btn btn-g btn-w" onclick="navigate(-1)">▶ Go Online Again</button>
+            </div>
+          `
+        },
+      ]
+    },
+    {
+      id: 'F5', name: 'Earnings & Withdrawal',
+      desc: 'Earnings dashboard → Withdrawal → Bank transfer confirmation',
+      steps: [
+        {
+          id: 'D3-S1', label: 'Earnings Dashboard',
+          annotations: [
+            { key: 'Hero number', val: '36sp ExtraBold green — the number drivers care most about. Largest on screen.', color: 'green' },
+            { key: 'T+2 settlement', val: 'Settled vs Pending split clearly shown. Pending = rides from last 48h awaiting bank settlement.', color: '' },
+            { key: '7-day bar chart', val: 'Bars colored green (settled) vs amber (pending). Today\'s bar animated on load.', color: 'amber' },
+          ],
+          render: () => `
+            <div style="height:100%;background:var(--bg);overflow-y:auto;">
+              <div class="earnings-hero">
+                <div class="earn-label">TODAY'S EARNINGS</div>
+                <div class="earn-amount">₹ 428.20</div>
+                <div class="earn-sub">12 rides · 6h 20m online</div>
+                <div style="display:flex;gap:10px;margin-top:16px;">
+                  <div style="flex:1;background:rgba(255,255,255,0.08);border-radius:10px;padding:10px;text-align:center;">
+                    <div style="font-size:11px;color:rgba(255,255,255,0.5);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Settled</div>
+                    <div style="font-size:18px;font-weight:800;color:var(--green);">₹320.40</div>
+                  </div>
+                  <div style="flex:1;background:rgba(255,255,255,0.08);border-radius:10px;padding:10px;text-align:center;">
+                    <div style="font-size:11px;color:rgba(255,255,255,0.5);letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Pending T+2</div>
+                    <div style="font-size:18px;font-weight:800;color:var(--amber);">₹107.80</div>
+                  </div>
+                </div>
+              </div>
+              <!-- Bar chart -->
+              <div style="background:white;padding:16px;margin:0 0 1px;">
+                <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:14px;">This Week</div>
+                <div style="display:flex;align-items:flex-end;gap:8px;height:80px;">
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+                    <div style="flex:1;width:100%;background:var(--green);border-radius:4px 4px 0 0;min-height:20px;" style="height:60%;"></div>
+                    <div style="font-size:9px;color:var(--ts);">M</div>
+                  </div>
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+                    <div style="width:100%;background:var(--green);border-radius:4px 4px 0 0;height:75%;"></div>
+                    <div style="font-size:9px;color:var(--ts);">T</div>
+                  </div>
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+                    <div style="width:100%;background:var(--green);border-radius:4px 4px 0 0;height:45%;"></div>
+                    <div style="font-size:9px;color:var(--ts);">W</div>
+                  </div>
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+                    <div style="width:100%;background:var(--green);border-radius:4px 4px 0 0;height:90%;"></div>
+                    <div style="font-size:9px;color:var(--ts);">T</div>
+                  </div>
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+                    <div style="width:100%;background:var(--green);border-radius:4px 4px 0 0;height:80%;"></div>
+                    <div style="font-size:9px;color:var(--ts);">F</div>
+                  </div>
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+                    <div style="width:100%;background:var(--amber);border-radius:4px 4px 0 0;height:55%;border:2px solid var(--saffron);"></div>
+                    <div style="font-size:9px;color:var(--saffron);font-weight:700;">Today</div>
+                  </div>
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+                    <div style="width:100%;background:var(--border);border-radius:4px 4px 0 0;height:10%;"></div>
+                    <div style="font-size:9px;color:var(--ts);">S</div>
+                  </div>
+                </div>
+              </div>
+              <!-- Withdraw button -->
+              <div style="background:white;padding:14px 16px;margin:1px 0;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                  <div><div style="font-size:11px;font-weight:700;color:var(--ts);letter-spacing:1px;text-transform:uppercase;">AVAILABLE BALANCE</div><div style="font-size:22px;font-weight:800;color:var(--navy);">₹2,847.60</div></div>
+                  <button class="btn btn-g" style="height:44px;font-size:14px;padding:0 20px;" onclick="navigate(1)">Withdraw →</button>
+                </div>
+              </div>
+            </div>
+          `
+        },
+        {
+          id: 'D3-S2', label: 'Withdrawal Screen',
+          annotations: [
+            { key: 'Balance card', val: 'Navy gradient card — matches driver brand. Green available amount = money to withdraw.', color: '' },
+            { key: 'Bank transfer default', val: 'Bank transfer is default. UPI is secondary. Min withdrawal: ₹100.', color: 'green' },
+            { key: 'Processing time', val: 'T+2 banking: funds arrive in 1-2 working days. Shown explicitly to set expectations.', color: 'amber' },
+          ],
+          render: () => `
+            <div style="height:100%;background:var(--bg);overflow-y:auto;">
+              <div class="scr-header" style="background:white;border-bottom:1px solid var(--border);">
+                <button class="back-btn" onclick="navigate(-1)">←</button>
+                <span class="scr-title">Withdraw Earnings</span>
+              </div>
+              <!-- Balance card -->
+              <div style="background:linear-gradient(160deg,var(--navy),var(--navy-mid));margin:16px;border-radius:16px;padding:20px;box-shadow:var(--sh-lg);">
+                <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.5);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">AVAILABLE TO WITHDRAW</div>
+                <div style="font-size:36px;font-weight:800;color:var(--green);font-variant-numeric:tabular-nums;letter-spacing:-2px;line-height:1;">₹ 2,847.60</div>
+                <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:8px;">Pending T+2 not included · Updates in real-time</div>
+              </div>
+              <div style="background:white;margin:0 16px;border-radius:14px;overflow:hidden;box-shadow:var(--sh-sm);">
+                <div style="padding:14px 16px;border-bottom:1px solid var(--border);">
+                  <div style="font-size:11px;font-weight:700;color:var(--ts);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">WITHDRAW TO</div>
+                  <div style="display:flex;align-items:center;gap:10px;padding:10px;background:rgba(255,107,0,0.06);border:1.5px solid rgba(255,107,0,0.2);border-radius:10px;">
+                    <span style="font-size:20px;">🏦</span>
+                    <div><div style="font-size:13px;font-weight:700;color:var(--navy);">State Bank of India</div><div style="font-size:11px;color:var(--ts);">Account ending ×× 4521</div></div>
+                    <span style="margin-left:auto;font-size:12px;color:var(--saffron);font-weight:600;cursor:pointer;">Change</span>
+                  </div>
+                </div>
+                <div style="padding:14px 16px;">
+                  <div style="font-size:11px;font-weight:700;color:var(--ts);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">AMOUNT</div>
+                  <div style="border:1.5px solid var(--saffron);border-radius:8px;padding:0 14px;height:52px;display:flex;align-items:center;box-shadow:0 0 0 3px rgba(255,107,0,0.10);background:white;margin-bottom:8px;">
+                    <span style="font-size:18px;font-weight:700;color:var(--ts);margin-right:6px;">₹</span>
+                    <span style="font-size:18px;font-weight:700;color:var(--navy);">2,847.60</span>
+                    <span style="margin-left:auto;font-size:12px;color:var(--saffron);font-weight:600;cursor:pointer;">Max</span>
+                  </div>
+                  <div style="display:flex;gap:8px;">
+                    <button style="flex:1;height:32px;background:var(--bg);border:1px solid var(--border);border-radius:6px;font-size:12px;font-weight:600;color:var(--ts);cursor:pointer;font-family:Poppins;">₹500</button>
+                    <button style="flex:1;height:32px;background:var(--bg);border:1px solid var(--border);border-radius:6px;font-size:12px;font-weight:600;color:var(--ts);cursor:pointer;font-family:Poppins;">₹1000</button>
+                    <button style="flex:1;height:32px;background:var(--bg);border:1px solid var(--border);border-radius:6px;font-size:12px;font-weight:600;color:var(--ts);cursor:pointer;font-family:Poppins;">₹2000</button>
+                    <button style="flex:1;height:32px;background:rgba(255,107,0,0.1);border:1px solid rgba(255,107,0,0.2);border-radius:6px;font-size:12px;font-weight:700;color:var(--saffron);cursor:pointer;font-family:Poppins;">Full</button>
+                  </div>
+                </div>
+              </div>
+              <div style="margin:12px 16px;padding:10px 14px;background:rgba(243,156,18,0.08);border-radius:10px;border-left:3px solid var(--amber);">
+                <div style="font-size:11px;color:#92400E;line-height:1.5;">⏱ Funds arrive in 1-2 working days via NEFT transfer.</div>
+              </div>
+              <div style="padding:0 16px 20px;">
+                <button class="btn btn-g btn-w" onclick="navigate(1)">Withdraw ₹2,847.60</button>
+              </div>
+            </div>
+          `
+        },
+        {
+          id: 'D3-S3', label: 'Withdrawal Confirmed',
+          annotations: [
+            { key: 'Success animation', val: 'Green checkmark pops in with ease-spring. Reassuring — money is on its way.', color: 'green' },
+            { key: 'Reference number', val: 'Shows transaction reference for support queries. Copyable.', color: '' },
+            { key: 'Next action', val: 'Direct CTA back to Dashboard to keep earning. No dead end.', color: 'amber' },
+          ],
+          render: () => `
+            <div style="height:100%;background:var(--bg);display:flex;flex-direction:column;align-items:center;padding:40px 20px 20px;">
+              <div style="width:80px;height:80px;background:var(--green-10);border-radius:50%;border:2px solid var(--green-30);display:flex;align-items:center;justify-content:center;font-size:36px;margin-bottom:16px;animation:pop-in 0.5s var(--ease-spring) 0.1s both;">✅</div>
+              <div style="font-family:'Fraunces',serif;font-size:26px;color:var(--navy);text-align:center;margin-bottom:6px;">Withdrawal Initiated!</div>
+              <div style="font-size:13px;color:var(--ts);text-align:center;margin-bottom:24px;">Funds will arrive in 1-2 working days</div>
+              <div style="background:white;border-radius:16px;padding:18px;width:100%;box-shadow:var(--sh-md);margin-bottom:16px;">
+                <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);margin-bottom:8px;">
+                  <span style="font-size:13px;color:var(--ts);">Amount</span>
+                  <span style="font-size:16px;font-weight:800;color:var(--green);">₹2,847.60</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:6px 0;">
+                  <span style="font-size:12px;color:var(--ts);">Bank</span>
+                  <span style="font-size:12px;font-weight:600;color:var(--tp);">SBI ×× 4521</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:6px 0;">
+                  <span style="font-size:12px;color:var(--ts);">Reference</span>
+                  <span style="font-family:'JetBrains Mono';font-size:12px;font-weight:600;color:var(--saffron);">CHL-240219-0042</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:6px 0;">
+                  <span style="font-size:12px;color:var(--ts);">Arrives by</span>
+                  <span style="font-size:12px;font-weight:600;color:var(--tp);">Feb 21, 2026 (est.)</span>
+                </div>
+              </div>
+              <button class="btn btn-g btn-w" onclick="navigate(-1)">↩ Back to Dashboard</button>
+            </div>
+          `
+        },
+      ]
+    },
+  ]
+};
+
+/* ============================================================
+   STATE
+============================================================ */
+let currentApp = 'customer';
+let currentFlowIdx = 0;
+let currentStepIdx = 0;
+
+function getCurrentFlows() {
+  return FLOWS[currentApp];
+}
+function getCurrentFlow() {
+  return getCurrentFlows()[currentFlowIdx];
+}
+function getCurrentStep() {
+  return getCurrentFlow().steps[currentStepIdx];
+}
+
+/* ============================================================
+   RENDER ENGINE
+============================================================ */
+function renderSidebar() {
+  const flows = getCurrentFlows();
+  const isDriver = currentApp === 'driver';
+  let html = '';
+  flows.forEach((flow, fi) => {
+    html += `<div class="flow-group">
+      <div class="flow-group-title">${flow.id} · ${flow.name}</div>`;
+    flow.steps.forEach((step, si) => {
+      const isCurrent = fi === currentFlowIdx && si === currentStepIdx;
+      const isDone = fi < currentFlowIdx || (fi === currentFlowIdx && si < currentStepIdx);
+      const cls = isCurrent ? (isDriver ? 'current-d' : 'current') : isDone ? 'done' : '';
+      html += `
+        ${si > 0 ? '<div class="step-connector"></div>' : ''}
+        <div class="step-item ${cls}" onclick="jumpTo(${fi},${si})">
+          <div class="step-dot"></div>
+          <div class="step-label">${step.label}</div>
+        </div>`;
+    });
+    html += '</div>';
+  });
+  document.getElementById('flow-list').innerHTML = html;
+}
+
+function renderScreen() {
+  const step = getCurrentStep();
+  const wrap = document.getElementById('screen-wrap');
+
+  // Remove previous screens
+  const prev = wrap.querySelector('.screen.active');
+  const prevOld = wrap.querySelector('.screen.prev');
+  if (prevOld) prevOld.remove();
+  if (prev) {
+    prev.classList.remove('active');
+    prev.classList.add('prev');
+    setTimeout(() => { if (prev.parentNode) prev.remove(); }, 400);
+  }
+
+  // Create new screen
+  const scr = document.createElement('div');
+  scr.className = 'screen';
+  scr.innerHTML = step.render();
+  wrap.appendChild(scr);
+  // Force reflow
+  scr.offsetHeight;
+  scr.classList.add('active');
+
+  // Status bar
+  const sb = document.getElementById('status-bar');
+  sb.className = 'status-bar' + (step.statusLight ? ' light' : '');
+
+  // Glow
+  const glow = document.getElementById('phone-glow');
+  glow.className = 'phone-glow' + (currentApp === 'driver' ? ' driver-glow' : '');
+}
+
+function renderPanel() {
+  const step = getCurrentStep();
+  const flow = getCurrentFlow();
+  const isDriver = currentApp === 'driver';
+  const accent = isDriver ? 'var(--green)' : 'var(--saffron)';
+
+  document.getElementById('panel-title').textContent = flow.name;
+  document.getElementById('panel-title').style.color = accent;
+  document.getElementById('panel-screen').textContent = step.label;
+
+  let html = '';
+  (step.annotations || []).forEach(a => {
+    html += `<div class="annot-card ${a.color}">
+      <div class="annot-key">${a.key}</div>
+      <div class="annot-val">${a.val}</div>
+    </div>`;
+  });
+  document.getElementById('panel-annotations').innerHTML = html;
+
+  // Progress
+  const totalSteps = getCurrentFlow().steps.length;
+  document.getElementById('panel-progress').textContent =
+    `Screen ${currentStepIdx + 1} of ${totalSteps} in this flow`;
+
+  // Next button
+  const btn = document.getElementById('btn-next');
+  btn.className = 'nav-arr primary' + (isDriver ? ' green-btn' : '');
+
+  const hasNext = currentStepIdx < getCurrentFlow().steps.length - 1;
+  const hasNextFlow = currentFlowIdx < getCurrentFlows().length - 1;
+  if (hasNext) {
+    btn.textContent = 'Next →';
+    btn.disabled = false;
+  } else if (hasNextFlow) {
+    btn.textContent = 'Next Flow →';
+    btn.disabled = false;
+  } else {
+    btn.textContent = '✓ End';
+    btn.disabled = false;
+  }
+
+  // Prev
+  document.getElementById('btn-prev').disabled = (currentFlowIdx === 0 && currentStepIdx === 0);
+}
+
+function renderAll() {
+  // Sidebar pills
+  document.getElementById('pill-c').className = 'toggle-pill' + (currentApp === 'customer' ? ' active-c' : '');
+  document.getElementById('pill-d').className = 'toggle-pill' + (currentApp === 'driver' ? ' active-d' : '');
+  renderSidebar();
+  renderScreen();
+  renderPanel();
+}
+
+/* ============================================================
+   NAVIGATION
+============================================================ */
+function navigate(dir) {
+  const flow = getCurrentFlow();
+  if (dir > 0) {
+    if (currentStepIdx < flow.steps.length - 1) {
+      currentStepIdx++;
+    } else if (currentFlowIdx < getCurrentFlows().length - 1) {
+      currentFlowIdx++;
+      currentStepIdx = 0;
+    }
+  } else {
+    if (currentStepIdx > 0) {
+      currentStepIdx--;
+    } else if (currentFlowIdx > 0) {
+      currentFlowIdx--;
+      currentStepIdx = getCurrentFlow().steps.length - 1;
+    }
+  }
+  renderAll();
+}
+
+function jumpTo(flowIdx, stepIdx) {
+  currentFlowIdx = flowIdx;
+  currentStepIdx = stepIdx;
+  renderAll();
+}
+
+function switchApp(app) {
+  currentApp = app;
+  currentFlowIdx = 0;
+  currentStepIdx = 0;
+  renderAll();
+}
+
+/* ============================================================
+   KEYBOARD
+============================================================ */
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); navigate(1); }
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); navigate(-1); }
+});
+
+/* ============================================================
+   RATING STARS
+============================================================ */
+function rateStar(n) {
+  document.querySelectorAll('.star').forEach((s, i) => {
+    s.classList.toggle('lit', i < n);
+    if (i < n) s.style.animation = 'pop-in 0.2s var(--ease-spring) both';
+    setTimeout(() => s.style.animation = '', 300);
+  });
+}
+
+/* ============================================================
+   RIDE REQUEST COUNTDOWN (demo)
+============================================================ */
+let reqTimer = null;
+function startReqCountdown() {
+  let v = 40;
+  reqTimer = setInterval(() => {
+    v--;
+    const el = document.getElementById('req-timer');
+    const ring = document.getElementById('req-ring');
+    if (!el || !ring) { clearInterval(reqTimer); return; }
+    el.textContent = v;
+    const c = 2 * Math.PI * 24;
+    ring.style.strokeDashoffset = c - (v / 60) * c;
+    if (v <= 10) { ring.style.stroke = 'var(--red)'; el.style.color = 'var(--red)'; }
+    else if (v <= 20) { ring.style.stroke = 'var(--amber)'; el.style.color = 'var(--amber)'; }
+    if (v <= 0) clearInterval(reqTimer);
+  }, 1000);
+}
+
+/* ============================================================
+   INIT
+============================================================ */
+renderAll();
+
+// Observe DOM for ride request screen to start countdown
+const observer = new MutationObserver(() => {
+  if (document.getElementById('req-timer') && !reqTimer) {
+    startReqCountdown();
+  } else if (!document.getElementById('req-timer') && reqTimer) {
+    clearInterval(reqTimer);
+    reqTimer = null;
+  }
+});
+observer.observe(document.getElementById('screen-wrap'), { childList: true, subtree: true });
+</script>
+</body>
+</html>
