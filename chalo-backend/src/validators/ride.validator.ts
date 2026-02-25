@@ -88,6 +88,21 @@ export const rideIdParamSchema = z.object({
 });
 
 /**
+ * SOS alert ID param validation
+ */
+export const sosAlertIdParamSchema = z.object({
+  sosAlertId: z.string().cuid('Invalid SOS alert ID'),
+});
+
+/**
+ * Trigger SOS body validation
+ */
+export const triggerSOSSchema = z.object({
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+});
+
+/**
  * Ride history query params
  */
 export const rideHistoryQuerySchema = z.object({

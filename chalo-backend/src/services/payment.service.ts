@@ -4,10 +4,11 @@
 // ============================================================
 
 import Razorpay from 'razorpay';
-import crypto from 'crypto';
+import crypto, { timingSafeEqual } from 'crypto';
 import prisma from '../config/database';
 import config from '../config';
 import { ApiError } from '../utils/apiError';
+import { withCircuitBreaker } from '../utils/circuitBreaker';
 import logger from '../config/logger';
 import { PaymentStatus, RideStatus } from '@prisma/client';
 
@@ -16,6 +17,15 @@ const razorpay = new Razorpay({
   key_id: config.razorpay.keyId,
   key_secret: config.razorpay.keySecret,
 });
+
+// Wrap Razorpay order creation with circuit breaker
+const createRazorpayOrder = withCircuitBreaker(
+  'razorpay',
+  async (params: { amount: number; currency: string; receipt: string; notes: Record<string, string> }) => {
+    return razorpay.orders.create(params);
+  },
+  { timeout: 15000, resetTimeout: 30000 }
+);
 
 export class PaymentService {
   /**
@@ -48,8 +58,8 @@ export class PaymentService {
     }
 
     try {
-      // Create Razorpay order
-      const order = await razorpay.orders.create({
+      // Create Razorpay order (protected by circuit breaker)
+      const order = await createRazorpayOrder({
         amount: Math.round(ride.finalFare * 100), // Convert to paise
         currency: 'INR',
         receipt: `ride_${rideId}`,
@@ -81,29 +91,66 @@ export class PaymentService {
   }
 
   /**
-   * Verify Razorpay payment signature
+   * Verify Razorpay payment signature (timing-safe)
    * Called after customer completes payment on Android
    */
   async verifyPayment(
     razorpayPaymentId: string,
     razorpayOrderId: string,
     razorpaySignature: string,
-    rideId: string
+    rideId: string,
+    userId: string
   ) {
-    // Verify signature
+    // 1. Fetch ride and validate ownership + order match
+    const ride = await prisma.ride.findUnique({ where: { id: rideId } });
+
+    if (!ride) {
+      throw ApiError.notFound('Ride not found');
+    }
+
+    if (ride.customerId !== userId) {
+      throw ApiError.forbidden('Not authorized to verify this payment');
+    }
+
+    if (ride.razorpayOrderId !== razorpayOrderId) {
+      logger.warn('Payment order mismatch', { rideId, expected: ride.razorpayOrderId, received: razorpayOrderId });
+      throw ApiError.badRequest('Payment order does not match this ride');
+    }
+
+    if (ride.paymentStatus === PaymentStatus.COMPLETED) {
+      throw ApiError.conflict('Payment already completed for this ride');
+    }
+
+    // 2. Verify signature using timing-safe comparison to prevent timing attacks
     const body = `${razorpayOrderId}|${razorpayPaymentId}`;
     const expectedSignature = crypto
       .createHmac('sha256', config.razorpay.keySecret)
       .update(body)
       .digest('hex');
 
-    if (expectedSignature !== razorpaySignature) {
+    // Timing-safe comparison to prevent timing attacks
+    const expectedBuffer = Buffer.from(expectedSignature, 'hex');
+    let providedBuffer: Buffer;
+    try {
+      providedBuffer = Buffer.from(razorpaySignature, 'hex');
+    } catch {
+      throw ApiError.badRequest('Payment verification failed — invalid signature format');
+    }
+
+    if (expectedBuffer.length !== providedBuffer.length) {
+      logger.warn('Payment signature length mismatch', { rideId, razorpayPaymentId });
+      throw ApiError.badRequest('Payment verification failed — invalid signature');
+    }
+
+    const isValidSignature = timingSafeEqual(expectedBuffer, providedBuffer);
+
+    if (!isValidSignature) {
       logger.warn('Payment signature verification failed', { rideId, razorpayPaymentId });
       throw ApiError.badRequest('Payment verification failed — invalid signature');
     }
 
     // Update ride payment status
-    const ride = await prisma.ride.update({
+    const updatedRide = await prisma.ride.update({
       where: { id: rideId },
       data: {
         razorpayPaymentId,
@@ -120,9 +167,9 @@ export class PaymentService {
     logger.info('Payment verified successfully', { rideId, razorpayPaymentId });
 
     return {
-      rideId: ride.id,
-      paymentStatus: ride.paymentStatus,
-      amount: ride.finalFare,
+      rideId: updatedRide.id,
+      paymentStatus: updatedRide.paymentStatus,
+      amount: updatedRide.finalFare,
     };
   }
 
@@ -171,21 +218,44 @@ export class PaymentService {
   }
 
   /**
-   * Handle Razorpay webhook events
+   * Handle Razorpay webhook events (timing-safe signature verification)
    * Razorpay sends payment status updates here
    */
-  async handleWebhook(payload: Record<string, unknown>, signature: string) {
-    // Verify webhook signature
+  async handleWebhook(rawBody: Buffer, signature: string) {
+    // Verify webhook signature using raw body bytes (not re-stringified JSON)
+    if (!config.razorpay.webhookSecret) {
+      logger.error('Webhook secret not configured — rejecting webhook');
+      throw ApiError.internal('Webhook processing unavailable');
+    }
+
     const expectedSignature = crypto
       .createHmac('sha256', config.razorpay.webhookSecret)
-      .update(JSON.stringify(payload))
+      .update(rawBody)
       .digest('hex');
 
-    if (expectedSignature !== signature) {
+    // Timing-safe comparison to prevent timing attacks
+    const expectedBuffer = Buffer.from(expectedSignature, 'hex');
+    let providedBuffer: Buffer;
+    try {
+      providedBuffer = Buffer.from(signature, 'hex');
+    } catch {
+      throw ApiError.unauthorized('Invalid webhook signature format');
+    }
+
+    if (expectedBuffer.length !== providedBuffer.length) {
+      logger.warn('Invalid webhook signature length');
+      throw ApiError.unauthorized('Invalid webhook signature');
+    }
+
+    const isValidSignature = timingSafeEqual(expectedBuffer, providedBuffer);
+
+    if (!isValidSignature) {
       logger.warn('Invalid webhook signature');
       throw ApiError.unauthorized('Invalid webhook signature');
     }
 
+    // Parse raw body into JSON after signature verification
+    const payload = JSON.parse(rawBody.toString()) as Record<string, unknown>;
     const event = payload.event as string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const paymentEntity = (payload as any)?.payload?.payment?.entity;
@@ -197,13 +267,13 @@ export class PaymentService {
 
     switch (event) {
       case 'payment.captured': {
-        // Payment successful — update ride
+        // Payment successful — update ride only if not already completed (idempotent)
         const orderId = paymentEntity.order_id;
         const ride = await prisma.ride.findFirst({
           where: { razorpayOrderId: orderId },
         });
 
-        if (ride) {
+        if (ride && ride.paymentStatus !== PaymentStatus.COMPLETED) {
           await prisma.ride.update({
             where: { id: ride.id },
             data: {
@@ -212,6 +282,8 @@ export class PaymentService {
             },
           });
           logger.info('Webhook: payment captured', { rideId: ride.id });
+        } else if (ride) {
+          logger.info('Webhook: payment.captured ignored — already completed', { rideId: ride.id });
         }
         break;
       }
@@ -222,12 +294,15 @@ export class PaymentService {
           where: { razorpayOrderId: orderId },
         });
 
-        if (ride) {
+        // Never overwrite a COMPLETED payment — Razorpay can send events out of order
+        if (ride && ride.paymentStatus !== PaymentStatus.COMPLETED) {
           await prisma.ride.update({
             where: { id: ride.id },
             data: { paymentStatus: PaymentStatus.FAILED },
           });
           logger.warn('Webhook: payment failed', { rideId: ride.id });
+        } else if (ride) {
+          logger.warn('Webhook: payment.failed ignored — payment already completed', { rideId: ride.id });
         }
         break;
       }

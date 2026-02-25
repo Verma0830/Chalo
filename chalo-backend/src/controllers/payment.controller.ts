@@ -32,13 +32,15 @@ export class PaymentController {
    */
   async verifyPayment(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      const userId = (req as AuthenticatedRequest).user.id;
       const input = req.body as VerifyPaymentInput;
 
       const result = await paymentService.verifyPayment(
         input.razorpayPaymentId,
         input.razorpayOrderId,
         input.razorpaySignature,
-        input.rideId
+        input.rideId,
+        userId
       );
 
       ApiResponse.success(res, result, 'Payment verified');
@@ -54,7 +56,9 @@ export class PaymentController {
   async handleWebhook(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const signature = req.headers['x-razorpay-signature'] as string;
-      const result = await paymentService.handleWebhook(req.body, signature);
+      // Use raw body bytes for signature verification (not re-stringified JSON)
+      const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from(JSON.stringify(req.body));
+      const result = await paymentService.handleWebhook(rawBody, signature);
       ApiResponse.success(res, result, 'Webhook received');
     } catch (error) {
       next(error);

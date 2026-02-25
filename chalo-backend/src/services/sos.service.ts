@@ -35,6 +35,11 @@ export class SOSService {
       throw ApiError.notFound('Ride not found');
     }
 
+    // Verify the caller is a participant in this ride
+    if (ride.customerId !== userId && ride.driverId !== userId) {
+      throw ApiError.forbidden('Only ride participants can trigger SOS');
+    }
+
     const activeStatuses: RideStatus[] = [
       RideStatus.DRIVER_ASSIGNED,
       RideStatus.DRIVER_ARRIVED,
@@ -165,13 +170,13 @@ export class SOSService {
    * Auto-resolve all active SOS alerts for a completed ride
    */
   async autoResolveForRide(rideId: string): Promise<void> {
-    const activeAlerts = await prisma.sOSAlert.findMany({
+    // Batch update all active SOS alerts for this ride (instead of sequential loop)
+    await prisma.sOSAlert.updateMany({
       where: { rideId, status: SOSStatus.ACTIVE },
+      data: { status: SOSStatus.AUTO_RESOLVED, resolvedAt: new Date() },
     });
 
-    for (const alert of activeAlerts) {
-      await this.resolveSOS(alert.id, alert.userId, true);
-    }
+    logger.info('Auto-resolved all SOS alerts for ride', { rideId });
   }
 }
 

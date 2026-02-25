@@ -2,14 +2,15 @@
 // Tests — ApiError custom error class
 // ============================================================
 
-import { ApiError } from '../../utils/apiError';
+import { ApiError, ErrorCode } from '../../utils/apiError';
 
 describe('ApiError', () => {
   describe('constructor', () => {
     it('creates an error with the correct properties', () => {
-      const err = new ApiError(400, 'Bad request', ['field required']);
+      const err = new ApiError(400, 'Bad request', ErrorCode.VALIDATION_ERROR, ['field required']);
       expect(err.statusCode).toBe(400);
       expect(err.message).toBe('Bad request');
+      expect(err.code).toBe(ErrorCode.VALIDATION_ERROR);
       expect(err.errors).toEqual(['field required']);
       expect(err.isOperational).toBe(true);
     });
@@ -36,17 +37,20 @@ describe('ApiError', () => {
       const err = ApiError.badRequest();
       expect(err.statusCode).toBe(400);
       expect(err.message).toBe('Bad Request');
+      expect(err.code).toBe(ErrorCode.VALIDATION_ERROR);
     });
 
-    it('badRequest() accepts custom message and errors', () => {
-      const err = ApiError.badRequest('Validation failed', [{ field: 'phone' }]);
+    it('badRequest() accepts custom message, code, and errors', () => {
+      const err = ApiError.badRequest('Validation failed', ErrorCode.VALIDATION_ERROR, [{ field: 'phone' }]);
       expect(err.message).toBe('Validation failed');
+      expect(err.code).toBe(ErrorCode.VALIDATION_ERROR);
       expect(err.errors).toHaveLength(1);
     });
 
     it('unauthorized() returns 401', () => {
       const err = ApiError.unauthorized();
       expect(err.statusCode).toBe(401);
+      expect(err.code).toBe(ErrorCode.UNAUTHORIZED);
       expect(err.isOperational).toBe(true);
     });
 

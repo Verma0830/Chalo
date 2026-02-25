@@ -7,7 +7,7 @@
 import prisma from '../config/database';
 import config from '../config';
 import CONSTANTS from '../utils/constants';
-import { calculateBaseFare, applySurge, calculateCommission } from '../utils/helpers';
+import { calculateBaseFare, applySurge, calculateCommission, haversineDistance } from '../utils/helpers';
 import { FareEstimate, Location } from '../types';
 import logger from '../config/logger';
 
@@ -26,31 +26,27 @@ export class FareService {
     // Fetch current config from DB (allows runtime changes without redeploy)
     const runtimeConfig = await this.getRuntimeConfig();
 
-    // Calculate base fare
-    const distanceKm = routeDetails.distanceKm;
-    const durationMins = routeDetails.durationMins;
-    const baseFare = calculateBaseFare(
-      distanceKm,
-      durationMins,
-      runtimeConfig.baseFarePerKm,
-      runtimeConfig.baseFarePerMin
-    );
+    // Compute each component once — no duplicate arithmetic
+    const { distanceKm, durationMins } = routeDetails;
 
-    // Check surge
     let surgeMultiplier = 1.0;
     if (runtimeConfig.surgeEnabled) {
       surgeMultiplier = await this.calculateSurgeMultiplier(pickup);
     }
 
-    const distanceFare = distanceKm * runtimeConfig.baseFarePerKm;
-    const timeFare = durationMins * runtimeConfig.baseFarePerMin;
+    // distanceFare and timeFare are computed here (and only here) for both
+    // the baseFare total and the itemised breakdown in the return value.
+    const distanceFare = Math.round(distanceKm * runtimeConfig.baseFarePerKm);
+    const timeFare = Math.round(durationMins * runtimeConfig.baseFarePerMin);
+    const rawBase = distanceFare + timeFare + CONSTANTS.BOOKING_FEE;
+    const baseFare = Math.max(rawBase, CONSTANTS.MIN_FARE);
     const surgeAmount = surgeMultiplier > 1 ? Math.round(baseFare * (surgeMultiplier - 1)) : 0;
     const totalFare = applySurge(baseFare, surgeMultiplier);
 
     return {
-      baseFare: Math.round(baseFare),
-      distanceFare: Math.round(distanceFare),
-      timeFare: Math.round(timeFare),
+      baseFare,
+      distanceFare,
+      timeFare,
       surgeMultiplier,
       surgeAmount,
       totalFare,
@@ -134,9 +130,7 @@ export class FareService {
     drop: Location
   ): Promise<{ distanceKm: number; durationMins: number; polyline: string }> {
     try {
-      // TODO: Integrate Google Maps Directions API
-      // For now, use Haversine approximation with a road factor
-      const { haversineDistance } = await import('../utils/helpers');
+      // Use haversineDistance — static import, not a dynamic require
       const straightLineKm = haversineDistance(
         pickup.lat,
         pickup.lng,
@@ -162,10 +156,39 @@ export class FareService {
   }
 
   /**
-   * Fetch runtime-configurable business rules from DB
+   * In-memory cache for runtime config (avoids DB query on every fare estimate)
+   * Refreshes every 60 seconds
+   */
+  private configCache: {
+    data: { baseFarePerKm: number; baseFarePerMin: number; commissionPercentage: number; surgeEnabled: boolean };
+    expiresAt: number;
+  } | null = null;
+  private static CONFIG_CACHE_TTL_MS = 60_000; // 1 minute
+
+  /**
+   * Fetch runtime-configurable business rules from DB (with in-memory cache)
    * Falls back to env/defaults if DB config not found
    */
   private async getRuntimeConfig(): Promise<{
+    baseFarePerKm: number;
+    baseFarePerMin: number;
+    commissionPercentage: number;
+    surgeEnabled: boolean;
+  }> {
+    // Return cached config if still valid
+    if (this.configCache && Date.now() < this.configCache.expiresAt) {
+      return this.configCache.data;
+    }
+
+    const data = await this.fetchRuntimeConfig();
+    this.configCache = { data, expiresAt: Date.now() + FareService.CONFIG_CACHE_TTL_MS };
+    return data;
+  }
+
+  /**
+   * Actually fetch config from DB
+   */
+  private async fetchRuntimeConfig(): Promise<{
     baseFarePerKm: number;
     baseFarePerMin: number;
     commissionPercentage: number;

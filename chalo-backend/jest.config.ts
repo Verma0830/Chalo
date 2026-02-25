@@ -28,7 +28,14 @@ const config: Config = {
     '^@utils/(.*)$': '<rootDir>/src/utils/$1',
     '^@validators/(.*)$': '<rootDir>/src/validators/$1',
     '^@types/(.*)$': '<rootDir>/src/types/$1',
+    // Map uuid to CommonJS version for Jest compatibility
+    '^uuid$': require.resolve('uuid'),
   },
+  // Transform uuid and other ESM-only modules
+  transformIgnorePatterns: [
+    'node_modules/(?!(uuid)/)',
+  ],
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/**/*.d.ts',

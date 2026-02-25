@@ -11,6 +11,8 @@ export const CONSTANTS = {
   MAX_DRIVER_SEARCH_TIME_SECS: 120,
   DRIVER_ARRIVED_RADIUS_METERS: 200,     // "I've Arrived" activates within 200m
   SCHEDULED_RIDE_REMINDER_MINS: 30,
+  DRIVER_SEARCH_MAX_CANDIDATES: 10,      // Max drivers to consider for matching
+  DRIVER_ACCEPT_TIMEOUT_SECS: 30,        // Time for driver to accept before trying next
 
   // --- Fare ---
   MIN_FARE: 30,                           // ₹30 minimum fare
@@ -53,6 +55,20 @@ export const CONSTANTS = {
   // --- Rating ---
   MIN_RATING: 1,
   MAX_RATING: 5,
+
+  // --- Request Limits ---
+  MAX_BODY_SIZE_API: '100kb',             // Default API body limit
+  MAX_BODY_SIZE_UPLOAD: '5mb',            // File upload body limit
+
+  // --- Timeouts (ms) ---
+  GOOGLE_MAPS_TIMEOUT_MS: 10000,          // Google Maps API timeout
+  RAZORPAY_TIMEOUT_MS: 15000,             // Razorpay API timeout
+  DEFAULT_API_TIMEOUT_MS: 30000,          // Generic API timeout
+
+  // --- Circuit Breaker ---
+  CIRCUIT_BREAKER_THRESHOLD_PERCENT: 50,
+  CIRCUIT_BREAKER_RESET_MS: 30000,
+  CIRCUIT_BREAKER_MIN_REQUESTS: 5,
 
   // --- Platform Config Keys (in DB) ---
   CONFIG_KEYS: {

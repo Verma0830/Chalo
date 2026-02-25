@@ -43,14 +43,22 @@ export const config = {
 
   // --- Razorpay ---
   razorpay: {
-    keyId: requireEnv('RAZORPAY_KEY_ID', 'rzp_test_placeholder'),
-    keySecret: requireEnv('RAZORPAY_KEY_SECRET', 'placeholder_secret'),
-    webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET || '',
+    keyId: process.env.NODE_ENV === 'production'
+      ? requireEnv('RAZORPAY_KEY_ID')
+      : optionalEnv('RAZORPAY_KEY_ID', 'rzp_test_placeholder'),
+    keySecret: process.env.NODE_ENV === 'production'
+      ? requireEnv('RAZORPAY_KEY_SECRET')
+      : optionalEnv('RAZORPAY_KEY_SECRET', 'placeholder_secret'),
+    webhookSecret: process.env.NODE_ENV === 'production'
+      ? requireEnv('RAZORPAY_WEBHOOK_SECRET')
+      : optionalEnv('RAZORPAY_WEBHOOK_SECRET', ''),
   },
 
   // --- Google Maps ---
   googleMaps: {
-    apiKey: requireEnv('GOOGLE_MAPS_API_KEY', 'placeholder_key'),
+    apiKey: process.env.NODE_ENV === 'production'
+      ? requireEnv('GOOGLE_MAPS_API_KEY')
+      : optionalEnv('GOOGLE_MAPS_API_KEY', 'placeholder_key'),
   },
 
   // --- Business Rules (defaults — overridden by PlatformConfig DB table at runtime) ---

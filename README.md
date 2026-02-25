@@ -38,8 +38,10 @@ Chalo/
 │   │   └── __tests__/      # Unit tests (Jest + ts-jest)
 │   ├── .env.example        # Required environment variables template
 │   ├── jest.config.ts
+│   ├── jest.setup.ts         # Global test mocks (uuid, metrics, rate limiter)
 │   ├── package.json
-│   └── tsconfig.json
+│   ├── tsconfig.json          # IDE config (VS Code, noEmit, includes test files)
+│   └── tsconfig.build.json    # Build config (compilation, rootDir: ./src)
 │
 ├── docs/
 │   ├── design/             # All UI/UX design files
@@ -80,7 +82,9 @@ Chalo/
 | Validation | Zod (every endpoint) |
 | Logging | Winston (JSON prod / colorized dev) |
 | Security | Helmet, CORS, HPP, per-endpoint rate limiting |
-| Testing | Jest + ts-jest (135 tests, 100% passing) |
+| Testing | Jest + ts-jest (154 tests, 8 suites, 100% passing) |
+| Circuit Breaker | opossum (Razorpay API protection) |
+| Metrics | prom-client (Prometheus, custom business metrics) |
 
 ---
 
@@ -160,7 +164,7 @@ GOOGLE_MAPS_API_KEY=
 npm run dev            # Start dev server (hot reload)
 npm run build          # Compile TypeScript → dist/
 npm run lint           # ESLint
-npm test               # Run all 135 unit tests
+npm test               # Run all 154 tests (unit + integration)
 npm run db:studio      # Open Prisma Studio (DB GUI)
 npm run db:migrate     # Run new migrations
 npm run db:seed        # Seed/reseed platform config
@@ -206,6 +210,27 @@ All design assets are in [`docs/design/`](docs/design/):
 | `chalo-component-library.html` | Reusable UI components |
 | `chalo-spec-sheet.html` | Developer handoff specs |
 | `chalo-design-tokens.json` | Design tokens (for Android theming) |
+
+---
+
+## Security & Reliability
+
+All 25 security/performance/reliability findings have been resolved. Key protections:
+
+| Feature | Implementation |
+|---|---|
+| OTP security | `crypto.randomInt()` + SHA-256 hashed storage |
+| Webhook integrity | Raw body HMAC verification + timing-safe comparison |
+| Payment validation | Ride ownership + order association + duplicate checks |
+| Secret management | `requireEnv()` in production + startup guards |
+| Circuit breaker | `opossum` on Razorpay API calls |
+| Race conditions | `prisma.$transaction()` for ride creation + OTP verification |
+| Rate limiting | Redis-backed, per-endpoint, trust proxy enabled |
+| Idempotency | User-scoped cache keys (Redis, 24h TTL) |
+| Metrics | Prometheus via `/metrics` (API key protected in production) |
+| Observability | Request ID tracing, structured JSON logging (Winston) |
+
+See [SECURITY_PERFORMANCE_REVIEW.md](SECURITY_PERFORMANCE_REVIEW.md) for full details and [CODE_REVIEW.md](CODE_REVIEW.md) for the complete review.
 
 ---
 

@@ -4,10 +4,12 @@
 // ============================================================
 
 import { Router } from 'express';
+import express from 'express';
 import { rideController } from '../controllers/ride.controller';
 import { authenticate, authorize } from '../middleware/auth';
 import { validateBody, validateParams, validateQuery } from '../middleware/validate';
 import { rideRateLimiter } from '../middleware/rateLimiter';
+import { idempotencyMiddleware } from '../middleware/idempotency';
 import {
   fareEstimateSchema,
   createRideSchema,
@@ -16,6 +18,8 @@ import {
   cancelRideSchema,
   rideIdParamSchema,
   rideHistoryQuerySchema,
+  triggerSOSSchema,
+  sosAlertIdParamSchema,
 } from '../validators/ride.validator';
 
 const router = Router();
@@ -29,18 +33,21 @@ router.use(authenticate);
 
 router.post(
   '/fare-estimate',
+  express.json({ limit: '10kb' }), // Strict body limit for fare estimates
   validateBody(fareEstimateSchema),
   rideController.getFareEstimate.bind(rideController)
 );
 
 // -------------------------------------------------------
-// Ride Creation
+// Ride Creation (with idempotency protection)
 // -------------------------------------------------------
 
 // On-demand ride
 router.post(
   '/',
+  express.json({ limit: '10kb' }), // Strict body limit
   rideRateLimiter,
+  idempotencyMiddleware, // Prevent duplicate rides on retry
   authorize('CUSTOMER'),
   validateBody(createRideSchema),
   rideController.createRide.bind(rideController)
@@ -49,7 +56,9 @@ router.post(
 // Scheduled ride
 router.post(
   '/schedule',
+  express.json({ limit: '10kb' }),
   rideRateLimiter,
+  idempotencyMiddleware,
   authorize('CUSTOMER'),
   validateBody(scheduleRideSchema),
   rideController.createScheduledRide.bind(rideController)
@@ -82,12 +91,23 @@ router.get(
 );
 
 // -------------------------------------------------------
+// Ride Tracking (real-time location)
+// -------------------------------------------------------
+
+router.get(
+  '/:rideId/location',
+  validateParams(rideIdParamSchema),
+  rideController.getRideLocation.bind(rideController)
+);
+
+// -------------------------------------------------------
 // Ride Actions
 // -------------------------------------------------------
 
 // Cancel ride
 router.post(
   '/:rideId/cancel',
+  express.json({ limit: '5kb' }),
   authorize('CUSTOMER'),
   validateParams(rideIdParamSchema),
   validateBody(cancelRideSchema),
@@ -97,6 +117,7 @@ router.post(
 // Rate ride
 router.post(
   '/:rideId/rate',
+  express.json({ limit: '5kb' }),
   authorize('CUSTOMER'),
   validateParams(rideIdParamSchema),
   validateBody(rateRideSchema),
@@ -110,13 +131,17 @@ router.post(
 // Trigger SOS
 router.post(
   '/:rideId/sos',
+  express.json({ limit: '5kb' }),
   validateParams(rideIdParamSchema),
+  validateBody(triggerSOSSchema),
   rideController.triggerSOS.bind(rideController)
 );
 
 // Resolve SOS
 router.post(
   '/sos/:sosAlertId/resolve',
+  express.json({ limit: '5kb' }),
+  validateParams(sosAlertIdParamSchema),
   rideController.resolveSOS.bind(rideController)
 );
 

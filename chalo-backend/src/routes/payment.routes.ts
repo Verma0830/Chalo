@@ -3,6 +3,7 @@
 // ============================================================
 
 import { Router } from 'express';
+import express from 'express';
 import { paymentController } from '../controllers/payment.controller';
 import { authenticate } from '../middleware/auth';
 import { validateBody } from '../middleware/validate';
@@ -41,6 +42,7 @@ router.post(
 router.post(
   '/webhook',
   webhookRateLimiter,
+  express.raw({ type: 'application/json' }),
   paymentController.handleWebhook.bind(paymentController)
 );
 

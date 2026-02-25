@@ -95,6 +95,22 @@ export class RideController {
   }
 
   /**
+   * GET /rides/:rideId/location
+   * Get real-time ride location (driver's current position)
+   */
+  async getRideLocation(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as AuthenticatedRequest).user.id;
+      const { rideId } = req.params;
+
+      const location = await rideService.getRideLocation(rideId, userId);
+      ApiResponse.success(res, location);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * GET /rides/history
    * Get ride history with pagination
    */

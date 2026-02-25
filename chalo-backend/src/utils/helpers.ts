@@ -3,6 +3,7 @@
 // Pure functions used across the application
 // ============================================================
 
+import crypto from 'crypto';
 import { PaginationQuery } from '../types';
 import CONSTANTS from './constants';
 
@@ -107,7 +108,9 @@ export function paginationToSkip(pagination: PaginationQuery): number {
 export function generateOTP(length: number = CONSTANTS.OTP_LENGTH): string {
   const min = Math.pow(10, length - 1);
   const max = Math.pow(10, length) - 1;
-  return String(Math.floor(min + Math.random() * (max - min + 1)));
+  const range = max - min + 1;
+  const randomValue = crypto.randomInt(range);
+  return String(min + randomValue);
 }
 
 /**

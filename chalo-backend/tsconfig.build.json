@@ -4,15 +4,20 @@
     "module": "commonjs",
     "lib": ["ES2022"],
     "types": ["node", "jest"],
-    "noEmit": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "composite": true,
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "noImplicitReturns": false,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "moduleResolution": "node",
     "baseUrl": ".",
@@ -29,6 +34,6 @@
       "@types/*": ["src/types/*"]
     }
   },
-  "include": ["src/**/*.ts", "jest.setup.ts", "jest.config.ts"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts"]
 }

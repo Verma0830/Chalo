@@ -1,7 +1,7 @@
 # Chalo — Development Roadmap & Next Steps
 
 > Last updated: February 2026  
-> Backend: ✅ Complete (135 tests passing, 0 errors)  
+> Backend: ✅ Complete (154 tests passing, 0 TypeScript errors, 25/25 security findings resolved)  
 > Database: ⬜ Not configured  
 > Customer App: ⬜ Not started  
 > Driver App: ⬜ Not started  
@@ -14,12 +14,14 @@
 |---|---|---|
 | Backend API (Node.js + Express) | ✅ Done | All 20 endpoints scaffolded |
 | Database schema (Prisma + PostgreSQL) | ✅ Done | 15 tables, 11 enums, PostGIS |
-| Auth service (Firebase OTP) | ✅ Done | Needs DB to test end-to-end |
-| Fare / ride services | ✅ Done | Complete business logic |
-| Payment service (Razorpay) | ✅ Done | UPI + cash + webhooks |
+| Auth service (Firebase OTP) | ✅ Done | Hashed OTP storage, transactional verification |
+| Fare / ride services | ✅ Done | Config caching, transactional ride creation |
+| Payment service (Razorpay) | ✅ Done | Raw body webhooks, circuit breaker, ride-order checks |
 | Notifications (FCM) | ✅ Done | Push + in-app |
-| SOS service | ✅ Done | Hold-to-trigger, auto-resolve |
-| Unit tests | ✅ Done | 135/135 passing |
+| SOS service | ✅ Done | Participant-verified, batch auto-resolve |
+| Security review | ✅ Done | 25/25 findings fixed (see SECURITY_PERFORMANCE_REVIEW.md) |
+| Unit + integration tests | ✅ Done | 154/154 passing (8 suites) |
+| TypeScript strict mode | ✅ Done | 0 errors, dual tsconfig (IDE + build) |
 | PostgreSQL database | ⬜ Pending | Step 1 below |
 | Customer Android app | ⬜ Pending | Step 2 below |
 | Driver Android app | ⬜ Pending | Step 3 below |

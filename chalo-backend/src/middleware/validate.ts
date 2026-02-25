@@ -5,7 +5,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { ZodSchema, ZodError } from 'zod';
-import { ApiError } from '../utils/apiError';
+import { ApiError, ErrorCode } from '../utils/apiError';
 
 type ValidationTarget = 'body' | 'params' | 'query';
 
@@ -35,7 +35,7 @@ export function validate(schema: ZodSchema, target: ValidationTarget = 'body') {
           code: err.code,
         }));
 
-        next(ApiError.badRequest('Validation failed', formattedErrors));
+        next(ApiError.badRequest('Validation failed', ErrorCode.VALIDATION_ERROR, formattedErrors));
         return;
       }
 

@@ -5,11 +5,21 @@
 
 import prisma from '../config/database';
 import { ApiError } from '../utils/apiError';
-import { generateOTP } from '../utils/helpers';
+import { generateOTP, maskPhone } from '../utils/helpers';
 import CONSTANTS from '../utils/constants';
+import config from '../config';
 import logger from '../config/logger';
+import crypto from 'crypto';
 import { UserRole } from '@prisma/client';
 import { SendOTPInput, VerifyOTPInput, CompleteProfileInput } from '../validators/auth.validator';
+
+/**
+ * Hash OTP with SHA-256 before storing in database.
+ * Prevents OTP exposure from database breaches.
+ */
+function hashOTP(otp: string): string {
+  return crypto.createHash('sha256').update(otp).digest('hex');
+}
 
 export class AuthService {
   /**
@@ -38,18 +48,21 @@ export class AuthService {
     const otpCode = generateOTP();
     const expiresAt = new Date(Date.now() + CONSTANTS.OTP_EXPIRY_MINS * 60 * 1000);
 
-    // Store OTP
+    // Store OTP (hashed to prevent exposure from DB breaches)
     await prisma.oTPVerification.create({
       data: {
         phone,
-        otpCode,
+        otpCode: hashOTP(otpCode),
         expiresAt,
       },
     });
 
-    // TODO: In production, send OTP via Firebase Auth or SMS provider (MSG91, Twilio)
-    // For now, log it (dev only)
-    logger.info(`OTP for ${phone}: ${otpCode} (expires: ${expiresAt.toISOString()})`);
+    // Log OTP only in development — never in production
+    if (config.isDev) {
+      logger.debug(`[DEV] OTP for ${phone}: ${otpCode}`);
+    } else {
+      logger.info(`OTP sent to ${maskPhone(phone)} (expires: ${expiresAt.toISOString()})`);
+    }
 
     return {
       message: 'OTP sent successfully',
@@ -72,21 +85,47 @@ export class AuthService {
   }> {
     const { phone, otp } = input;
 
-    // Find the most recent valid OTP for this phone
-    const otpRecord = await prisma.oTPVerification.findFirst({
-      where: {
-        phone,
-        otpCode: otp,
-        verified: false,
-        expiresAt: { gte: new Date() },
-      },
-      orderBy: { createdAt: 'desc' },
+    // Hash incoming OTP to compare against stored hash
+    const hashedOtp = hashOTP(otp);
+
+    // Use transaction for atomic check-and-update (prevents race conditions)
+    const otpRecord = await prisma.$transaction(async (tx) => {
+      const record = await tx.oTPVerification.findFirst({
+        where: {
+          phone,
+          otpCode: hashedOtp,
+          verified: false,
+          expiresAt: { gte: new Date() },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (!record) return null;
+
+      if (record.attempts >= CONSTANTS.MAX_OTP_ATTEMPTS) {
+        return 'MAX_ATTEMPTS' as const;
+      }
+
+      // Atomically mark as verified
+      await tx.oTPVerification.update({
+        where: { id: record.id },
+        data: {
+          verified: true,
+          attempts: { increment: 1 },
+        },
+      });
+
+      return record;
     });
+
+    if (otpRecord === 'MAX_ATTEMPTS') {
+      throw ApiError.tooManyRequests('Maximum OTP attempts exceeded. Request a new OTP.');
+    }
 
     if (!otpRecord) {
       // Check if expired vs wrong code
       const expiredOTP = await prisma.oTPVerification.findFirst({
-        where: { phone, otpCode: otp, verified: false },
+        where: { phone, otpCode: hashedOtp, verified: false },
         orderBy: { createdAt: 'desc' },
       });
 
@@ -97,30 +136,13 @@ export class AuthService {
       throw ApiError.badRequest('Invalid OTP. Please check and try again.');
     }
 
-    // Check attempts
-    if (otpRecord.attempts >= CONSTANTS.MAX_OTP_ATTEMPTS) {
-      throw ApiError.tooManyRequests('Maximum OTP attempts exceeded. Request a new OTP.');
-    }
+    // Atomically find or create user — prevents UniqueConstraintError on concurrent
+    // requests for the same phone (e.g., two OTPs both verified in the same millisecond)
+    const [user, isNewUser] = await prisma.$transaction(async (tx) => {
+      const existing = await tx.user.findUnique({ where: { phone } });
+      if (existing) return [existing, false] as const;
 
-    // Mark OTP as verified
-    await prisma.oTPVerification.update({
-      where: { id: otpRecord.id },
-      data: {
-        verified: true,
-        attempts: { increment: 1 },
-      },
-    });
-
-    // Check if user exists
-    let user = await prisma.user.findUnique({
-      where: { phone },
-    });
-
-    let isNewUser = false;
-
-    if (!user) {
-      // Create new user as CUSTOMER (default role)
-      user = await prisma.user.create({
+      const created = await tx.user.create({
         data: {
           phone,
           role: UserRole.CUSTOMER,
@@ -129,12 +151,12 @@ export class AuthService {
           },
         },
       });
-      isNewUser = true;
 
-      logger.info(`New user created: ${phone}`, { userId: user.id });
-    }
+      logger.info(`New user created: ${phone}`, { userId: created.id });
+      return [created, true] as const;
+    });
 
-    // Update last login
+    // Update last login (outside user-creation transaction — non-critical)
     await prisma.user.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
@@ -275,6 +297,22 @@ export class AuthService {
       where: { userId },
       data,
     });
+  }
+  /**
+   * Clean up expired and old verified OTP records (L3)
+   * Should be called periodically (e.g., daily cron or startup)
+   */
+  async cleanupExpiredOTPs(): Promise<number> {
+    const result = await prisma.oTPVerification.deleteMany({
+      where: {
+        OR: [
+          { expiresAt: { lt: new Date() } },
+          { verified: true, createdAt: { lt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+        ],
+      },
+    });
+    logger.info(`Cleaned up ${result.count} expired OTP records`);
+    return result.count;
   }
 }
 
