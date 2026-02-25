@@ -641,14 +641,19 @@ The home screen vehicle selector must be built as a component from Day 1, even w
 
 ## 13. Open Decisions & Next Steps
 
+### Decisions — Locked ✅
+
+| # | Decision | Confirmed Value | Status |
+|---|---|---|---|
+| 1 | Commission percentage | **15%** per completed ride (configurable via admin) | ✅ Locked |
+| 2 | Weekly subscription fee | **₹199/week** (configurable via admin) | ✅ Locked |
+| 3 | Surge pricing in V1 | **Yes** — multiplier-based (1.0x–2.0x), thresholds configurable | ✅ Locked |
+| 4 | Payment gateway | **Razorpay** — UPI, webhooks, Android SDK | ✅ Locked |
+
 ### Still To Be Decided
 
 | # | Decision | Who Decides | When Needed |
 |---|---|---|---|
-| 1 | Exact commission percentage for commission model | Founder | Before driver onboarding |
-| 2 | Exact weekly subscription fee | Founder | Before driver onboarding |
-| 3 | Surge pricing — yes or no in V1? | Founder | Before fare estimation logic is built |
-| 4 | UPI payment gateway — Razorpay vs PayU vs others | Tech team | Before payment screen is built |
 | 5 | Cash field agent network for driver withdrawals — how does it work operationally? | Ops team | Before earnings withdrawal screen is finalized |
 | 6 | Minimum number of drivers before public launch | Founder | Go-to-market planning |
 | 7 | V1 cancellation fee threshold — how many cancellations before penalty in V2? | Founder | After 30 days of V1 data |
@@ -656,23 +661,22 @@ The home screen vehicle selector must be built as a component from Day 1, even w
 
 ---
 
-### Recommended Next Steps (In Order)
+### Development Progress
 
-| Step | Deliverable | Owner |
+| Step | Deliverable | Status |
 |---|---|---|
-| **Step 1** | Complete user flow diagrams for both apps — all states including edge cases (no driver available, SOS trigger, payment failure, etc.) | UX Designer |
-| **Step 2** | Screen-by-screen wireframe descriptions with exact layout, spacing, tap target logic | UX Designer |
-| **Step 3** | Design System definition — color tokens, typography scale, component library in Figma | UI Designer |
-| **Step 4** | High-fidelity Figma screens for both apps (Customer: 14 screens, Driver: 14 screens) | UI Designer |
-| **Step 5** | Prototype for user testing — recruit 10 local riders + 10 local customers in Faridabad | UX Researcher / Founder |
-| **Step 6** | Iterate on prototype based on real user feedback | UI/UX Designer |
-| **Step 7** | Handoff documentation for developers (component specs, API contracts, state logic) | UX Designer + Tech Lead |
-| **Step 8** | Android development begins — Customer app first, Driver app parallel | Dev Team |
-| **Step 9** | Driver onboarding campaign in Faridabad — physical + digital | Marketing / Ops |
-| **Step 10** | Soft launch with limited driver pool → gather data → iterate | Founder + Team |
+| **Step 1** | Product documentation, user flows, wireframes, prototype, design system, component library | ✅ Complete |
+| **Step 2** | Backend API (Node.js + TypeScript + Express + Prisma + PostgreSQL) | 🔧 In Progress |
+| **Step 3** | Customer Android app (Kotlin + Jetpack Compose) | ⬜ Next |
+| **Step 4** | Driver Android app (Kotlin + Jetpack Compose) | ⬜ Planned |
+| **Step 5** | Payment integration (Razorpay) | ⬜ Planned |
+| **Step 6** | Real-time location + ride matching (Firebase RTDB) | ⬜ Planned |
+| **Step 7** | Testing, QA, edge case handling | ⬜ Planned |
+| **Step 8** | Driver onboarding campaign in Faridabad | ⬜ Planned |
+| **Step 9** | Soft launch with limited driver pool | ⬜ Planned |
 
 ---
 
-*Document Version: 1.0*
-*Last Updated: February 2026*
-*Status: Design-Ready — Awaiting Wireframe Phase*
+*Document Version: 1.1*
+*Last Updated: February 25, 2026*
+*Status: Backend Development — In Progress*

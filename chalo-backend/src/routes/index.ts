@@ -1,0 +1,23 @@
+// ============================================================
+// Chalo Backend — Route Registry
+// All routes registered here, mounted in app.ts
+// ============================================================
+
+import { Router } from 'express';
+import authRoutes from './auth.routes';
+import rideRoutes from './ride.routes';
+import paymentRoutes from './payment.routes';
+import notificationRoutes from './notification.routes';
+
+const router = Router();
+
+// -------------------------------------------------------
+// API Routes — /api/v1/*
+// -------------------------------------------------------
+
+router.use('/auth', authRoutes);
+router.use('/rides', rideRoutes);
+router.use('/payments', paymentRoutes);
+router.use('/notifications', notificationRoutes);
+
+export default router;
