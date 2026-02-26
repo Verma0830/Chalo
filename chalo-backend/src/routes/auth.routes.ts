@@ -13,6 +13,7 @@ import {
   verifyOTPSchema,
   completeProfileSchema,
   updateEmergencyContactSchema,
+  registerDeviceTokenSchema,
 } from '../validators/auth.validator';
 import { savedLocationSchema } from '../validators/ride.validator';
 
@@ -71,6 +72,14 @@ router.put(
   authenticate,
   validateBody(savedLocationSchema),
   authController.updateSavedLocation.bind(authController)
+);
+
+// Register or update FCM device token
+router.put(
+  '/device-token',
+  authenticate,
+  validateBody(registerDeviceTokenSchema),
+  authController.registerDeviceToken.bind(authController)
 );
 
 export default router;

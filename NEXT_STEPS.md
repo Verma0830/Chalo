@@ -1,7 +1,8 @@
 # Chalo — Development Roadmap & Next Steps
 
 > Last updated: February 2026  
-> Backend: ✅ Complete (154 tests passing, 0 TypeScript errors, 25/25 security findings resolved)  
+> Backend: ✅ Complete (163 tests passing, 0 TypeScript errors, 25/25 security findings resolved, all P2/P3 done)  
+> Review score: **7.42/10** (up from 6.63/10)  
 > Database: ⬜ Not configured  
 > Customer App: ⬜ Not started  
 > Driver App: ⬜ Not started  
@@ -13,19 +14,113 @@
 | Component | Status | Notes |
 |---|---|---|
 | Backend API (Node.js + Express) | ✅ Done | All 20 endpoints scaffolded |
-| Database schema (Prisma + PostgreSQL) | ✅ Done | 15 tables, 11 enums, PostGIS |
-| Auth service (Firebase OTP) | ✅ Done | Hashed OTP storage, transactional verification |
-| Fare / ride services | ✅ Done | Config caching, transactional ride creation |
+| Database schema (Prisma + PostgreSQL) | ✅ Done | 15 tables, 11 enums, PostGIS + 6 composite indexes |
+| Auth service (Firebase OTP) | ✅ Done | Hashed OTP storage, transactional verification, Redis cache |
+| Fare / ride services | ✅ Done | L1+L2+L3 config cache, transactional ride creation, RTDB sync |
 | Payment service (Razorpay) | ✅ Done | Raw body webhooks, circuit breaker, ride-order checks |
-| Notifications (FCM) | ✅ Done | Push + in-app |
-| SOS service | ✅ Done | Participant-verified, batch auto-resolve |
+| Notifications (FCM) | ⚠️ Partial | In-app DB storage ✅ — FCM `messaging.send()` still TODO |
+| SOS service | ⚠️ Partial | DB records + participant verification ✅ — SMS delivery still TODO |
+| k6 load test | ✅ Done | `k6/smoke.js` with thresholds, k6 globals (`__ENV`) declared |
 | Security review | ✅ Done | 25/25 findings fixed (see SECURITY_PERFORMANCE_REVIEW.md) |
-| Unit + integration tests | ✅ Done | 154/154 passing (8 suites) |
+| P2 + P3 review items | ✅ Done | All 19 items — 163/163 tests passing |
 | TypeScript strict mode | ✅ Done | 0 errors, dual tsconfig (IDE + build) |
+| Secrets rotation docs | ✅ Done | `.env.example` rotation guide for all 6 secret types |
+| Docker / docker-compose | ⬜ Pending | Step 0 below |
+| GitHub Actions CI | ⬜ Pending | Step 0 below |
+| FCM push send | ⬜ Pending | Implement `messaging.send()` in notification service |
+| Google Maps API | ⬜ Pending | Replace Haversine stub with real Directions API |
+| SOS SMS (MSG91) | ⬜ Pending | Wire SMS send in SOS service |
 | PostgreSQL database | ⬜ Pending | Step 1 below |
-| Customer Android app | ⬜ Pending | Step 2 below |
-| Driver Android app | ⬜ Pending | Step 3 below |
-| Deployment / CI-CD | ⬜ Pending | Step 4 below |
+| Customer Android app | ⬜ Pending | Step 3 below |
+| Driver Android app | ⬜ Pending | Step 4 below |
+| Deployment / CI-CD | ⬜ Pending | Step 5 below |
+
+---
+
+## Step 0 — Docker + CI (Do This First)
+
+Before anything else, adding Docker and CI gives every future change a safety net.
+
+### Add Dockerfile
+
+Create `chalo-backend/Dockerfile`:
+```dockerfile
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM node:20-alpine AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json .
+COPY --from=builder /app/prisma ./prisma
+EXPOSE 3000
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
+```
+
+### Add docker-compose.yml
+
+Create `docker-compose.yml` at the project root:
+```yaml
+version: '3.9'
+services:
+  api:
+    build: ./chalo-backend
+    ports: ["3000:3000"]
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://chalo:chalo@postgres:5432/chalo_dev
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+  postgres:
+    image: postgis/postgis:16-3.4-alpine
+    environment:
+      POSTGRES_DB: chalo_dev
+      POSTGRES_USER: chalo
+      POSTGRES_PASSWORD: chalo
+    ports: ["5432:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chalo"]
+      interval: 5s
+      retries: 5
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+```
+
+### Add GitHub Actions CI
+
+Create `.github/workflows/ci.yml`:
+```yaml
+name: CI
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'npm', cache-dependency-path: chalo-backend/package-lock.json }
+      - run: cd chalo-backend && npm ci
+      - run: cd chalo-backend && npx tsc --noEmit
+      - run: cd chalo-backend && npm run lint
+      - run: cd chalo-backend && npm test
+      - run: cd chalo-backend && npm run build
+```
 
 ---
 

@@ -4,11 +4,26 @@
 // ============================================================
 
 import { Request, Response, NextFunction } from 'express';
+import { UserRole } from '@prisma/client';
 import { getAuth } from '../config/firebase';
 import prisma from '../config/database';
+import { getRedisClient, isRedisReady } from '../config/redis';
 import { ApiError } from '../utils/apiError';
 import logger from '../config/logger';
 import { AuthenticatedRequest } from '../types';
+
+/** TTL for cached user records in Redis (seconds) */
+const AUTH_CACHE_TTL_SECS = 300; // 5 minutes
+
+/** Shape of the user object stored in the auth cache */
+interface CachedAuthUser {
+  id: string;
+  phone: string;
+  name: string | null;
+  role: UserRole;
+  languagePref: string;
+  isActive: boolean;
+}
 
 /**
  * Middleware: Verify Firebase ID token from Authorization header
@@ -35,17 +50,53 @@ export const authenticate = async (
     // Verify with Firebase
     const decodedToken = await getAuth().verifyIdToken(token);
 
-    // Find user in our database
-    const user = await prisma.user.findUnique({
-      where: { phone: decodedToken.phone_number },
-      include: {
-        customerProfile: true,
-        driverProfile: true,
-      },
-    });
+    // Check Redis cache first to avoid DB hit on every request
+    const cacheKey = `auth:user:${decodedToken.uid}`;
+    const redis = getRedisClient();
+    let user: CachedAuthUser | null = null;
 
+    if (redis && isRedisReady()) {
+      try {
+        const cached = await redis.get(cacheKey);
+        if (cached) {
+          user = JSON.parse(cached);
+        }
+      } catch (err) {
+        logger.warn('Auth cache read failed — falling back to DB', { error: String(err) });
+      }
+    }
+
+    // Cache miss — query database
     if (!user) {
-      throw ApiError.unauthorized('User not found. Please register first.');
+      const dbUser = await prisma.user.findUnique({
+        where: { phone: decodedToken.phone_number },
+        include: {
+          customerProfile: true,
+          driverProfile: true,
+        },
+      });
+
+      if (!dbUser) {
+        throw ApiError.unauthorized('User not found. Please register first.');
+      }
+
+      user = {
+        id: dbUser.id,
+        phone: dbUser.phone,
+        name: dbUser.name,
+        role: dbUser.role,
+        languagePref: dbUser.languagePref,
+        isActive: dbUser.isActive,
+      };
+
+      // Populate cache (fire-and-forget)
+      if (redis && isRedisReady()) {
+        redis
+          .setEx(cacheKey, AUTH_CACHE_TTL_SECS, JSON.stringify(user))
+          .catch((err) => {
+            logger.warn('Auth cache write failed', { error: String(err) });
+          });
+      }
     }
 
     if (!user.isActive) {
@@ -133,8 +184,16 @@ export const optionalAuth = async (
     }
 
     next();
-  } catch {
-    // Silently continue — optional auth shouldn't block
+  } catch (error) {
+    // Log unexpected failures (Firebase outages, network errors) at warn level.
+    // Auth errors (expired token, malformed header) are expected — log at debug.
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes('expired') || message.includes('Decoding')) {
+      logger.debug('Optional auth token invalid', { error: message });
+    } else {
+      logger.warn('Optional auth unexpected error', { error: message });
+    }
+    // Continue — optional auth should never block the request
     next();
   }
 };

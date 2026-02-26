@@ -37,8 +37,10 @@ const transports: winston.transport[] = [
   }),
 ];
 
-// File transports — production only (or if log dir exists)
-if (config.isProd || config.env !== 'test') {
+// File transports — enabled by LOG_TO_FILE env var (skip in Docker / cloud where stdout is collected)
+const enableFileTransports = process.env.LOG_TO_FILE === 'true' || (!config.isProd && config.env !== 'test');
+
+if (enableFileTransports) {
   transports.push(
     // All logs
     new winston.transports.File({

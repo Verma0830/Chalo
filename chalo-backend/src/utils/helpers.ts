@@ -71,7 +71,14 @@ export function calculateCommission(fare: number, commissionPercentage: number):
 }
 
 /**
- * Calculate T+N settlement due date
+ * Calculate T+N settlement due date.
+ *
+ * **Immutability guarantee**: Creates a new `Date` instance — the original
+ * `completedAt` is never mutated so callers can continue using it safely.
+ *
+ * @param completedAt - The ride completion timestamp (not mutated)
+ * @param settlementDays - Number of business days until settlement (default: T+2)
+ * @returns A new Date representing the settlement due date
  */
 export function calculateSettlementDate(
   completedAt: Date,
@@ -87,9 +94,11 @@ export function calculateSettlementDate(
  */
 export function parsePagination(query: Record<string, unknown>): PaginationQuery {
   const page = Math.max(1, Number(query.page) || CONSTANTS.DEFAULT_PAGE);
+  const rawLimit = Number(query.limit);
+  // Explicitly handle limit=0 and NaN — both fall through to the default
   const limit = Math.min(
     CONSTANTS.MAX_LIMIT,
-    Math.max(1, Number(query.limit) || CONSTANTS.DEFAULT_LIMIT)
+    Math.max(1, Number.isFinite(rawLimit) && rawLimit > 0 ? rawLimit : CONSTANTS.DEFAULT_LIMIT)
   );
 
   return { page, limit };

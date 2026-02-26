@@ -5,8 +5,15 @@
 
 import prisma from '../config/database';
 import logger from '../config/logger';
+import { getMessaging } from '../config/firebase';
 import { PushNotificationPayload } from '../types';
 import { NotificationType } from '@prisma/client';
+
+/** Stale-token error codes returned by FCM */
+const STALE_FCM_TOKEN_CODES = new Set([
+  'messaging/registration-token-not-registered',
+  'messaging/invalid-registration-token',
+]);
 
 export class NotificationService {
   /**
@@ -28,27 +35,47 @@ export class NotificationService {
         },
       });
 
-      // 2. Send via FCM
-      // TODO: Implement FCM sending once Firebase is fully set up
-      // Need to store FCM device tokens per user
-      //
-      // const { getMessaging } = await import('../config/firebase');
-      // const messaging = getMessaging();
-      // await messaging.send({
-      //   token: userFCMToken,
-      //   notification: { title, body },
-      //   data: data || {},
-      //   android: {
-      //     priority: 'high',
-      //     notification: {
-      //       channelId: 'ride_updates',
-      //       priority: 'high',
-      //       sound: 'default',
-      //     },
-      //   },
-      // });
+      // 2. Fetch user's FCM token
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { fcmToken: true },
+      });
 
-      logger.info('Notification sent', { userId, title, type: data?.type });
+      if (!user?.fcmToken) {
+        logger.info('No FCM token for user — skipping push', { userId, title });
+        return;
+      }
+
+      // 3. Send via FCM
+      try {
+        const messaging = getMessaging();
+        await messaging.send({
+          token: user.fcmToken,
+          notification: { title, body },
+          data: data || {},
+          android: {
+            priority: 'high',
+            notification: {
+              channelId: 'ride_updates',
+              sound: 'default',
+            },
+          },
+        });
+
+        logger.info('FCM notification sent', { userId, title, type: data?.type });
+      } catch (fcmError: unknown) {
+        // Handle stale/invalid token — clear it so we stop retrying
+        const errorCode = (fcmError as { code?: string }).code ?? '';
+        if (STALE_FCM_TOKEN_CODES.has(errorCode)) {
+          logger.warn('Stale FCM token — clearing', { userId, errorCode });
+          await prisma.user.update({
+            where: { id: userId },
+            data: { fcmToken: null, fcmTokenUpdatedAt: null },
+          });
+        } else {
+          logger.error('FCM send failed', { userId, title, error: fcmError });
+        }
+      }
     } catch (error) {
       // Notification failure should not break the main flow
       logger.error('Failed to send notification', { userId, title, error });

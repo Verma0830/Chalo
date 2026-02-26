@@ -9,14 +9,17 @@ import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
 import hpp from 'hpp';
+import { timingSafeEqual } from 'crypto';
 
 import config from './config';
 import { morganStream } from './config/logger';
 import { globalErrorHandler, notFoundHandler } from './middleware/errorHandler';
 import { createRateLimiter } from './middleware/rateLimiter';
 import { requestIdMiddleware, getRequestId } from './middleware/requestId';
+import { sanitizeBody } from './middleware/sanitize.middleware';
 import { metricsHandler, httpRequestDuration, httpRequestTotal } from './utils/metrics';
 import { prisma } from './config/database';
+import { pingRedis } from './config/redis';
 import routes from './routes';
 
 export interface AppOptions {
@@ -86,6 +89,7 @@ export function createApp(options: AppOptions = {}): Application {
 
   app.use(express.json({ limit: '100kb' }));
   app.use(express.urlencoded({ extended: true, limit: '100kb' }));
+  app.use(sanitizeBody);
   app.use(compression());
 
   // -------------------------------------------------------
@@ -149,6 +153,7 @@ export function createApp(options: AppOptions = {}): Application {
       uptime: process.uptime(),
       checks: {
         database: 'unknown' as 'ok' | 'down' | 'unknown',
+        redis: 'unknown' as 'ok' | 'down' | 'unknown',
       },
     };
 
@@ -158,6 +163,16 @@ export function createApp(options: AppOptions = {}): Application {
       healthCheck.checks.database = 'ok';
     } catch {
       healthCheck.checks.database = 'down';
+      healthCheck.status = 'degraded';
+    }
+
+    try {
+      // Check Redis connectivity
+      const redisPong = await pingRedis();
+      healthCheck.checks.redis = redisPong ? 'ok' : 'down';
+      if (!redisPong) healthCheck.status = 'degraded';
+    } catch {
+      healthCheck.checks.redis = 'down';
       healthCheck.status = 'degraded';
     }
 
@@ -173,8 +188,13 @@ export function createApp(options: AppOptions = {}): Application {
     app.get('/metrics', (req: Request, res: Response, next: NextFunction): void => {
       // Protect metrics in production with API key
       if (config.isProd && config.internalApiKey) {
-        const apiKey = req.headers['x-api-key'] || req.query.key;
-        if (apiKey !== config.internalApiKey) {
+        const apiKey = String(req.headers['x-api-key'] || req.query.key || '');
+        const expected = config.internalApiKey;
+        // Timing-safe comparison to prevent side-channel attacks
+        const keyMatch =
+          apiKey.length === expected.length &&
+          timingSafeEqual(Buffer.from(apiKey), Buffer.from(expected));
+        if (!keyMatch) {
           res.status(403).json({ success: false, message: 'Forbidden' });
           return;
         }

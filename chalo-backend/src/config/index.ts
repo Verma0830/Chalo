@@ -61,6 +61,12 @@ export const config = {
       : optionalEnv('GOOGLE_MAPS_API_KEY', 'placeholder_key'),
   },
 
+  // --- MSG91 (SMS / WhatsApp) ---
+  msg91: {
+    authKey: process.env.MSG91_AUTH_KEY || '',
+    senderId: optionalEnv('MSG91_SENDER_ID', 'CHALO'),
+  },
+
   // --- Business Rules (defaults — overridden by PlatformConfig DB table at runtime) ---
   business: {
     commissionPercentage: parseInt(optionalEnv('COMMISSION_PERCENTAGE', '15'), 10),

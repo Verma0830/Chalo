@@ -4,7 +4,7 @@
 // ============================================================
 
 import { RideStatus } from '@prisma/client';
-import { ApiError, ErrorCode } from '../../utils/apiError';
+import { ErrorCode } from '../../utils/apiError';
 
 // Mock dependencies
 jest.mock('../../config/database', () => {
@@ -71,6 +71,14 @@ jest.mock('../../utils/metrics', () => ({
   driverSearchDuration: { observe: jest.fn() },
 }));
 
+jest.mock('../../config/firebase', () => ({
+  getDatabase: jest.fn().mockReturnValue({
+    ref: jest.fn().mockReturnValue({
+      update: jest.fn().mockResolvedValue(undefined),
+    }),
+  }),
+}));
+
 import prisma from '../../config/database';
 import { RideService } from '../../services/ride.service';
 
@@ -91,13 +99,7 @@ describe('RideService', () => {
 
       await expect(
         rideService.createRide(customerId, invalidPickup, validDrop, 'CASH')
-      ).rejects.toThrow(ApiError);
-
-      try {
-        await rideService.createRide(customerId, invalidPickup, validDrop, 'CASH');
-      } catch (err) {
-        expect((err as ApiError).code).toBe(ErrorCode.VALIDATION_ERROR);
-      }
+      ).rejects.toMatchObject({ code: ErrorCode.VALIDATION_ERROR });
     });
 
     it('throws RIDE_ALREADY_ACTIVE when customer has active ride', async () => {
@@ -108,13 +110,10 @@ describe('RideService', () => {
 
       await expect(
         rideService.createRide(customerId, validPickup, validDrop, 'CASH')
-      ).rejects.toThrow('You already have an active ride');
-
-      try {
-        await rideService.createRide(customerId, validPickup, validDrop, 'CASH');
-      } catch (err) {
-        expect((err as ApiError).code).toBe(ErrorCode.RIDE_ALREADY_ACTIVE);
-      }
+      ).rejects.toMatchObject({
+        code: ErrorCode.RIDE_ALREADY_ACTIVE,
+        message: expect.stringContaining('already have an active ride'),
+      });
     });
   });
 
@@ -124,13 +123,7 @@ describe('RideService', () => {
 
       await expect(
         rideService.getRideDetails('nonexistent', 'customer_001')
-      ).rejects.toThrow('Ride not found');
-
-      try {
-        await rideService.getRideDetails('nonexistent', 'customer_001');
-      } catch (err) {
-        expect((err as ApiError).code).toBe(ErrorCode.RIDE_NOT_FOUND);
-      }
+      ).rejects.toMatchObject({ code: ErrorCode.RIDE_NOT_FOUND });
     });
 
     it('throws FORBIDDEN when accessing another customers ride', async () => {
@@ -146,11 +139,9 @@ describe('RideService', () => {
         status: RideStatus.COMPLETED,
       });
 
-      try {
-        await rideService.getRideDetails('ride_001', 'wrong_customer');
-      } catch (err) {
-        expect((err as ApiError).code).toBe(ErrorCode.FORBIDDEN);
-      }
+      await expect(
+        rideService.getRideDetails('ride_001', 'wrong_customer')
+      ).rejects.toMatchObject({ code: ErrorCode.FORBIDDEN });
     });
   });
 
@@ -164,23 +155,15 @@ describe('RideService', () => {
 
       await expect(
         rideService.cancelRide('ride_001', 'customer_001', 'Changed my mind')
-      ).rejects.toThrow('Cannot cancel ride');
-
-      try {
-        await rideService.cancelRide('ride_001', 'customer_001');
-      } catch (err) {
-        expect((err as ApiError).code).toBe(ErrorCode.RIDE_CANNOT_CANCEL);
-      }
+      ).rejects.toMatchObject({ code: ErrorCode.RIDE_CANNOT_CANCEL });
     });
 
     it('throws RIDE_NOT_FOUND for nonexistent ride', async () => {
       (prisma.ride.findUnique as jest.Mock).mockResolvedValue(null);
 
-      try {
-        await rideService.cancelRide('nonexistent', 'customer_001');
-      } catch (err) {
-        expect((err as ApiError).code).toBe(ErrorCode.RIDE_NOT_FOUND);
-      }
+      await expect(
+        rideService.cancelRide('nonexistent', 'customer_001')
+      ).rejects.toMatchObject({ code: ErrorCode.RIDE_NOT_FOUND });
     });
   });
 
@@ -193,11 +176,9 @@ describe('RideService', () => {
         customerRating: null,
       });
 
-      try {
-        await rideService.rateRide('ride_001', 'customer_001', 5);
-      } catch (err) {
-        expect((err as ApiError).code).toBe(ErrorCode.RIDE_NOT_COMPLETED);
-      }
+      await expect(
+        rideService.rateRide('ride_001', 'customer_001', 5)
+      ).rejects.toMatchObject({ code: ErrorCode.RIDE_NOT_COMPLETED });
     });
 
     it('throws RIDE_ALREADY_RATED when ride was already rated', async () => {
@@ -208,19 +189,15 @@ describe('RideService', () => {
         customerRating: 4, // Already rated!
       });
 
-      try {
-        await rideService.rateRide('ride_001', 'customer_001', 5);
-      } catch (err) {
-        expect((err as ApiError).code).toBe(ErrorCode.RIDE_ALREADY_RATED);
-      }
+      await expect(
+        rideService.rateRide('ride_001', 'customer_001', 5)
+      ).rejects.toMatchObject({ code: ErrorCode.RIDE_ALREADY_RATED });
     });
 
     it('throws VALIDATION_ERROR for rating outside 1-5', async () => {
-      try {
-        await rideService.rateRide('ride_001', 'customer_001', 6);
-      } catch (err) {
-        expect((err as ApiError).code).toBe(ErrorCode.VALIDATION_ERROR);
-      }
+      await expect(
+        rideService.rateRide('ride_001', 'customer_001', 6)
+      ).rejects.toMatchObject({ code: ErrorCode.VALIDATION_ERROR });
     });
   });
 
@@ -247,6 +224,170 @@ describe('RideService', () => {
 
       expect(result.location).toBeNull();
       expect(result.message).toBe('Driver location not available');
+    });
+  });
+
+  // -------------------------------------------------------
+  // Happy-path Tests (P2 — success flows)
+  // -------------------------------------------------------
+
+  describe('createRide (success)', () => {
+    const validPickup = { lat: 28.4089, lng: 77.3178, address: 'Sector 14, Faridabad' };
+    const validDrop = { lat: 28.4506, lng: 77.3150, address: 'Old Faridabad' };
+    const customerId = 'cuid_customer_001';
+
+    it('creates a ride successfully when no active ride exists', async () => {
+      // No active ride
+      (prisma.ride.findFirst as jest.Mock).mockResolvedValue(null);
+
+      // ride.create returns the new ride
+      (prisma.ride.create as jest.Mock).mockResolvedValue({
+        id: 'ride_new_001',
+        status: RideStatus.REQUESTED,
+        customerId,
+      });
+
+      // Mock $queryRaw for driver search (fire-and-forget — returns empty)
+      const { prisma: namedPrisma } = require('../../config/database');
+      (namedPrisma.$queryRaw as jest.Mock).mockResolvedValue([]);
+
+      const result = await rideService.createRide(customerId, validPickup, validDrop, 'CASH');
+
+      expect(result.rideId).toBe('ride_new_001');
+      expect(result.status).toBe(RideStatus.REQUESTED);
+      expect(result.fare.totalFare).toBe(55);
+      expect(result.pickup.address).toBe('Sector 14, Faridabad');
+      expect(result.paymentMethod).toBe('CASH');
+    });
+  });
+
+  describe('getRideDetails (success)', () => {
+    it('returns ride details for the owning customer', async () => {
+      const mockRide = {
+        id: 'ride_001',
+        customerId: 'customer_001',
+        pickupLat: 28.4,
+        pickupLng: 77.3,
+        pickupAddress: 'Pickup',
+        dropLat: 28.5,
+        dropLng: 77.4,
+        dropAddress: 'Drop',
+        baseFare: 50,
+        surgeMultiplier: 1.0,
+        finalFare: 55,
+        paymentMethod: 'CASH',
+        paymentStatus: 'PENDING',
+        distanceKm: 3.5,
+        durationMins: 10,
+        isScheduled: false,
+        scheduledAt: null,
+        customerRating: null,
+        status: RideStatus.IN_PROGRESS,
+        requestedAt: new Date(),
+        driverAssignedAt: new Date(),
+        driverArrivedAt: null,
+        startedAt: new Date(),
+        completedAt: null,
+        cancelledAt: null,
+        driver: {
+          id: 'driver_001',
+          name: 'Ravi',
+          phone: '+919999999999',
+          driverProfile: {
+            vehicleNumber: 'HR26AB1234',
+            vehicleModel: 'Honda Activa',
+            ratingAvg: 4.5,
+            bikePhotoUrl: null,
+          },
+        },
+      };
+
+      (prisma.ride.findUnique as jest.Mock).mockResolvedValue(mockRide);
+
+      const result = await rideService.getRideDetails('ride_001', 'customer_001');
+
+      expect(result.id).toBe('ride_001');
+      expect(result.status).toBe(RideStatus.IN_PROGRESS);
+      expect(result.driver?.name).toBe('Ravi');
+      expect(result.fare.finalFare).toBe(55);
+    });
+  });
+
+  describe('getRideHistory (success)', () => {
+    it('returns paginated ride history', async () => {
+      const mockRides = [
+        {
+          id: 'ride_001',
+          pickupAddress: 'A',
+          dropAddress: 'B',
+          finalFare: 55,
+          status: RideStatus.COMPLETED,
+          paymentMethod: 'CASH',
+          distanceKm: 3.5,
+          customerRating: 5,
+          createdAt: new Date(),
+          completedAt: new Date(),
+          driver: { name: 'Ravi', driverProfile: { vehicleNumber: 'HR26AB1234' } },
+        },
+      ];
+
+      (prisma.ride.findMany as jest.Mock).mockResolvedValue(mockRides);
+      (prisma.ride.count as jest.Mock).mockResolvedValue(1);
+
+      const result = await rideService.getRideHistory('customer_001', 1, 20, 'ALL');
+
+      expect(result.rides).toHaveLength(1);
+      expect(result.meta.total).toBe(1);
+      expect(result.meta.page).toBe(1);
+    });
+  });
+
+  describe('cancelRide (success)', () => {
+    it('cancels a requested ride', async () => {
+      (prisma.ride.findUnique as jest.Mock).mockResolvedValue({
+        id: 'ride_001',
+        customerId: 'customer_001',
+        status: RideStatus.REQUESTED,
+        driverId: null,
+      });
+
+      (prisma.ride.update as jest.Mock).mockResolvedValue({
+        id: 'ride_001',
+        status: RideStatus.CANCELLED,
+      });
+
+      (prisma.customerProfile.update as jest.Mock).mockResolvedValue({});
+
+      const result = await rideService.cancelRide('ride_001', 'customer_001', 'Changed plans');
+
+      expect(result.rideId).toBe('ride_001');
+      expect(result.status).toBe(RideStatus.CANCELLED);
+    });
+  });
+
+  describe('rateRide (success)', () => {
+    it('rates a completed ride', async () => {
+      (prisma.ride.findUnique as jest.Mock).mockResolvedValue({
+        id: 'ride_001',
+        customerId: 'customer_001',
+        driverId: 'driver_001',
+        status: RideStatus.COMPLETED,
+        customerRating: null,
+      });
+
+      (prisma.ride.update as jest.Mock).mockResolvedValue({});
+      (prisma.driverProfile.findFirst as jest.Mock).mockResolvedValue({
+        id: 'dp_001',
+        ratingAvg: 4.0,
+        ratingCount: 10,
+      });
+      (prisma.driverProfile.update as jest.Mock).mockResolvedValue({});
+
+      const result = await rideService.rateRide('ride_001', 'customer_001', 5, 'Great ride!');
+
+      expect(result.rideId).toBe('ride_001');
+      expect(result.rating).toBe(5);
+      expect(result.comment).toBe('Great ride!');
     });
   });
 });

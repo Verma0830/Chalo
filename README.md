@@ -72,19 +72,21 @@ Chalo/
 | Language | TypeScript 5.3 (strict) |
 | Framework | Express 4 |
 | ORM | Prisma 5 |
-| Database | PostgreSQL (PostGIS) |
-| Auth | Firebase Admin SDK |
-| Push Notifications | FCM (Firebase Cloud Messaging) |
-| Realtime Location | Firebase Realtime Database |
+| Database | PostgreSQL (PostGIS) + 6 composite indexes |
+| Cache | Redis (rate limiting, idempotency, auth tokens, config cache) |
+| Auth | Firebase Admin SDK + phone OTP (SHA-256 hashed) |
+| Push Notifications | FCM (Firebase Cloud Messaging) + in-app DB storage |
+| Realtime Location | Firebase Realtime Database (ride status sync) |
 | File Storage | Firebase Storage |
 | Payments | Razorpay (UPI + webhooks) |
 | Maps | Google Maps Directions + Places APIs |
 | Validation | Zod (every endpoint) |
-| Logging | Winston (JSON prod / colorized dev) |
-| Security | Helmet, CORS, HPP, per-endpoint rate limiting |
-| Testing | Jest + ts-jest (154 tests, 8 suites, 100% passing) |
+| Logging | Winston (JSON prod / colorized dev, Docker-aware) |
+| Security | Helmet, CORS, HPP, per-endpoint rate limiting (Redis), request ID tracing, timing-safe comparisons |
+| Testing | Jest + ts-jest (163 tests, 8 suites, 100% passing) |
 | Circuit Breaker | opossum (Razorpay API protection) |
 | Metrics | prom-client (Prometheus, custom business metrics) |
+| Load Testing | k6 (smoke test with thresholds) |
 
 ---
 
@@ -230,7 +232,17 @@ All 25 security/performance/reliability findings have been resolved. Key protect
 | Metrics | Prometheus via `/metrics` (API key protected in production) |
 | Observability | Request ID tracing, structured JSON logging (Winston) |
 
-See [SECURITY_PERFORMANCE_REVIEW.md](SECURITY_PERFORMANCE_REVIEW.md) for full details and [CODE_REVIEW.md](CODE_REVIEW.md) for the complete review.
+See [SECURITY_PERFORMANCE_REVIEW.md](SECURITY_PERFORMANCE_REVIEW.md) for full details on all 25 findings (all fixed), and [CODE_REVIEW.md](CODE_REVIEW.md) for the complete Round 3 + Round 4 reviews.
+
+---
+
+## Code Review Score
+
+| Phase | Score | What Changed |
+|---|---|---|
+| Initial Review | 6.63/10 | Baseline |
+| After Security Fixes (P0+P1) | 6.87/10 | Critical gaps identified and fixed |
+| After P2+P3 Implementation | **7.42/10** | Redis singleton, RTDB sync, auth cache, indexes, k6 tests, coverage, notification validation |
 
 ---
 

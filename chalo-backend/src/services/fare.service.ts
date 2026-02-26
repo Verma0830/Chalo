@@ -8,6 +8,8 @@ import prisma from '../config/database';
 import config from '../config';
 import CONSTANTS from '../utils/constants';
 import { calculateBaseFare, applySurge, calculateCommission, haversineDistance } from '../utils/helpers';
+import { withCircuitBreakerFallback } from '../utils/circuitBreaker';
+import { getRedisClient, isRedisReady } from '../config/redis';
 import { FareEstimate, Location } from '../types';
 import logger from '../config/logger';
 
@@ -124,49 +126,109 @@ export class FareService {
   /**
    * Get route details from Google Maps Directions API
    * Returns distance in km and duration in minutes
+   * Circuit breaker falls back to Haversine estimate on failure
    */
-  private async getRouteDetails(
-    pickup: Location,
-    drop: Location
-  ): Promise<{ distanceKm: number; durationMins: number; polyline: string }> {
-    try {
-      // Use haversineDistance — static import, not a dynamic require
-      const straightLineKm = haversineDistance(
-        pickup.lat,
-        pickup.lng,
-        drop.lat,
-        drop.lng
+  private getRouteDetails = withCircuitBreakerFallback<
+    [Location, Location],
+    { distanceKm: number; durationMins: number; polyline: string }
+  >(
+    'google-maps-directions',
+    async (pickup: Location, drop: Location) => {
+      const origin = `${pickup.lat},${pickup.lng}`;
+      const destination = `${drop.lat},${drop.lng}`;
+      const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}&key=${config.googleMaps.apiKey}&mode=driving&region=in`;
+
+      const controller = new AbortController();
+      const timeout = setTimeout(
+        () => controller.abort(),
+        CONSTANTS.GOOGLE_MAPS_TIMEOUT_MS
       );
 
-      // Road factor: actual road distance is ~1.3x straight-line distance in Indian cities
-      const roadFactorKm = Number((straightLineKm * 1.3).toFixed(2));
+      try {
+        const response = await fetch(url, { signal: controller.signal });
+        const json = (await response.json()) as {
+          status: string;
+          routes: Array<{
+            legs: Array<{
+              distance: { value: number };
+              duration: { value: number };
+            }>;
+            overview_polyline: { points: string };
+          }>;
+        };
 
-      // Assume average speed of 25 km/h in Faridabad traffic
-      const durationMins = Math.ceil((roadFactorKm / 25) * 60);
+        if (json.status !== 'OK' || !json.routes.length) {
+          throw new Error(`Google Directions API returned status: ${json.status}`);
+        }
 
-      return {
-        distanceKm: roadFactorKm,
-        durationMins: Math.max(durationMins, 3), // Minimum 3 minutes
-        polyline: '', // Will be populated when Google Maps API is integrated
-      };
-    } catch (error) {
-      logger.error('Failed to get route details', { error, pickup, drop });
-      throw error;
+        const leg = json.routes[0].legs[0];
+        return {
+          distanceKm: Number((leg.distance.value / 1000).toFixed(2)),
+          durationMins: Math.max(Math.ceil(leg.duration.value / 60), 3),
+          polyline: json.routes[0].overview_polyline.points,
+        };
+      } finally {
+        clearTimeout(timeout);
+      }
+    },
+    // Fallback: Haversine estimate when Google Maps is unreachable
+    (pickup: Location, drop: Location) => {
+      logger.warn('Google Maps API unavailable — using Haversine fallback', {
+        pickup,
+        drop,
+      });
+      return this.haversineFallback(pickup, drop);
+    },
+    {
+      timeout: CONSTANTS.GOOGLE_MAPS_TIMEOUT_MS,
+      errorThresholdPercentage: CONSTANTS.CIRCUIT_BREAKER_THRESHOLD_PERCENT,
+      resetTimeout: CONSTANTS.CIRCUIT_BREAKER_RESET_MS,
+      volumeThreshold: CONSTANTS.CIRCUIT_BREAKER_MIN_REQUESTS,
     }
+  );
+
+  /**
+   * Haversine-based route estimate (fallback when Maps API is down)
+   * Uses 1.3x road factor for Indian cities and 25 km/h avg speed
+   */
+  private haversineFallback(
+    pickup: Location,
+    drop: Location
+  ): { distanceKm: number; durationMins: number; polyline: string } {
+    const ROAD_FACTOR = 1.3;
+    const AVG_SPEED_KMH = 25;
+    const MIN_DURATION_MINS = 3;
+
+    const straightLineKm = haversineDistance(
+      pickup.lat,
+      pickup.lng,
+      drop.lat,
+      drop.lng
+    );
+    const roadFactorKm = Number((straightLineKm * ROAD_FACTOR).toFixed(2));
+    const durationMins = Math.ceil((roadFactorKm / AVG_SPEED_KMH) * 60);
+
+    return {
+      distanceKm: roadFactorKm,
+      durationMins: Math.max(durationMins, MIN_DURATION_MINS),
+      polyline: '', // No polyline from Haversine
+    };
   }
 
   /**
-   * In-memory cache for runtime config (avoids DB query on every fare estimate)
-   * Refreshes every 60 seconds
+   * Redis-backed cache for runtime config.
+   * Shares config across all instances and falls back to in-memory when Redis is down.
+   * TTL: 60 seconds.
    */
   private configCache: {
     data: { baseFarePerKm: number; baseFarePerMin: number; commissionPercentage: number; surgeEnabled: boolean };
     expiresAt: number;
   } | null = null;
-  private static CONFIG_CACHE_TTL_MS = 60_000; // 1 minute
+  private static CONFIG_CACHE_TTL_SECS = 60; // 1 minute
+  private static REDIS_CONFIG_KEY = 'fare:runtime-config';
 
   /**
-   * Fetch runtime-configurable business rules from DB (with in-memory cache)
+   * Fetch runtime-configurable business rules from DB (with Redis + in-memory cache)
    * Falls back to env/defaults if DB config not found
    */
   private async getRuntimeConfig(): Promise<{
@@ -175,13 +237,39 @@ export class FareService {
     commissionPercentage: number;
     surgeEnabled: boolean;
   }> {
-    // Return cached config if still valid
+    // L1: In-memory cache (hot path — zero latency)
     if (this.configCache && Date.now() < this.configCache.expiresAt) {
       return this.configCache.data;
     }
 
+    // L2: Redis cache (shared across instances)
+    const redis = getRedisClient();
+    if (redis && isRedisReady()) {
+      try {
+        const cached = await redis.get(FareService.REDIS_CONFIG_KEY);
+        if (cached) {
+          const data = JSON.parse(cached);
+          this.configCache = { data, expiresAt: Date.now() + FareService.CONFIG_CACHE_TTL_SECS * 1000 };
+          return data;
+        }
+      } catch (err) {
+        logger.warn('FareService Redis config cache read failed', { error: String(err) });
+      }
+    }
+
+    // L3: Database fetch
     const data = await this.fetchRuntimeConfig();
-    this.configCache = { data, expiresAt: Date.now() + FareService.CONFIG_CACHE_TTL_MS };
+    this.configCache = { data, expiresAt: Date.now() + FareService.CONFIG_CACHE_TTL_SECS * 1000 };
+
+    // Populate Redis cache (fire-and-forget)
+    if (redis && isRedisReady()) {
+      redis
+        .setEx(FareService.REDIS_CONFIG_KEY, FareService.CONFIG_CACHE_TTL_SECS, JSON.stringify(data))
+        .catch((err) => {
+          logger.warn('FareService Redis config cache write failed', { error: String(err) });
+        });
+    }
+
     return data;
   }
 

@@ -36,6 +36,12 @@ jest.mock('../../config/database', () => ({
   disconnectDatabase: jest.fn().mockResolvedValue(undefined),
 }));
 
+jest.mock('../../config/redis', () => ({
+  pingRedis: jest.fn().mockResolvedValue(true),
+  getRedisClient: jest.fn().mockReturnValue(null),
+  isRedisReady: jest.fn().mockReturnValue(false),
+}));
+
 describe('API Integration Tests', () => {
   const app = createTestApp();
 
@@ -133,6 +139,40 @@ describe('API Integration Tests', () => {
           drop: { lat: 28.5, lng: 77.4, address: 'Drop' },
           paymentMethod: 'CASH',
         })
+        .expect(401);
+
+      expect(response.body.success).toBe(false);
+    });
+
+    it('requires authentication for ride history', async () => {
+      const response = await request(app)
+        .get('/api/v1/rides/history')
+        .expect(401);
+
+      expect(response.body.success).toBe(false);
+    });
+
+    it('requires authentication for notifications', async () => {
+      const response = await request(app)
+        .get('/api/v1/notifications')
+        .expect(401);
+
+      expect(response.body.success).toBe(false);
+    });
+
+    it('rejects malformed Bearer token', async () => {
+      const response = await request(app)
+        .get('/api/v1/rides/history')
+        .set('Authorization', 'Bearer invalid-token-here')
+        .expect(401);
+
+      expect(response.body.success).toBe(false);
+    });
+
+    it('rejects missing Bearer prefix', async () => {
+      const response = await request(app)
+        .get('/api/v1/rides/history')
+        .set('Authorization', 'some-token-without-bearer')
         .expect(401);
 
       expect(response.body.success).toBe(false);

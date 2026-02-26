@@ -299,6 +299,17 @@ export class AuthService {
     });
   }
   /**
+   * Register or update FCM device token for push notifications
+   */
+  async registerDeviceToken(userId: string, fcmToken: string): Promise<void> {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { fcmToken, fcmTokenUpdatedAt: new Date() },
+    });
+    logger.info('FCM device token registered', { userId });
+  }
+
+  /**
    * Clean up expired and old verified OTP records (L3)
    * Should be called periodically (e.g., daily cron or startup)
    */

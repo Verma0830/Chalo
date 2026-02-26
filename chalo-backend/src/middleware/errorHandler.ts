@@ -4,6 +4,7 @@
 // ============================================================
 
 import { Request, Response, NextFunction } from 'express';
+import { Prisma } from '@prisma/client';
 import { ApiError, ErrorCode } from '../utils/apiError';
 import { getRequestId } from './requestId';
 import logger from '../config/logger';
@@ -50,12 +51,22 @@ export const globalErrorHandler = (
     statusCode = 400;
     message = err.message;
     code = ErrorCode.VALIDATION_ERROR;
-  } else if (err.name === 'PrismaClientKnownRequestError') {
-    // Prisma constraint violations, etc.
-    statusCode = 409;
-    message = 'Database operation failed — possible duplicate or constraint violation';
-    code = 'DATABASE_CONSTRAINT_ERROR';
-  } else if (err.name === 'PrismaClientValidationError') {
+  } else if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    // Prisma constraint violations — differentiate by error code
+    if (err.code === 'P2002') {
+      statusCode = 409;
+      message = 'Database operation failed — duplicate value violates unique constraint';
+      code = 'DATABASE_CONSTRAINT_ERROR';
+    } else if (err.code === 'P2025') {
+      statusCode = 404;
+      message = 'Requested record not found';
+      code = ErrorCode.NOT_FOUND;
+    } else {
+      statusCode = 400;
+      message = 'Database operation failed';
+      code = 'DATABASE_ERROR';
+    }
+  } else if (err instanceof Prisma.PrismaClientValidationError) {
     statusCode = 400;
     message = 'Invalid data sent to database';
     code = ErrorCode.VALIDATION_ERROR;

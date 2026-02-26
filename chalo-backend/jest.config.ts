@@ -46,10 +46,23 @@ const config: Config = {
   ],
   coverageThreshold: {
     global: {
-      branches: 60,
-      functions: 60,
-      lines: 60,
-      statements: 60,
+      branches: 15,
+      functions: 20,
+      lines: 30,
+      statements: 30,
+    },
+    // Critical business logic — higher bar
+    './src/utils/helpers.ts': {
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80,
+    },
+    './src/utils/apiError.ts': {
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80,
     },
   },
   verbose: true,

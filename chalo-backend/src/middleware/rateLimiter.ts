@@ -5,57 +5,8 @@
 // ============================================================
 
 import rateLimit, { Options } from 'express-rate-limit';
-import { createClient, RedisClientType } from 'redis';
-import config from '../config';
+import { getRedisClient, isRedisReady } from '../config/redis';
 import logger from '../config/logger';
-
-// -------------------------------------------------------
-// Redis Client for Rate Limiting (shared across limiters)
-// -------------------------------------------------------
-
-let redisClient: RedisClientType | null = null;
-let redisReady = false;
-
-/**
- * Initialize Redis connection for rate limiting
- * Call this during app startup
- */
-export async function initRateLimitRedis(): Promise<void> {
-  if (config.isDev && !process.env.REDIS_URL) {
-    logger.warn('Redis URL not configured — using in-memory rate limiting (dev only)');
-    return;
-  }
-
-  try {
-    redisClient = createClient({ url: config.redisUrl });
-
-    redisClient.on('error', (err) => {
-      logger.error('Redis rate limiter error', { error: err.message });
-      redisReady = false;
-    });
-
-    redisClient.on('ready', () => {
-      logger.info('Redis rate limiter connected');
-      redisReady = true;
-    });
-
-    await redisClient.connect();
-  } catch (error) {
-    logger.error('Failed to connect Redis for rate limiting', { error });
-    // Continue without Redis — will use in-memory fallback
-  }
-}
-
-/**
- * Disconnect Redis gracefully
- */
-export async function disconnectRateLimitRedis(): Promise<void> {
-  if (redisClient) {
-    await redisClient.quit();
-    redisClient = null;
-    redisReady = false;
-  }
-}
 
 // -------------------------------------------------------
 // Custom Redis Store for express-rate-limit
@@ -71,7 +22,8 @@ function createRedisStore(options: RedisStoreOptions) {
 
   return {
     async increment(key: string): Promise<{ totalHits: number; resetTime: Date }> {
-      if (!redisClient || !redisReady) {
+      const client = getRedisClient();
+      if (!client || !isRedisReady()) {
         // Fallback: allow request but log warning
         return { totalHits: 1, resetTime: new Date(Date.now() + windowMs) };
       }
@@ -80,13 +32,13 @@ function createRedisStore(options: RedisStoreOptions) {
       const now = Date.now();
 
       try {
-        const result = await redisClient.multi()
+        const result = await client.multi()
           .incr(redisKey)
           .pExpire(redisKey, windowMs)
           .exec();
 
         const totalHits = (result?.[0] as number) || 1;
-        const ttl = await redisClient.pTTL(redisKey);
+        const ttl = await client.pTTL(redisKey);
         const resetTime = new Date(now + (ttl > 0 ? ttl : windowMs));
 
         return { totalHits, resetTime };
@@ -97,22 +49,24 @@ function createRedisStore(options: RedisStoreOptions) {
     },
 
     async decrement(key: string): Promise<void> {
-      if (!redisClient || !redisReady) return;
+      const client = getRedisClient();
+      if (!client || !isRedisReady()) return;
 
       try {
         const redisKey = `${prefix}:${key}`;
-        await redisClient.decr(redisKey);
+        await client.decr(redisKey);
       } catch (error) {
         logger.error('Redis rate limit decrement failed', { error });
       }
     },
 
     async resetKey(key: string): Promise<void> {
-      if (!redisClient || !redisReady) return;
+      const client = getRedisClient();
+      if (!client || !isRedisReady()) return;
 
       try {
         const redisKey = `${prefix}:${key}`;
-        await redisClient.del(redisKey);
+        await client.del(redisKey);
       } catch (error) {
         logger.error('Redis rate limit reset failed', { error });
       }

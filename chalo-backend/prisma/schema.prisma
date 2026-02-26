@@ -105,16 +105,18 @@ enum NotificationType {
 
 /// Core user account — shared between customers and drivers
 model User {
-  id            String    @id @default(cuid())
-  phone         String    @unique
-  name          String?
-  email         String?
-  role          UserRole
-  languagePref  String    @default("pa") // "pa" = Punjabi, "en" = English
-  isActive      Boolean   @default(true)
-  lastLoginAt   DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                String    @id @default(cuid())
+  phone             String    @unique
+  name              String?
+  email             String?
+  role              UserRole
+  languagePref      String    @default("pa") // "pa" = Punjabi, "en" = English
+  isActive          Boolean   @default(true)
+  fcmToken          String?                  // Firebase Cloud Messaging device token
+  fcmTokenUpdatedAt DateTime?                // Last time FCM token was registered/refreshed
+  lastLoginAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   // Relations
   customerProfile   CustomerProfile?

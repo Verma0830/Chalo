@@ -11,9 +11,9 @@ import { buildPaginationMeta } from '../utils/apiResponse';
 import { PaginationMeta } from '../types';
 import CONSTANTS from '../utils/constants';
 import { sanitizeLocation } from '../utils/sanitize';
-import { haversineDistance } from '../utils/helpers';
 import { ridesCreatedTotal, ridesCancelledTotal, driverSearchDuration } from '../utils/metrics';
 import logger from '../config/logger';
+import { getDatabase } from '../config/firebase';
 import { Prisma, RideStatus, CancellationBy } from '@prisma/client';
 
 // ---------------------------------------------------------------------------
@@ -126,6 +126,9 @@ export class RideService {
 
     logger.info('Ride created', { rideId: createdRide.id, customerId, fare: fareEstimate.totalFare });
 
+    // Sync initial status to Firebase RTDB for real-time client updates
+    this.syncRideToRTDB(createdRide.id, { status: RideStatus.REQUESTED });
+
     // 4. Begin driver search (async — notification service handles this)
     // On failure, mark ride as NO_DRIVER to prevent stuck rides (M8)
     this.searchAndNotifyDrivers(createdRide.id, sanitizedPickup.lat, sanitizedPickup.lng, fareEstimate.totalFare).catch(async (err) => {
@@ -219,6 +222,9 @@ export class RideService {
     ridesCreatedTotal.inc({ type: 'scheduled' });
 
     logger.info('Scheduled ride created', { rideId: ride.id, scheduledAt });
+
+    // Sync scheduled status to Firebase RTDB
+    this.syncRideToRTDB(ride.id, { status: RideStatus.SCHEDULED });
 
     return {
       rideId: ride.id,
@@ -512,6 +518,9 @@ export class RideService {
     // Record metric
     ridesCancelledTotal.inc({ cancelled_by: 'customer' });
 
+    // Sync cancellation to RTDB
+    this.syncRideToRTDB(rideId, { status: RideStatus.CANCELLED });
+
     // Notify driver if one was assigned (outside transaction)
     if (ride.driverId) {
       await notificationService.sendPushNotification({
@@ -605,6 +614,31 @@ export class RideService {
   }
 
   /**
+   * Write ride status to Firebase Realtime Database for instant client updates.
+   * Fire-and-forget — failures are logged but never block the main flow.
+   */
+  private syncRideToRTDB(
+    rideId: string,
+    data: { status: RideStatus; driverId?: string | null; updatedAt?: string }
+  ): void {
+    try {
+      const ref = getDatabase().ref(`rides/${rideId}`);
+      ref
+        .update({
+          status: data.status,
+          ...(data.driverId !== undefined ? { driverId: data.driverId } : {}),
+          updatedAt: data.updatedAt ?? new Date().toISOString(),
+        })
+        .catch((err) => {
+          logger.warn('RTDB ride sync failed', { rideId, error: String(err) });
+        });
+    } catch (err) {
+      // getDatabase() may throw in dev when Firebase is not configured
+      logger.warn('RTDB unavailable — skipping ride sync', { rideId, error: String(err) });
+    }
+  }
+
+  /**
    * Search for nearby drivers and send ride requests
    * This is the matching engine with scoring-based selection
    * @param rideId - The ride to match
@@ -625,31 +659,51 @@ export class RideService {
 
     const searchStart = Date.now();
 
-    // Find online, verified drivers within radius
+    // Find online, verified drivers within radius using PostGIS ST_DWithin
     const radiusKm = CONSTANTS.DRIVER_SEARCH_RADIUS_KM;
+    const radiusMeters = radiusKm * 1000;
 
-    // Approximate bounding box for initial filter (1 degree ≈ 111 km)
-    const latDelta = radiusKm / 111;
-    const lngDelta = radiusKm / (111 * Math.cos((pickupLat * Math.PI) / 180));
-
-    const nearbyDrivers = await prisma.driverProfile.findMany({
-      where: {
-        isOnline: true,
-        verificationStatus: 'VERIFIED',
-        currentLat: {
-          gte: pickupLat - latDelta,
-          lte: pickupLat + latDelta,
-        },
-        currentLng: {
-          gte: pickupLng - lngDelta,
-          lte: pickupLng + lngDelta,
-        },
-      },
-      include: {
-        user: { select: { id: true, name: true } },
-      },
-      take: CONSTANTS.DRIVER_SEARCH_MAX_CANDIDATES,
-    });
+    // PostGIS spatial query — delegates distance computation to the DB engine
+    // instead of fetching all drivers and filtering in JS.
+    // ST_DWithin operates on geography type for metre-accurate results.
+    const nearbyDrivers = await prisma.$queryRaw<
+      Array<{
+        id: string;
+        userId: string;
+        userName: string;
+        currentLat: number;
+        currentLng: number;
+        ratingAvg: number;
+        ratingCount: number;
+        distanceMeters: number;
+      }>
+    >`
+      SELECT
+        dp."id",
+        dp."userId",
+        u."name" AS "userName",
+        dp."currentLat",
+        dp."currentLng",
+        dp."ratingAvg",
+        dp."ratingCount",
+        ST_Distance(
+          ST_SetSRID(ST_Point(dp."currentLng", dp."currentLat"), 4326)::geography,
+          ST_SetSRID(ST_Point(${pickupLng}, ${pickupLat}), 4326)::geography
+        ) AS "distanceMeters"
+      FROM "driver_profiles" dp
+      JOIN "users" u ON u."id" = dp."userId"
+      WHERE dp."isOnline" = true
+        AND dp."verificationStatus" = 'VERIFIED'
+        AND dp."currentLat" IS NOT NULL
+        AND dp."currentLng" IS NOT NULL
+        AND ST_DWithin(
+          ST_SetSRID(ST_Point(dp."currentLng", dp."currentLat"), 4326)::geography,
+          ST_SetSRID(ST_Point(${pickupLng}, ${pickupLat}), 4326)::geography,
+          ${radiusMeters}
+        )
+      ORDER BY "distanceMeters" ASC
+      LIMIT ${CONSTANTS.DRIVER_SEARCH_MAX_CANDIDATES}
+    `;
 
     // Record search duration metric
     const searchDurationSecs = (Date.now() - searchStart) / 1000;
@@ -681,18 +735,16 @@ export class RideService {
         });
       }
 
+      // Sync no-driver status to RTDB
+      this.syncRideToRTDB(rideId, { status: RideStatus.NO_DRIVER });
+
       return;
     }
 
     // Score-based driver selection (V2 improvement)
     // Score = (distance_score * 0.5) + (rating_score * 0.3) + (idle_time_score * 0.2)
     const scoredDrivers = nearbyDrivers.map((driver) => {
-      const distanceKm = haversineDistance(
-        pickupLat,
-        pickupLng,
-        driver.currentLat!,
-        driver.currentLng!
-      );
+      const distanceKm = driver.distanceMeters / 1000;
 
       // Distance score: closer is better (1.0 at 0km, 0.0 at maxRadius)
       const distanceScore = Math.max(0, 1 - distanceKm / radiusKm);
@@ -701,7 +753,7 @@ export class RideService {
       const ratingScore = driver.ratingAvg / CONSTANTS.MAX_RATING;
 
       // Idle time score: longer idle = higher priority (placeholder for V2)
-      const idleTimeScore = 0.5; // TODO: Calculate from last ride completion time
+      const idleTimeScore = 0.5;
 
       const totalScore = distanceScore * 0.5 + ratingScore * 0.3 + idleTimeScore * 0.2;
 
@@ -714,10 +766,8 @@ export class RideService {
     const bestDriver = scoredDrivers[0];
 
     // Send request to top-scored driver
-    // TODO V2: Broadcast to top N drivers, first-accept wins
-    // fare is always provided by the caller — no fallback DB query needed
     await notificationService.sendPushNotification({
-      userId: bestDriver.driver.user.id,
+      userId: bestDriver.driver.userId,
       title: 'New Ride Request!',
       body: `New ride request ${bestDriver.distanceKm.toFixed(1)}km away. ₹${fare}`,
       data: { rideId, type: 'RIDE_REQUEST' },
@@ -725,7 +775,7 @@ export class RideService {
 
     logger.info('Ride request sent to driver', {
       rideId,
-      driverId: bestDriver.driver.user.id,
+      driverId: bestDriver.driver.userId,
       driversFound: nearbyDrivers.length,
       searchDurationSecs,
       driverScore: bestDriver.totalScore.toFixed(2),

@@ -4,55 +4,11 @@
 // ============================================================
 
 import { Request, Response, NextFunction } from 'express';
-import { createClient, RedisClientType } from 'redis';
-import config from '../config';
+import { getRedisClient, isRedisReady } from '../config/redis';
 import logger from '../config/logger';
-
-let redisClient: RedisClientType | null = null;
-let redisReady = false;
 
 // Idempotency key TTL: 24 hours
 const IDEMPOTENCY_TTL_SECONDS = 86400;
-
-/**
- * Initialize Redis for idempotency storage
- * Call during app startup
- */
-export async function initIdempotencyRedis(): Promise<void> {
-  if (config.isDev && !process.env.REDIS_URL) {
-    logger.warn('Redis URL not configured — idempotency disabled (dev only)');
-    return;
-  }
-
-  try {
-    redisClient = createClient({ url: config.redisUrl });
-
-    redisClient.on('error', (err) => {
-      logger.error('Redis idempotency error', { error: err.message });
-      redisReady = false;
-    });
-
-    redisClient.on('ready', () => {
-      logger.info('Redis idempotency store connected');
-      redisReady = true;
-    });
-
-    await redisClient.connect();
-  } catch (error) {
-    logger.error('Failed to connect Redis for idempotency', { error });
-  }
-}
-
-/**
- * Disconnect idempotency Redis
- */
-export async function disconnectIdempotencyRedis(): Promise<void> {
-  if (redisClient) {
-    await redisClient.quit();
-    redisClient = null;
-    redisReady = false;
-  }
-}
 
 /**
  * Idempotency Middleware
@@ -76,7 +32,8 @@ export function idempotencyMiddleware(
   }
 
   // Redis not available — proceed without idempotency
-  if (!redisClient || !redisReady) {
+  const client = getRedisClient();
+  if (!client || !isRedisReady()) {
     logger.warn('Idempotency check skipped — Redis unavailable');
     return next();
   }
@@ -86,7 +43,7 @@ export function idempotencyMiddleware(
   const cacheKey = `idempotency:${userId}:${idempotencyKey}`;
 
   // Check for existing response
-  redisClient
+  client
     .get(cacheKey)
     .then((cached) => {
       if (cached) {
@@ -107,7 +64,7 @@ export function idempotencyMiddleware(
           body,
         };
 
-        redisClient!
+        client
           .setEx(cacheKey, IDEMPOTENCY_TTL_SECONDS, JSON.stringify(toCache))
           .catch((err) => {
             logger.error('Failed to cache idempotency response', { error: err });
@@ -129,10 +86,11 @@ export function idempotencyMiddleware(
  * Useful for manual checks in services
  */
 export async function hasIdempotencyKey(key: string): Promise<boolean> {
-  if (!redisClient || !redisReady) return false;
+  const client = getRedisClient();
+  if (!client || !isRedisReady()) return false;
 
   try {
-    const exists = await redisClient.exists(`idempotency:${key}`);
+    const exists = await client.exists(`idempotency:${key}`);
     return exists === 1;
   } catch {
     return false;

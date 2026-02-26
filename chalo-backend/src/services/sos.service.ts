@@ -6,6 +6,7 @@
 import prisma from '../config/database';
 import { ApiError } from '../utils/apiError';
 import logger from '../config/logger';
+import { sendSOSAlerts } from './sms.service';
 import { SOSStatus, RideStatus } from '@prisma/client';
 
 export class SOSService {
@@ -61,7 +62,7 @@ export class SOSService {
 
     // Build alert recipient list
     const emergencyContact = ride.customer.customerProfile;
-    const alertRecipients: Array<{ name: string; phone: string; channel: string }> = [];
+    const alertRecipients: Array<{ name: string; phone: string; channel: 'SMS' | 'WHATSAPP' }> = [];
 
     if (emergencyContact?.emergencyContactName && emergencyContact?.emergencyContactPhone) {
       alertRecipients.push({
@@ -108,12 +109,19 @@ export class SOSService {
       },
     });
 
-    // TODO: Send actual SMS/WhatsApp alerts via provider (Twilio, MSG91, WhatsApp Business API)
-    // Alert content:
-    // "EMERGENCY: {customerName} triggered SOS during a ride.
-    //  Driver: {driverName} ({vehicleNumber})
-    //  Live location: https://maps.google.com/?q={lat},{lng}
-    //  Time: {timestamp}"
+    // Send SMS/WhatsApp alerts to emergency contacts (fire-and-forget)
+    if (alertRecipients.length > 0) {
+      sendSOSAlerts({
+        customerName: ride.customer.name || 'Customer',
+        driverName: ride.driver?.name || 'Unknown',
+        vehicleNumber: ride.driver?.driverProfile?.vehicleNumber || 'N/A',
+        lat,
+        lng,
+        recipients: alertRecipients,
+      }).catch((err) => {
+        logger.error('SOS SMS delivery failed', { sosAlertId: sosAlert.id, error: err });
+      });
+    }
 
     logger.warn('SOS ALERT TRIGGERED', {
       sosAlertId: sosAlert.id,

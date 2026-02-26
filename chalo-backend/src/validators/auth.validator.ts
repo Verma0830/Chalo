@@ -62,7 +62,19 @@ export const updateEmergencyContactSchema = z.object({
     .regex(/^\+91[6-9]\d{9}$/, 'Invalid Indian mobile number'),
 });
 
+/**
+ * Register FCM device token
+ */
+export const registerDeviceTokenSchema = z.object({
+  fcmToken: z
+    .string()
+    .trim()
+    .min(1, 'FCM token is required')
+    .max(512, 'FCM token too long'),
+});
+
 export type SendOTPInput = z.infer<typeof sendOTPSchema>;
 export type VerifyOTPInput = z.infer<typeof verifyOTPSchema>;
 export type CompleteProfileInput = z.infer<typeof completeProfileSchema>;
 export type UpdateEmergencyContactInput = z.infer<typeof updateEmergencyContactSchema>;
+export type RegisterDeviceTokenInput = z.infer<typeof registerDeviceTokenSchema>;

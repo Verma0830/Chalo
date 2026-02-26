@@ -9,16 +9,44 @@
 
 ## Executive Summary
 
-The backend is a **production-hardened foundation** with clean architecture, proper layering, Zod validation, structured logging, and **154 passing tests** across 8 test suites (unit + integration). Two rounds of code review have been completed, addressing all 25 security/performance/reliability findings (see [SECURITY_PERFORMANCE_REVIEW.md](SECURITY_PERFORMANCE_REVIEW.md) — all 25/25 fixed). A third **industry-standards code quality review** (Round 3) has now been completed, addressing 10 further issues across redundancy, type safety, and reliability.
+The backend is a **production-hardened foundation** with clean architecture, proper layering, Zod validation, structured logging, and **163 passing tests** across 8 test suites (unit + integration). Four rounds of code review have been completed.
 
-**Key improvements implemented:**
-- OTPs: cryptographically secure generation (`crypto.randomInt`), SHA-256 hashed storage, production-safe logging
-- Payments: raw-body webhook verification, timing-safe signature comparison, ride-order association checks, circuit breaker on Razorpay
-- Race conditions: transactional ride creation and OTP verification (`prisma.$transaction`)
-- Security: production secret guards, user-scoped idempotency, SOS participant verification, request ID sanitization
-- Performance: PlatformConfig caching (60s TTL), batched SOS auto-resolve, eliminated redundant DB queries
-- Testing: 154 tests (validators, utils, services, integration), TypeScript strict mode, dual tsconfig (IDE + build)
-- Code quality (Round 3): see [Round 3 Code Quality Review](#round-3-code-quality-review) below
+- **Round 1 & 2:** 25 security/performance/reliability findings — all fixed (see [SECURITY_PERFORMANCE_REVIEW.md](SECURITY_PERFORMANCE_REVIEW.md))
+- **Round 3:** 10 code quality issues — all fixed (see below)
+- **Round 4:** All P2 and P3 items from [chalo-backend-review.md](chalo-backend-review.md) — all 19 fixed
+
+**Current score: 7.42/10** (up from 6.63/10 at first review). Target 8.5–9.0/10 once Docker, CI, FCM sending, Google Maps, and driver API are implemented.
+
+---
+
+## Round 4 — P2 / P3 Implementation (February 2026)
+
+> All 19 P2 and P3 items from the professional review implemented and verified.  
+> Tests: **163/163 passing** (up from 154). TypeScript: **0 errors**.
+
+### Summary Table
+
+| # | Item | File(s) | Status |
+|---|---|---|---|
+| P2-1.5 | Shared Redis singleton | `src/config/redis.ts` (NEW) | ✅ Done |
+| P2-1.6 | RTDB ride status sync | `src/services/ride.service.ts` | ✅ Done |
+| P2-2.3 | Auth Redis cache (5 min TTL) | `src/middleware/auth.ts` | ✅ Done |
+| P2-2.4 | `optionalAuth` error logging | `src/middleware/auth.ts` | ✅ Done |
+| P2-3.2 | `rejects.toMatchObject` test pattern | `ride.service.test.ts` | ✅ Done |
+| P2-3.3 | `calculateSettlementDate` JSDoc | `src/utils/helpers.ts` | ✅ Done |
+| P2-4.1 | Coverage thresholds | `jest.config.ts` | ✅ Done |
+| P2-4.2 | 5 happy-path ride service tests | `ride.service.test.ts` | ✅ Done |
+| P2-4.3 | 4 auth integration tests | `api.integration.test.ts` | ✅ Done |
+| P2-4.4 | k6 smoke test + ESLint `__ENV` fix | `k6/smoke.js`, `.eslintrc.json` | ✅ Done |
+| P2-5.2 | 6 composite DB index migration | `prisma/migrations/...` | ✅ Done |
+| P2-5.3 | Connection pool docs | `.env.example` | ✅ Done |
+| P2-5.4 | FareService L1+L2+L3 Redis cache | `src/services/fare.service.ts` | ✅ Done |
+| P2-6.3 | Health check Redis ping | `src/app.ts` | ✅ Done |
+| P2-6.4 | Winston `LOG_TO_FILE` opt-in | `src/config/logger.ts` | ✅ Done |
+| P2-6.5 | `REDIS_URL` production guard | `src/server.ts` | ✅ Done |
+| P2-6.6 | Secrets rotation guide | `.env.example` | ✅ Done |
+| P3-3.4 | `parsePagination` limit=0 fix | `src/utils/helpers.ts` | ✅ Done |
+| P3-3.5 | Notification Zod query validation | `src/validators/notification.validator.ts` (NEW), `src/routes/notification.routes.ts` | ✅ Done |
 
 ---
 
@@ -797,30 +825,30 @@ If serving driver photos or docs, put them behind CloudFront / Cloudflare.
 5. ~~**Add graceful shutdown** — server.ts~~ ✅ Done (previous session)
 6. ~~**Add request ID middleware** — app.ts~~ ✅ Done (previous session)
 
-## Remaining Items (scale & architecture — not blocking V1)
+## Remaining Items (next priority — not blocking V1 quality bar)
 
 | Priority | Issue | Effort | Status |
 |----------|-------|--------|--------|
-| 🔴 Critical | 1.1 Secrets in defaults | 10 min | ✅ Fixed |
-| 🔴 Critical | 1.5 Timing-safe signature | 10 min | ✅ Fixed |
-| 🔴 Critical | 2.2 Missing indexes | 30 min | ⬜ Pending (migration needed) |
-| 🔴 Critical | 2.4 Transactions | 2 hrs | ✅ Fixed |
-| 🟠 High | 1.4 Redis rate limiter | 1 hr | ✅ Fixed (previous session) |
-| 🟠 High | 4.2 Graceful shutdown | 30 min | ✅ Fixed (previous session) |
-| 🟠 High | 4.3 Request ID tracing | 30 min | ✅ Fixed (previous session) |
-| 🟠 High | 3.3 Idempotency keys | 2 hrs | ✅ Fixed (previous session) |
-| 🟠 High | 7.2 Driver timeout job | 3 hrs | ⬜ Needs Bull queue or cron |
-| 🟡 Medium | 6.1 Integration tests | 4 hrs | ✅ Fixed (previous session) |
-| 🟡 Medium | 4.5 Prometheus metrics | 2 hrs | ✅ Fixed (previous session) |
-| 🟡 Medium | 5.1 Dependency injection | 4 hrs | ⬜ Architecture improvement |
-| 🟢 Low | 8.3 OpenAPI docs | 2 hrs | ⬜ Developer experience |
+| 🔴 Critical | Dockerfile + docker-compose | 2 hrs | ⬜ Pending |
+| 🔴 Critical | GitHub Actions CI pipeline | 1 hr | ⬜ Pending |
+| 🔴 Critical | FCM `messaging.send()` | 3 hrs | ⬜ Pending |
+| 🔴 Critical | Google Maps Directions API | 2 hrs | ⬜ Pending |
+| 🔴 Critical | SOS SMS via MSG91 | 2 hrs | ⬜ Pending |
+| 🟠 High | Driver-side REST endpoints | 3–4 days | ⬜ Pending |
+| 🟠 High | BullMQ scheduled ride dispatcher | 1 day | ⬜ Pending |
+| 🟠 High | PostGIS ST_DWithin driver search | 3 hrs | ⬜ Pending |
+| 🟠 High | Admin API (driver approval, config) | 2–3 days | ⬜ Pending |
+| 🟡 Medium | Prisma instanceof error handler (2.5) | 30 min | ⬜ Pending |
+| 🟡 Medium | Cursor-based pagination | 2 hrs | ⬜ Pending |
+| 🟡 Medium | OpenAPI / Swagger docs | 3 hrs | ⬜ Pending |
+| 🟢 Low | Rate limit by user ID (not just IP) | 1 hr | ⬜ Pending |
 
 ---
 
 ## Conclusion
 
-The backend architecture is **production-ready for a controlled V1 launch**. All 25 security, performance, and reliability findings have been resolved, and all 10 code quality issues from Round 3 have been fixed. The codebase features cryptographically secure OTPs with hashed storage, timing-safe webhook verification, circuit breaker protection on external APIs, transactional data integrity, idempotent payment webhooks, fully typed Prisma selects, and **154 passing tests** (all green after every change).
+The backend architecture is **production-ready for a controlled V1 launch**. All 25 security/performance/reliability findings from Rounds 1–2, all 10 code quality issues from Round 3, and all 19 P2+P3 items from the professional Round 4 review have been resolved. The codebase features cryptographically secure OTPs with hashed storage, timing-safe webhook verification, circuit breaker protection on external APIs, transactional data integrity, idempotent payment webhooks, fully typed Prisma selects, a shared Redis singleton, Firebase RTDB ride status sync, auth caching, composite DB indexes, k6 load tests, and **163 passing tests** (all green after every change).
 
-**Remaining scale items** (database indexes, driver timeout queue, dependency injection, OpenAPI docs) can be addressed post-launch as the platform grows.
+**Current score: 7.42/10.** Reaching 8.5–9.0/10 requires the functional integrations (Docker, CI, FCM, Google Maps, SOS SMS) and driver-side API — none of which require re-architecture.
 
-After configuring the database and environment variables (see [NEXT_STEPS.md](NEXT_STEPS.md)), this backend is ready for the Faridabad market launch.
+After configuring the database and environment variables (see [NEXT_STEPS.md](NEXT_STEPS.md)), this backend is ready for the Faridabad market pilot.

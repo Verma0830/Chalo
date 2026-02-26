@@ -5,6 +5,8 @@
 import { Router } from 'express';
 import { notificationController } from '../controllers/notification.controller';
 import { authenticate } from '../middleware/auth';
+import { validateQuery } from '../middleware/validate';
+import { notificationQuerySchema } from '../validators/notification.validator';
 
 const router = Router();
 
@@ -14,6 +16,7 @@ router.use(authenticate);
 // Get notifications (paginated)
 router.get(
   '/',
+  validateQuery(notificationQuerySchema),
   notificationController.getNotifications.bind(notificationController)
 );
 

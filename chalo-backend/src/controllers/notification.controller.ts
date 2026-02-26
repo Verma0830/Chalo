@@ -15,8 +15,8 @@ export class NotificationController {
   async getNotifications(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = (req as AuthenticatedRequest).user.id;
-      const page = Number(req.query.page) || 1;
-      const limit = Number(req.query.limit) || 20;
+      const page = req.query.page as unknown as number;
+      const limit = req.query.limit as unknown as number;
 
       const { notifications, total } = await notificationService.getUserNotifications(userId, page, limit);
       const meta = buildPaginationMeta(page, limit, total);

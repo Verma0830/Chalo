@@ -9,10 +9,9 @@ import config from './config';
 import logger from './config/logger';
 import { initializeFirebase } from './config/firebase';
 import { prisma, disconnectDatabase } from './config/database';
+import { connectRedis, disconnectRedis } from './config/redis';
 import { createApp } from './app';
-import { initRateLimitRedis, disconnectRateLimitRedis } from './middleware/rateLimiter';
-import { initIdempotencyRedis, disconnectIdempotencyRedis } from './middleware/idempotency';
-import { authService } from './services/auth.service';
+import { initJobQueue, closeJobQueue } from './jobs/queue';
 
 // Track active connections for graceful shutdown
 const connections: Set<Socket> = new Set();
@@ -38,15 +37,18 @@ async function startServer(): Promise<void> {
       if (!config.internalApiKey) {
         logger.warn('INTERNAL_API_KEY not set — /metrics endpoint will be unprotected');
       }
+      if (config.redisUrl === 'redis://localhost:6379') {
+        throw new Error('REDIS_URL must be explicitly configured in production');
+      }
     }
 
     // 2. Verify database connection
     await prisma.$connect();
     logger.info('Database connected successfully');
 
-    // 3. Initialize Redis connections
-    await initRateLimitRedis();
-    await initIdempotencyRedis();
+    // 3. Initialize shared Redis connection
+    await connectRedis();
+    logger.info('Redis connected');
 
     // 4. Create Express app
     const app = createApp();
@@ -74,19 +76,10 @@ async function startServer(): Promise<void> {
       `);
     });
 
-    // 7. Schedule background maintenance tasks
-    //    Run OTP cleanup immediately on startup, then once every 24 hours.
-    //    This removes expired/used OTP rows so the table stays lean.
-    const OTP_CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 h
-    authService.cleanupExpiredOTPs().catch((err) =>
-      logger.error('Initial OTP cleanup failed', { err })
-    );
-    setInterval(() => {
-      authService.cleanupExpiredOTPs().catch((err) =>
-        logger.error('Scheduled OTP cleanup failed', { err })
-      );
-    }, OTP_CLEANUP_INTERVAL_MS);
-    logger.info(`OTP cleanup scheduled every ${OTP_CLEANUP_INTERVAL_MS / 3600000}h`);
+    // 7. Initialize BullMQ job queue (OTP cleanup, etc.)
+    //    Replaces setInterval — safe for multi-instance deployments
+    await initJobQueue();
+    logger.info('Background job queue initialized');
 
     // 8. Graceful shutdown handlers
     const shutdown = async (signal: string) => {
@@ -103,10 +96,13 @@ async function startServer(): Promise<void> {
         logger.info('HTTP server closed — no new connections');
 
         try {
+          // Close job queue
+          await closeJobQueue();
+          logger.info('Job queue closed');
+
           // Disconnect Redis
-          await disconnectRateLimitRedis();
-          await disconnectIdempotencyRedis();
-          logger.info('Redis connections closed');
+          await disconnectRedis();
+          logger.info('Redis disconnected');
 
           // Disconnect database
           await disconnectDatabase();

@@ -12,6 +12,7 @@ import {
   VerifyOTPInput,
   CompleteProfileInput,
   UpdateEmergencyContactInput,
+  RegisterDeviceTokenInput,
 } from '../validators/auth.validator';
 import { SavedLocationInput } from '../validators/ride.validator';
 
@@ -108,6 +109,21 @@ export class AuthController {
         input.address
       );
       ApiResponse.success(res, result, `${input.type} location saved`);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * PUT /auth/device-token
+   * Register or update FCM device token for push notifications
+   */
+  async registerDeviceToken(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as AuthenticatedRequest).user.id;
+      const { fcmToken } = req.body as RegisterDeviceTokenInput;
+      await authService.registerDeviceToken(userId, fcmToken);
+      ApiResponse.success(res, null, 'Device token registered');
     } catch (error) {
       next(error);
     }
