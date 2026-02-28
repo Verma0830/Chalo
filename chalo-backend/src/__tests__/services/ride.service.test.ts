@@ -79,7 +79,7 @@ jest.mock('../../config/firebase', () => ({
   }),
 }));
 
-import prisma from '../../config/database';
+import prisma, { prisma as dbPrisma } from '../../config/database';
 import { RideService } from '../../services/ride.service';
 
 const rideService = new RideService();
@@ -248,8 +248,7 @@ describe('RideService', () => {
       });
 
       // Mock $queryRaw for driver search (fire-and-forget — returns empty)
-      const { prisma: namedPrisma } = require('../../config/database');
-      (namedPrisma.$queryRaw as jest.Mock).mockResolvedValue([]);
+      (dbPrisma.$queryRaw as jest.Mock).mockResolvedValue([]);
 
       const result = await rideService.createRide(customerId, validPickup, validDrop, 'CASH');
 

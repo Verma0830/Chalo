@@ -17,6 +17,15 @@ function requireEnv(key: string, defaultValue?: string): string {
   return value;
 }
 
+function requireInt(key: string, defaultValue: number): number {
+  const raw = process.env[key];
+  const parsed = raw !== undefined ? parseInt(raw, 10) : defaultValue;
+  if (!Number.isFinite(parsed)) {
+    throw new Error(`Environment variable ${key} must be a valid integer, got: "${raw}"`);
+  }
+  return parsed;
+}
+
 function optionalEnv(key: string, defaultValue: string): string {
   return process.env[key] || defaultValue;
 }
@@ -24,7 +33,7 @@ function optionalEnv(key: string, defaultValue: string): string {
 export const config = {
   // --- Server ---
   env: optionalEnv('NODE_ENV', 'development'),
-  port: parseInt(optionalEnv('PORT', '5000'), 10),
+  port: requireInt('PORT', 5000),
   apiVersion: optionalEnv('API_VERSION', 'v1'),
   isDev: optionalEnv('NODE_ENV', 'development') === 'development',
   isProd: process.env.NODE_ENV === 'production',
@@ -69,10 +78,10 @@ export const config = {
 
   // --- Business Rules (defaults — overridden by PlatformConfig DB table at runtime) ---
   business: {
-    commissionPercentage: parseInt(optionalEnv('COMMISSION_PERCENTAGE', '15'), 10),
-    subscriptionFeeWeekly: parseInt(optionalEnv('SUBSCRIPTION_FEE_WEEKLY', '199'), 10),
+    commissionPercentage: requireInt('COMMISSION_PERCENTAGE', 15),
+    subscriptionFeeWeekly: requireInt('SUBSCRIPTION_FEE_WEEKLY', 199),
     surgeEnabled: optionalEnv('SURGE_ENABLED', 'true') === 'true',
-    settlementDays: parseInt(optionalEnv('SETTLEMENT_DAYS', '2'), 10),
+    settlementDays: requireInt('SETTLEMENT_DAYS', 2),
     rideAcceptWindowSecs: 60,
     maxScheduleDays: 7,
     driverSearchRadiusKm: 5,
@@ -90,7 +99,7 @@ export const config = {
   logLevel: optionalEnv('LOG_LEVEL', 'debug'),
 
   // --- CORS ---
-  allowedOrigins: optionalEnv('ALLOWED_ORIGINS', 'http://localhost:3000').split(','),
+  allowedOrigins: optionalEnv('ALLOWED_ORIGINS', 'http://localhost:3000').split(',').map(s => s.trim()),
 } as const;
 
 export type Config = typeof config;

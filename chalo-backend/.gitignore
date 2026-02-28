@@ -38,3 +38,5 @@ coverage/
 # Temp
 tmp/
 temp/
+.vscode/*
+!.vscode/settings.json

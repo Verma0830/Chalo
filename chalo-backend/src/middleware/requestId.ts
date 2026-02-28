@@ -31,7 +31,7 @@ export function requestIdMiddleware(
     (req.headers['x-correlation-id'] as string);
 
   // Sanitize: allow only alphanumeric, hyphens, and underscores (max 128 chars)
-  const requestId = upstreamId && /^[\w\-]{1,128}$/.test(upstreamId)
+  const requestId = upstreamId && /^[\w-]{1,128}$/.test(upstreamId)
     ? upstreamId
     : uuid();
 
