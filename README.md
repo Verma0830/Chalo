@@ -40,6 +40,7 @@ Chalo/
 │       └── __tests__/      # Unit + integration tests (Jest + ts-jest)
 │
 └── docs/
+    ├── CODEBASE.md                    # Full codebase reference (give to Claude at session start)
     ├── api/
     │   └── POSTMAN_GUIDE.md          # API testing guide (Postman flows)
     ├── design/                        # All UI/UX design files
@@ -54,7 +55,8 @@ Chalo/
     │   └── chalo-design-tokens.json
     ├── development/
     │   ├── NEXT_STEPS.md             # Step-by-step development roadmap
-    │   └── IMPLEMENTATION_ROADMAP.md # Detailed task breakdown (phases 1-3)
+    │   ├── IMPLEMENTATION_ROADMAP.md # Detailed task breakdown (phases 1-3)
+    │   └── FRIEND_SETUP.md           # New developer onboarding guide (start here)
     ├── product/
     │   └── chalo-product-documentation.md
     └── reviews/
@@ -112,71 +114,117 @@ All configs live in the `PlatformConfig` DB table — change without redeploymen
 
 ## Backend Quick Start
 
-### Prerequisites
-- Node.js ≥ 20
-- Docker Desktop (for PostgreSQL + Redis)
-- Firebase project (already configured — `firebase-service-account.json` present)
+### Before You Start — Prerequisites
 
-### Local Dev Setup (first time)
+| Requirement | Why | Check |
+|---|---|---|
+| Node.js ≥ 20 | Runs the API | `node --version` |
+| Docker Desktop | Runs PostgreSQL + Redis | Open Docker Desktop → whale icon in taskbar |
+| Git | Clone the repo | `git --version` |
+| `firebase-service-account.json` | Firebase auth + FCM | Must be in `chalo-backend/` — get from team (not committed to git) |
+
+> **Windows:** Docker Desktop must be **open and showing "Engine running"** (whale icon in system tray) before any `docker` command will work.
+
+---
+
+### First-Time Setup (do this once)
 
 ```bash
-# 1. Start the PostGIS database container
-docker start chalo-db
-# (First time only: docker run -d --name chalo-db -e POSTGRES_PASSWORD=luffy \
-#   -e POSTGRES_DB=chalo -p 5432:5432 postgis/postgis:15-3.3)
+# Step 1 — Open Docker Desktop, wait for "Engine running"
 
-# 2. Install dependencies
+# Step 2 — Create the PostgreSQL container (skip if it already exists)
+docker run -d --name chalo-db \
+  -e POSTGRES_PASSWORD=luffy \
+  -e POSTGRES_DB=chalo \
+  -p 5432:5432 \
+  postgis/postgis:15-3.3
+
+# Step 3 — Create the Redis container (skip if it already exists)
+docker run -d --name chalo-redis \
+  -p 6379:6379 \
+  redis:7-alpine
+
+# Step 4 — Install Node dependencies
 cd chalo-backend
 npm install
 
-# 3. Apply database migrations (already done — skip if DB exists)
+# Step 5 — Create your .env file (copy the template and fill in values)
+copy .env.example .env
+# Edit .env — minimum: set REDIS_URL and FIREBASE_DATABASE_URL
+
+# Step 6 — Apply all database migrations
 npx prisma migrate deploy
 
-# 4. Start development server
+# Step 7 — Seed platform config (fares, commission %, etc.)
+npm run db:seed
+
+# Step 8 — Start the server
 npm run dev
-# → Server running at http://localhost:3001/api/v1
-# → Health check: http://localhost:3001/health
+# → API at http://localhost:3001/api/v1
+# → Health: http://localhost:3001/health  (should return {"status":"ok"})
 ```
+
+---
 
 ### Daily Dev Workflow
 
 ```bash
-docker start chalo-db   # Start DB if not running
+# 1. Open Docker Desktop and wait for it to start (whale icon = ready)
+# 2. Start containers
+docker start chalo-db
+docker start chalo-redis
+# 3. Start the API
 cd chalo-backend
-npm run dev             # Start API (hot reload)
+npm run dev
 ```
+
+---
 
 ### Environment Variables (`.env`)
 
 ```env
 DATABASE_URL="postgresql://postgres:luffy@localhost:5432/chalo?schema=public"
+REDIS_URL="redis://localhost:6379"
 PORT=3001
 NODE_ENV=development
 
-# Firebase (service account JSON path)
+# Firebase (get FIREBASE_DATABASE_URL from Firebase console → Realtime Database)
 FIREBASE_SERVICE_ACCOUNT_PATH=./firebase-service-account.json
-FIREBASE_DATABASE_URL=https://your-project.firebaseio.com
+FIREBASE_DATABASE_URL=https://your-project-default-rtdb.firebaseio.com
 
-# Razorpay (test keys — skip for Cash-only dev)
-RAZORPAY_KEY_ID=rzp_test_xxxxxxxxxxxx
-RAZORPAY_KEY_SECRET=your_test_secret
+# Razorpay — leave as placeholder for Cash-only dev (UPI not needed locally)
+RAZORPAY_KEY_ID=rzp_test_placeholder
+RAZORPAY_KEY_SECRET=placeholder_secret
 
-# Google Maps (use Haversine fallback in dev — key optional)
-GOOGLE_MAPS_API_KEY=your_google_maps_api_key
+# Google Maps — leave blank for dev (Haversine fallback is used automatically)
+GOOGLE_MAPS_API_KEY=
+
+# KYC API — leave blank (ManualKYCProvider is used automatically)
+SUREPASS_API_KEY=
+
+# SMS for SOS alerts — leave blank (SOS alert logs to console in dev)
+MSG91_AUTH_KEY=
+MSG91_SENDER_ID=CHALO
 ```
+
+> If `REDIS_URL` is not set, the app runs without Redis in dev mode — rate limiting and caching are disabled, which is fine for local testing.
+
+---
 
 ### Useful Commands
 
 ```bash
-npm run dev            # Start dev server (hot reload)
-npm run build          # Compile TypeScript → dist/
-npm run lint           # ESLint
-npm test               # Run all tests (unit + integration)
-npm run db:studio      # Open Prisma Studio GUI (localhost:5555)
-npm run db:seed        # Seed/reseed platform config
-npx prisma migrate deploy   # Apply pending migrations
-docker-compose up      # Full stack (API + PostGIS + Redis via Docker)
+npm run dev                  # Start dev server (hot reload via ts-node-dev)
+npm run build                # Compile TypeScript → dist/
+npm run lint                 # ESLint check
+npm test                     # Run all 249 tests
+npm run db:studio            # Open Prisma Studio GUI at localhost:5555
+npm run db:seed              # Seed / reseed platform config table
+npx prisma migrate deploy    # Apply pending DB migrations
+docker-compose up --build    # Alternative: run entire stack via Docker Compose
 ```
+
+> **Migration rule:** Always use `prisma migrate deploy`, never `prisma migrate dev`. The `dev` command needs a shadow database which fails with PostGIS on Windows.
 
 ---
 
@@ -333,3 +381,12 @@ See [SECURITY_PERFORMANCE_REVIEW.md](docs/reviews/SECURITY_PERFORMANCE_REVIEW.md
 ## What's Next
 
 See [NEXT_STEPS.md](docs/development/NEXT_STEPS.md) for the detailed, step-by-step development roadmap.
+
+## Key Docs
+
+| Document | Purpose |
+|---|---|
+| [docs/CODEBASE.md](docs/CODEBASE.md) | Full codebase reference — give this to any Claude at the start of a session |
+| [docs/development/FRIEND_SETUP.md](docs/development/FRIEND_SETUP.md) | New developer onboarding guide (fresh machine → running server) |
+| [docs/api/POSTMAN_GUIDE.md](docs/api/POSTMAN_GUIDE.md) | Step-by-step API testing with Postman |
+| [docs/development/NEXT_STEPS.md](docs/development/NEXT_STEPS.md) | Development roadmap (what to build next) |
