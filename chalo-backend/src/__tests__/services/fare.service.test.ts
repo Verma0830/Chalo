@@ -82,11 +82,12 @@ function mockFetchOk(body: object) {
 }
 
 // ── Baseline config mock ───────────────────────────────────────
+// Keys must match CONSTANTS.CONFIG_KEYS values (lowercase_snake_case)
 const defaultConfigs = [
-  { key: 'BASE_FARE_PER_KM', value: '12' },
-  { key: 'BASE_FARE_PER_MIN', value: '2' },
-  { key: 'COMMISSION_PERCENTAGE', value: '15' },
-  { key: 'SURGE_ENABLED', value: 'false' },
+  { key: 'base_fare_per_km', value: '12' },
+  { key: 'base_fare_per_min', value: '2' },
+  { key: 'commission_percentage', value: '15' },
+  { key: 'surge_enabled', value: 'false' },
 ];
 
 describe('FareService.estimateFare', () => {

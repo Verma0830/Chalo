@@ -24,42 +24,44 @@
 
 ```
 Chalo/
-├── chalo-backend/          # Node.js + TypeScript + Express API
-│   ├── prisma/             # Database schema (PostgreSQL) + seed
-│   ├── src/
-│   │   ├── config/         # App config, logger, Firebase, database
-│   │   ├── controllers/    # HTTP request handlers
-│   │   ├── middleware/     # Auth, error handler, rate limiter, validator
-│   │   ├── routes/         # Express route definitions
-│   │   ├── services/       # Business logic (ride, fare, payment, SOS…)
-│   │   ├── types/          # TypeScript type definitions
-│   │   ├── utils/          # Helpers, constants, ApiError, ApiResponse
-│   │   ├── validators/     # Zod request validators
-│   │   └── __tests__/      # Unit tests (Jest + ts-jest)
-│   ├── .env.example        # Required environment variables template
-│   ├── jest.config.ts
-│   ├── jest.setup.ts         # Global test mocks (uuid, metrics, rate limiter)
-│   ├── package.json
-│   ├── tsconfig.json          # IDE config (VS Code, noEmit, includes test files)
-│   └── tsconfig.build.json    # Build config (compilation, rootDir: ./src)
-│
-├── docs/
-│   ├── design/             # All UI/UX design files
-│   │   ├── chalo-component-library.html
-│   │   ├── chalo-customer-screens.html
-│   │   ├── chalo-design-system.html
-│   │   ├── chalo-design-tokens.json
-│   │   ├── chalo-driver-screens.html
-│   │   ├── chalo-prototype.html
-│   │   ├── chalo-spec-sheet.html
-│   │   ├── chalo-user-flows.html
-│   │   └── chalo-wireframes.html
-│   └── product/
-│       └── chalo-product-documentation.md
-│
-├── NEXT_STEPS.md           # Detailed development roadmap
 ├── README.md               # This file
-└── tsconfig.json           # Root project references (for VS Code)
+├── chalo-backend/          # Node.js + TypeScript + Express API
+│   ├── prisma/             # Database schema (PostgreSQL) + seed + migrations
+│   └── src/
+│       ├── config/         # App config, logger, Firebase, database, Redis
+│       ├── controllers/    # HTTP request handlers (auth, ride, driver, admin…)
+│       ├── jobs/           # BullMQ background jobs (ride expiry, OTP cleanup)
+│       ├── middleware/     # Auth, error handler, rate limiter, validator
+│       ├── routes/         # Express route definitions
+│       ├── services/       # Business logic (ride, fare, payment, SOS, KYC…)
+│       ├── types/          # TypeScript type definitions
+│       ├── utils/          # Helpers, constants, ApiError, ApiResponse, metrics
+│       ├── validators/     # Zod request validators
+│       └── __tests__/      # Unit + integration tests (Jest + ts-jest)
+│
+└── docs/
+    ├── api/
+    │   └── POSTMAN_GUIDE.md          # API testing guide (Postman flows)
+    ├── design/                        # All UI/UX design files
+    │   ├── chalo-prototype.html
+    │   ├── chalo-customer-screens.html
+    │   ├── chalo-driver-screens.html
+    │   ├── chalo-design-system.html
+    │   ├── chalo-component-library.html
+    │   ├── chalo-spec-sheet.html
+    │   ├── chalo-user-flows.html
+    │   ├── chalo-wireframes.html
+    │   └── chalo-design-tokens.json
+    ├── development/
+    │   ├── NEXT_STEPS.md             # Step-by-step development roadmap
+    │   └── IMPLEMENTATION_ROADMAP.md # Detailed task breakdown (phases 1-3)
+    ├── product/
+    │   └── chalo-product-documentation.md
+    └── reviews/
+        ├── CODE_REVIEW.md
+        ├── SECURITY_PERFORMANCE_REVIEW.md
+        ├── chalo-backend-review.md
+        └── chalo-master-document.docx
 ```
 
 ---
@@ -248,6 +250,21 @@ All driver endpoints require Firebase auth + `DRIVER` role.
 | POST | `/api/v1/driver/withdrawals` | Request payout (bank transfer or UPI) |
 | GET | `/api/v1/driver/withdrawals/:withdrawalId` | Withdrawal status |
 
+### Admin (8 endpoints)
+
+All admin endpoints require Firebase auth + `ADMIN` role.
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/v1/admin/drivers/pending` | List drivers pending verification (FIFO) |
+| GET | `/api/v1/admin/drivers/:driverId` | Full driver profile + documents |
+| POST | `/api/v1/admin/drivers/:driverId/approve` | Approve driver (optional note) |
+| POST | `/api/v1/admin/drivers/:driverId/reject` | Reject driver (required reason) |
+| POST | `/api/v1/admin/drivers/:driverId/auto-verify` | Run KYC API (Surepass / manual fallback) |
+| GET | `/api/v1/admin/rides/live` | Live rides currently in progress |
+| GET | `/api/v1/admin/config` | Get all platform config values |
+| PUT | `/api/v1/admin/config/:key` | Update a platform config value |
+
 ---
 
 ## Design Files
@@ -285,7 +302,7 @@ All 25 security/performance/reliability findings have been resolved. Key protect
 | Metrics | Prometheus via `/metrics` (API key protected in production) |
 | Observability | Request ID tracing, structured JSON logging (Winston) |
 
-See [SECURITY_PERFORMANCE_REVIEW.md](SECURITY_PERFORMANCE_REVIEW.md) for full details on all 25 findings (all fixed), and [CODE_REVIEW.md](CODE_REVIEW.md) for the complete Round 3 + Round 4 reviews.
+See [SECURITY_PERFORMANCE_REVIEW.md](docs/reviews/SECURITY_PERFORMANCE_REVIEW.md) for full details on all 25 findings (all fixed), and [CODE_REVIEW.md](docs/reviews/CODE_REVIEW.md) for the complete Round 3 + Round 4 reviews.
 
 ---
 
@@ -315,4 +332,4 @@ See [SECURITY_PERFORMANCE_REVIEW.md](SECURITY_PERFORMANCE_REVIEW.md) for full de
 
 ## What's Next
 
-See [NEXT_STEPS.md](NEXT_STEPS.md) for the detailed, step-by-step development roadmap.
+See [NEXT_STEPS.md](docs/development/NEXT_STEPS.md) for the detailed, step-by-step development roadmap.
