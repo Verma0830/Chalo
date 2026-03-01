@@ -6,6 +6,7 @@
 import { Router } from 'express';
 import authRoutes from './auth.routes';
 import rideRoutes from './ride.routes';
+import driverRoutes from './driver.routes';
 import paymentRoutes from './payment.routes';
 import notificationRoutes from './notification.routes';
 
@@ -17,6 +18,7 @@ const router = Router();
 
 router.use('/auth', authRoutes);
 router.use('/rides', rideRoutes);
+router.use('/driver', driverRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/notifications', notificationRoutes);
 

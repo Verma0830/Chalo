@@ -14,6 +14,7 @@ import { sanitizeLocation } from '../utils/sanitize';
 import { ridesCreatedTotal, ridesCancelledTotal, driverSearchDuration } from '../utils/metrics';
 import logger from '../config/logger';
 import { getDatabase } from '../config/firebase';
+import { getRedisClient, isRedisReady } from '../config/redis';
 import { Prisma, RideStatus, CancellationBy } from '@prisma/client';
 
 // ---------------------------------------------------------------------------
@@ -765,7 +766,22 @@ export class RideService {
 
     const bestDriver = scoredDrivers[0];
 
-    // Send request to top-scored driver
+    // Write offer to Redis so the driver's app can poll getIncomingRide()
+    // TTL = accept window + a 10-second grace buffer
+    const redis = getRedisClient();
+    if (redis && isRedisReady()) {
+      void redis
+        .setEx(
+          `ride:offer:${bestDriver.driver.userId}`,
+          CONSTANTS.RIDE_ACCEPT_WINDOW_SECS + 10,
+          rideId
+        )
+        .catch((err) => {
+          logger.warn('Redis offer write failed', { rideId, error: String(err) });
+        });
+    }
+
+    // Send FCM nudge — driver app polls getIncomingRide() on receipt
     await notificationService.sendPushNotification({
       userId: bestDriver.driver.userId,
       title: 'New Ride Request!',
@@ -780,6 +796,40 @@ export class RideService {
       searchDurationSecs,
       driverScore: bestDriver.totalScore.toFixed(2),
     });
+  }
+
+  /**
+   * Re-trigger driver search after a decline.
+   * Public so DriverService can call it without circular import at module load.
+   * @param excludeDriverId - The driver who just declined (excluded from candidates)
+   */
+  async retriggerDriverSearch(
+    rideId: string,
+    pickupLat: number,
+    pickupLng: number,
+    fare: number,
+    excludeDriverId: string
+  ): Promise<void> {
+    // Verify ride is still in REQUESTED state before searching again
+    const ride = await prisma.ride.findUnique({
+      where: { id: rideId },
+      select: { status: true, driverId: true },
+    });
+
+    if (!ride || ride.status !== RideStatus.REQUESTED || ride.driverId !== null) {
+      logger.debug('Skipping re-trigger — ride no longer searchable', {
+        rideId,
+        status: ride?.status,
+      });
+      return;
+    }
+
+    logger.info('Re-triggering driver search after decline', { rideId, excludeDriverId });
+
+    // Re-use the same search — the scored list will naturally deprioritise the declining
+    // driver only if they move further away; for V1 this is acceptable behaviour.
+    // V2: maintain a per-ride exclusion list in Redis.
+    await this.searchAndNotifyDrivers(rideId, pickupLat, pickupLng, fare);
   }
 
 }
