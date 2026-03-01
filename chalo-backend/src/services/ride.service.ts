@@ -764,72 +764,91 @@ export class RideService {
     // Sort by score descending
     scoredDrivers.sort((a, b) => b.totalScore - a.totalScore);
 
-    const bestDriver = scoredDrivers[0];
+    // Extract all candidate IDs sorted by score
+    const allCandidateIds = scoredDrivers.map((s) => s.driver.userId);
 
-    // Write offer to Redis so the driver's app can poll getIncomingRide()
-    // TTL = accept window + a 10-second grace buffer
+    // Persist full candidate list in Redis for batch advance by BullMQ worker
     const redis = getRedisClient();
     if (redis && isRedisReady()) {
       void redis
         .setEx(
-          `ride:offer:${bestDriver.driver.userId}`,
-          CONSTANTS.RIDE_ACCEPT_WINDOW_SECS + 10,
-          rideId
+          `ride:candidates:${rideId}`,
+          CONSTANTS.RIDE_CANDIDATES_TTL_SECS,
+          JSON.stringify(allCandidateIds)
         )
         .catch((err) => {
-          logger.warn('Redis offer write failed', { rideId, error: String(err) });
+          logger.warn('Redis candidate list write failed', { rideId, error: String(err) });
         });
     }
 
-    // Send FCM nudge — driver app polls getIncomingRide() on receipt
-    await notificationService.sendPushNotification({
-      userId: bestDriver.driver.userId,
-      title: 'New Ride Request!',
-      body: `New ride request ${bestDriver.distanceKm.toFixed(1)}km away. ₹${fare}`,
-      data: { rideId, type: 'RIDE_REQUEST' },
-    });
+    // Dispatch first batch — top DRIVER_BROADCAST_SIZE drivers simultaneously
+    const firstBatch = allCandidateIds.slice(0, CONSTANTS.DRIVER_BROADCAST_SIZE);
+    await this.dispatchBatch(rideId, firstBatch, fare, pickupLat, pickupLng, CONSTANTS.DRIVER_BROADCAST_SIZE);
 
-    logger.info('Ride request sent to driver', {
+    logger.info('Broadcast driver search initiated', {
       rideId,
-      driverId: bestDriver.driver.userId,
-      driversFound: nearbyDrivers.length,
+      totalCandidates: allCandidateIds.length,
+      firstBatchSize: firstBatch.length,
       searchDurationSecs,
-      driverScore: bestDriver.totalScore.toFixed(2),
     });
   }
 
   /**
-   * Re-trigger driver search after a decline.
-   * Public so DriverService can call it without circular import at module load.
-   * @param excludeDriverId - The driver who just declined (excluded from candidates)
+   * Dispatch a batch of drivers: write Redis offer keys, send FCM, schedule expiry job.
+   * Public so the BullMQ ride-offer-expired worker can advance batches.
+   *
+   * @param rideId         - The ride being offered
+   * @param driverUserIds  - userId[] for this batch
+   * @param fare           - Fare amount (₹) for FCM message
+   * @param pickupLat      - Pickup latitude
+   * @param pickupLng      - Pickup longitude
+   * @param nextBatchStart - Index into candidates[] for the next batch (passed into BullMQ job)
    */
-  async retriggerDriverSearch(
+  async dispatchBatch(
     rideId: string,
+    driverUserIds: string[],
+    fare: number,
     pickupLat: number,
     pickupLng: number,
-    fare: number,
-    excludeDriverId: string
+    nextBatchStart: number
   ): Promise<void> {
-    // Verify ride is still in REQUESTED state before searching again
-    const ride = await prisma.ride.findUnique({
-      where: { id: rideId },
-      select: { status: true, driverId: true },
-    });
+    const redis = getRedisClient();
 
-    if (!ride || ride.status !== RideStatus.REQUESTED || ride.driverId !== null) {
-      logger.debug('Skipping re-trigger — ride no longer searchable', {
-        rideId,
-        status: ride?.status,
-      });
-      return;
+    // Store active batch so acceptRide() can clean up losing drivers
+    if (redis && isRedisReady()) {
+      void redis
+        .setEx(
+          `ride:active_batch:${rideId}`,
+          CONSTANTS.RIDE_OFFER_BATCH_TTL_SECS,
+          JSON.stringify(driverUserIds)
+        )
+        .catch(() => null);
     }
 
-    logger.info('Re-triggering driver search after decline', { rideId, excludeDriverId });
+    // Write individual offer keys + send FCM for every driver in the batch
+    await Promise.allSettled(
+      driverUserIds.map(async (driverUserId) => {
+        if (redis && isRedisReady()) {
+          await redis
+            .setEx(`ride:offer:${driverUserId}`, CONSTANTS.RIDE_OFFER_BATCH_TTL_SECS, rideId)
+            .catch((err) => {
+              logger.warn('Redis offer write failed', { rideId, driverUserId, error: String(err) });
+            });
+        }
+        await notificationService.sendPushNotification({
+          userId: driverUserId,
+          title: 'New Ride Request!',
+          body: `New ride nearby. ₹${fare}`,
+          data: { rideId, type: 'RIDE_REQUEST' },
+        });
+      })
+    );
 
-    // Re-use the same search — the scored list will naturally deprioritise the declining
-    // driver only if they move further away; for V1 this is acceptable behaviour.
-    // V2: maintain a per-ride exclusion list in Redis.
-    await this.searchAndNotifyDrivers(rideId, pickupLat, pickupLng, fare);
+    // Schedule the batch expiry job — BullMQ fires after RIDE_OFFER_BATCH_TTL_SECS
+    const { scheduleRideOfferExpiry } = await import('../jobs/queue');
+    await scheduleRideOfferExpiry({ rideId, nextBatchStart, pickupLat, pickupLng, fare });
+
+    logger.info('Batch dispatched', { rideId, driverCount: driverUserIds.length, nextBatchStart });
   }
 
 }

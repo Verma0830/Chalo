@@ -172,6 +172,8 @@ model DriverProfile {
   verificationStatus    VerificationStatus  @default(PENDING)
   verifiedAt            DateTime?
   rejectionReason       String?
+  verificationNote      String?
+  verificationMetadata  Json?
   
   // Plan
   planType              DriverPlanType      @default(COMMISSION)

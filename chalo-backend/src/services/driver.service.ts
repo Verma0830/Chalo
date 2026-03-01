@@ -488,10 +488,22 @@ export class DriverService {
         driverId: userId,
       });
 
-      // Remove the offer from Redis — offer consumed
+      // Remove the offer from Redis — offer consumed; also clear other batch members' offers
       const redis = getRedisClient();
       if (redis && isRedisReady()) {
         void redis.del(`ride:offer:${userId}`).catch(() => null);
+
+        // Clean up offers for the other drivers in the same batch (they lost)
+        const batchRaw = await redis.get(`ride:active_batch:${rideId}`).catch(() => null);
+        if (batchRaw) {
+          const batchIds: string[] = JSON.parse(batchRaw);
+          const losers = batchIds.filter((id) => id !== userId);
+          void Promise.allSettled(losers.map((id) => redis.del(`ride:offer:${id}`))).catch(() => null);
+        }
+
+        // Clean up batch tracking keys
+        void redis.del(`ride:active_batch:${rideId}`).catch(() => null);
+        void redis.del(`ride:candidates:${rideId}`).catch(() => null);
       }
 
       activeRidesGauge.inc({ status: 'DRIVER_ASSIGNED' });
@@ -569,19 +581,19 @@ export class DriverService {
     const redis = getRedisClient();
     if (redis && isRedisReady()) {
       void redis.del(`ride:offer:${userId}`).catch(() => null);
+
+      // Remove this driver from the active batch array
+      // The BullMQ ride-offer-expired job will advance to the next batch when TTL fires
+      const batchRaw = await redis.get(`ride:active_batch:${rideId}`).catch(() => null);
+      if (batchRaw) {
+        const updated = (JSON.parse(batchRaw) as string[]).filter((id) => id !== userId);
+        void redis
+          .setEx(`ride:active_batch:${rideId}`, CONSTANTS.RIDE_OFFER_BATCH_TTL_SECS, JSON.stringify(updated))
+          .catch(() => null);
+      }
     }
 
     logger.info('Driver declined ride', { rideId, driverId: userId });
-
-    // Re-trigger driver search — find the next-best driver, excluding this one
-    // Import is deferred to avoid circular dependency at module load time
-    void import('./ride.service').then(({ rideService }) => {
-      rideService
-        .retriggerDriverSearch(rideId, ride.pickupLat, ride.pickupLng, ride.finalFare, userId)
-        .catch((err) => {
-          logger.warn('Re-trigger driver search failed after decline', { rideId, error: String(err) });
-        });
-    });
 
     return { rideId, declined: true };
   }

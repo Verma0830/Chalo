@@ -12,7 +12,9 @@ export const CONSTANTS = {
   DRIVER_ARRIVED_RADIUS_METERS: 200,     // "I've Arrived" activates within 200m
   SCHEDULED_RIDE_REMINDER_MINS: 30,
   DRIVER_SEARCH_MAX_CANDIDATES: 10,      // Max drivers to consider for matching
-  DRIVER_ACCEPT_TIMEOUT_SECS: 30,        // Time for driver to accept before trying next
+  DRIVER_BROADCAST_SIZE: 5,             // How many drivers get notified per batch
+  RIDE_OFFER_BATCH_TTL_SECS: 65,        // Redis TTL per batch window (60s window + 5s grace)
+  RIDE_CANDIDATES_TTL_SECS: 600,        // Redis TTL for full candidate list (10 min)
 
   // --- Fare ---
   MIN_FARE: 30,                           // ₹30 minimum fare

@@ -9,6 +9,7 @@ import rideRoutes from './ride.routes';
 import driverRoutes from './driver.routes';
 import paymentRoutes from './payment.routes';
 import notificationRoutes from './notification.routes';
+import adminRoutes from './admin.routes';
 
 const router = Router();
 
@@ -21,5 +22,6 @@ router.use('/rides', rideRoutes);
 router.use('/driver', driverRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/admin', adminRoutes);
 
 export default router;
