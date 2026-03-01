@@ -95,6 +95,7 @@ describe('RideService', () => {
     const customerId = 'cuid_customer_001';
 
     it('throws VALIDATION_ERROR when pickup is missing lat', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const invalidPickup = { lat: undefined as any, lng: 77.3178, address: 'Test' };
 
       await expect(

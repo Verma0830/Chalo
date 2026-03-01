@@ -66,6 +66,7 @@ export async function initJobQueue(): Promise<void> {
         }
         default:
           logger.warn('Unknown job type', { jobName: job.name });
+          return;
       }
     },
     { connection, concurrency: 1 }
