@@ -112,52 +112,55 @@ All configs live in the `PlatformConfig` DB table — change without redeploymen
 
 ### Prerequisites
 - Node.js ≥ 20
-- PostgreSQL ≥ 14
-- A Firebase project (for auth + FCM)
-- A Razorpay account (for payments)
+- Docker Desktop (for PostgreSQL + Redis)
+- Firebase project (already configured — `firebase-service-account.json` present)
 
-### Setup
+### Local Dev Setup (first time)
 
 ```bash
-# 1. Install dependencies
+# 1. Start the PostGIS database container
+docker start chalo-db
+# (First time only: docker run -d --name chalo-db -e POSTGRES_PASSWORD=luffy \
+#   -e POSTGRES_DB=chalo -p 5432:5432 postgis/postgis:15-3.3)
+
+# 2. Install dependencies
 cd chalo-backend
 npm install
 
-# 2. Copy and fill environment variables
-cp .env.example .env
-# Edit .env with your DB URL, Firebase creds, Razorpay keys, Google Maps key
+# 3. Apply database migrations (already done — skip if DB exists)
+npx prisma migrate deploy
 
-# 3. Run database migrations
-npx prisma migrate dev --name init
-
-# 4. Seed platform config
-npx prisma db:seed
-
-# 5. Start development server
+# 4. Start development server
 npm run dev
+# → Server running at http://localhost:3001/api/v1
+# → Health check: http://localhost:3001/health
+```
+
+### Daily Dev Workflow
+
+```bash
+docker start chalo-db   # Start DB if not running
+cd chalo-backend
+npm run dev             # Start API (hot reload)
 ```
 
 ### Environment Variables (`.env`)
 
 ```env
-DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/chalo_dev?schema=public"
-PORT=3000
+DATABASE_URL="postgresql://postgres:luffy@localhost:5432/chalo?schema=public"
+PORT=3001
 NODE_ENV=development
 
-# Firebase
-FIREBASE_PROJECT_ID=
-FIREBASE_CLIENT_EMAIL=
-FIREBASE_PRIVATE_KEY=
-FIREBASE_DATABASE_URL=
-FIREBASE_STORAGE_BUCKET=
+# Firebase (service account JSON path)
+FIREBASE_SERVICE_ACCOUNT_PATH=./firebase-service-account.json
+FIREBASE_DATABASE_URL=https://your-project.firebaseio.com
 
-# Razorpay
-RAZORPAY_KEY_ID=
-RAZORPAY_KEY_SECRET=
-RAZORPAY_WEBHOOK_SECRET=
+# Razorpay (test keys — skip for Cash-only dev)
+RAZORPAY_KEY_ID=rzp_test_xxxxxxxxxxxx
+RAZORPAY_KEY_SECRET=your_test_secret
 
-# Google Maps
-GOOGLE_MAPS_API_KEY=
+# Google Maps (use Haversine fallback in dev — key optional)
+GOOGLE_MAPS_API_KEY=your_google_maps_api_key
 ```
 
 ### Useful Commands
@@ -166,34 +169,84 @@ GOOGLE_MAPS_API_KEY=
 npm run dev            # Start dev server (hot reload)
 npm run build          # Compile TypeScript → dist/
 npm run lint           # ESLint
-npm test               # Run all 154 tests (unit + integration)
-npm run db:studio      # Open Prisma Studio (DB GUI)
-npm run db:migrate     # Run new migrations
+npm test               # Run all tests (unit + integration)
+npm run db:studio      # Open Prisma Studio GUI (localhost:5555)
 npm run db:seed        # Seed/reseed platform config
+npx prisma migrate deploy   # Apply pending migrations
+docker-compose up      # Full stack (API + PostGIS + Redis via Docker)
 ```
 
 ---
 
-## API Endpoints (Customer)
+## API Endpoints — 41 Total
+
+### Auth (7 endpoints)
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/api/v1/auth/otp/send` | Public | Send OTP to phone |
+| POST | `/api/v1/auth/otp/verify` | Public | Verify OTP + get Firebase token |
+| GET | `/api/v1/auth/profile` | Required | Get current user profile |
+| PUT | `/api/v1/auth/profile` | Required | Complete / update profile |
+| PUT | `/api/v1/auth/emergency-contact` | Required | Update emergency contact |
+| PUT | `/api/v1/auth/saved-location` | Required | Save home / work location |
+| PUT | `/api/v1/auth/device-token` | Required | Register FCM device token |
+
+### Rides — Customer (11 endpoints)
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/api/v1/rides/fare-estimate` | Required | Get fare + ETA before booking |
+| POST | `/api/v1/rides` | CUSTOMER | Create on-demand ride |
+| POST | `/api/v1/rides/schedule` | CUSTOMER | Schedule a future ride |
+| GET | `/api/v1/rides/history` | CUSTOMER | Paginated ride history |
+| GET | `/api/v1/rides/scheduled` | CUSTOMER | Upcoming scheduled rides |
+| GET | `/api/v1/rides/:rideId` | Required | Ride details |
+| GET | `/api/v1/rides/:rideId/location` | Required | Live driver location |
+| POST | `/api/v1/rides/:rideId/cancel` | CUSTOMER | Cancel a ride |
+| POST | `/api/v1/rides/:rideId/rate` | CUSTOMER | Rate a completed ride |
+| POST | `/api/v1/rides/:rideId/sos` | Required | Trigger SOS alert |
+| POST | `/api/v1/rides/sos/:sosAlertId/resolve` | Required | Resolve SOS alert |
+
+### Payments (3 endpoints)
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/api/v1/payments/order` | Required | Create Razorpay order |
+| POST | `/api/v1/payments/verify` | Required | Verify UPI payment |
+| POST | `/api/v1/payments/webhook` | Signature | Razorpay webhook handler |
+
+### Notifications (4 endpoints)
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/api/v1/notifications` | Required | Paginated notifications list |
+| GET | `/api/v1/notifications/unread-count` | Required | Unread notification count |
+| PATCH | `/api/v1/notifications/:notificationId/read` | Required | Mark one as read |
+| PATCH | `/api/v1/notifications/read-all` | Required | Mark all as read |
+
+### Driver (16 endpoints)
+
+All driver endpoints require Firebase auth + `DRIVER` role.
 
 | Method | Path | Description |
 |---|---|---|
-| POST | `/api/v1/auth/send-otp` | Send OTP to phone |
-| POST | `/api/v1/auth/verify-otp` | Verify OTP + get token |
-| POST | `/api/v1/auth/complete-profile` | Set name / language |
-| GET | `/api/v1/auth/me` | Current user profile |
-| POST | `/api/v1/auth/emergency-contact` | Update emergency contact |
-| POST | `/api/v1/rides/fare-estimate` | Get fare before booking |
-| POST | `/api/v1/rides` | Create on-demand ride |
-| POST | `/api/v1/rides/schedule` | Schedule a future ride |
-| GET | `/api/v1/rides/:id` | Ride details |
-| GET | `/api/v1/rides` | Ride history |
-| POST | `/api/v1/rides/:id/cancel` | Cancel a ride |
-| POST | `/api/v1/rides/:id/rate` | Rate a completed ride |
-| POST | `/api/v1/payments/order` | Create Razorpay order |
-| POST | `/api/v1/payments/verify` | Verify UPI payment |
-| POST | `/api/v1/notifications` | Get notifications |
-| PATCH | `/api/v1/notifications/:id/read` | Mark notification read |
+| POST | `/api/v1/driver/go-online` | Set online + starting GPS location |
+| POST | `/api/v1/driver/go-offline` | Set offline (blocked if active ride) |
+| GET | `/api/v1/driver/status` | Current online state + active ride |
+| POST | `/api/v1/driver/location` | GPS location update (Redis→Postgres→RTDB) |
+| GET | `/api/v1/driver/rides/incoming` | Poll for pending ride offer |
+| POST | `/api/v1/driver/rides/:rideId/accept` | Accept ride (atomic compare-and-swap) |
+| POST | `/api/v1/driver/rides/:rideId/decline` | Decline ride + retrigger search |
+| POST | `/api/v1/driver/rides/:rideId/arrived` | Mark arrived at pickup |
+| POST | `/api/v1/driver/rides/:rideId/start` | Start ride (customer on board) |
+| POST | `/api/v1/driver/rides/:rideId/complete` | Complete ride + create earnings record |
+| POST | `/api/v1/driver/rides/:rideId/cancel` | Cancel ride (before start only) |
+| GET | `/api/v1/driver/trips` | Paginated trip history |
+| GET | `/api/v1/driver/earnings` | Earnings summary + breakdown by period |
+| GET | `/api/v1/driver/earnings/settlement` | Pending / processing / settled amounts |
+| POST | `/api/v1/driver/withdrawals` | Request payout (bank transfer or UPI) |
+| GET | `/api/v1/driver/withdrawals/:withdrawalId` | Withdrawal status |
 
 ---
 
@@ -243,8 +296,22 @@ See [SECURITY_PERFORMANCE_REVIEW.md](SECURITY_PERFORMANCE_REVIEW.md) for full de
 | Initial Review | 6.63/10 | Baseline |
 | After Security Fixes (P0+P1) | 6.87/10 | Critical gaps identified and fixed |
 | After P2+P3 Implementation | **7.42/10** | Redis singleton, RTDB sync, auth cache, indexes, k6 tests, coverage, notification validation |
+| After Driver API + Docker + CI | **~8.0/10** | 16 driver endpoints, PostGIS indexes, Dockerized, CI pipeline |
+| After Local DB Setup | **~8.0/10** | Docker PostGIS running locally, migrations applied, server live on port 3001 |
 
 ---
+
+## Current Runtime Status
+
+| Service | Status | Details |
+|---|---|---|
+| PostgreSQL + PostGIS | ✅ Running | Docker container `chalo-db`, port 5432 |
+| Redis | ✅ Running | localhost:6379 |
+| Firebase Admin | ✅ Connected | Service account loaded |
+| API Server | ✅ Running | http://localhost:3001/api/v1 |
+| BullMQ job queue | ✅ Running | OTP cleanup queue active |
+| All 11 DB tables | ✅ Migrated | `prisma migrate deploy` applied |
+| PostGIS GIST index | ✅ Applied | Driver proximity search optimised |
 
 ## What's Next
 

@@ -1,7 +1,11 @@
 # ============================================================
 # Chalo Backend — CI Pipeline
 # Runs on every push and PR to main
-# Lint → Build → Test
+#
+# Jobs run in parallel where possible:
+#   lint  ─┐
+#           ├─► build (after both pass)
+#   test  ─┘
 # ============================================================
 
 name: CI
@@ -12,14 +16,55 @@ on:
   pull_request:
     branches: [main]
 
-env:
-  NODE_ENV: test
-  DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/chalo_test?schema=public"
-  REDIS_URL: "redis://localhost:6379"
-
 jobs:
-  ci:
+
+  # ─────────────────────────────────────────────
+  # Job 1: Lint (no DB needed — runs immediately)
+  # ─────────────────────────────────────────────
+  lint:
+    name: Lint & Type Check
     runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: npm
+          cache-dependency-path: chalo-backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: chalo-backend
+        run: npm ci --no-audit --no-fund
+
+      - name: TypeScript type check
+        working-directory: chalo-backend
+        run: npx tsc --noEmit
+
+      - name: ESLint
+        working-directory: chalo-backend
+        run: npm run lint
+
+      - name: Security audit (high severity only)
+        working-directory: chalo-backend
+        run: npm audit --audit-level=high
+        # Allow the job to continue — advisory only (does not block merge)
+        continue-on-error: true
+
+  # ─────────────────────────────────────────────
+  # Job 2: Test (needs DB + Redis)
+  # ─────────────────────────────────────────────
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    env:
+      NODE_ENV: test
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/chalo_test?schema=public"
+      REDIS_URL: "redis://localhost:6379"
 
     services:
       postgres:
@@ -53,13 +98,13 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '20.x'
           cache: npm
           cache-dependency-path: chalo-backend/package-lock.json
 
       - name: Install dependencies
         working-directory: chalo-backend
-        run: npm ci
+        run: npm ci --no-audit --no-fund
 
       - name: Generate Prisma client
         working-directory: chalo-backend
@@ -69,14 +114,51 @@ jobs:
         working-directory: chalo-backend
         run: npx prisma migrate deploy
 
-      - name: Lint
+      - name: Run tests with coverage
         working-directory: chalo-backend
-        run: npm run lint
+        run: npm test -- --coverage --forceExit
 
-      - name: Build
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          directory: chalo-backend/coverage
+          flags: backend
+          fail_ci_if_error: false
+        # Set CODECOV_TOKEN in GitHub repo secrets to enable coverage tracking
+        # Get token at: https://app.codecov.io → add your repo → copy token
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  # ─────────────────────────────────────────────
+  # Job 3: Build (runs after lint + test both pass)
+  # ─────────────────────────────────────────────
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+          cache: npm
+          cache-dependency-path: chalo-backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: chalo-backend
+        run: npm ci --no-audit --no-fund
+
+      - name: Generate Prisma client
+        working-directory: chalo-backend
+        run: npx prisma generate
+
+      - name: TypeScript build
         working-directory: chalo-backend
         run: npm run build
 
-      - name: Test
-        working-directory: chalo-backend
-        run: npm test -- --coverage --forceExit
+      - name: Verify dist output exists
+        run: test -f chalo-backend/dist/server.js

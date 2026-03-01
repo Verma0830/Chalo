@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(npm run lint)",
-      "Bash(npm uninstall @types/uuid)"
+      "Bash(npm uninstall @types/uuid)",
+      "Bash(npm run build)"
     ]
   }
 }

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm test -- --forceExit)",
+      "Bash(docker exec chalo-db psql -U postgres -d chalo -c \"SELECT migration_name, finished_at, applied_steps_count, rolled_back_at FROM _prisma_migrations ORDER BY started_at;\")",
+      "Bash(docker exec chalo-db psql -U postgres -d chalo -c \"SELECT extname FROM pg_extension;\")",
+      "Bash(docker exec chalo-db psql -U postgres -d chalo -c \"\\\\dt public.*\")"
+    ]
+  }
+}
