@@ -14,6 +14,7 @@ import {
   driverRideParamSchema,
   withdrawalIdParamSchema,
   declineRideSchema,
+  completeRideSchema,
   earningsQuerySchema,
   tripHistoryQuerySchema,
   withdrawalSchema,
@@ -107,6 +108,7 @@ router.post(
 router.post(
   '/rides/:rideId/complete',
   validateParams(driverRideParamSchema),
+  validateBody(completeRideSchema),
   driverController.completeRide.bind(driverController)
 );
 

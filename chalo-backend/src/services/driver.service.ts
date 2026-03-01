@@ -724,7 +724,7 @@ export class DriverService {
    *
    * External calls (notifications, RTDB) happen AFTER the transaction.
    */
-  async completeRide(userId: string, rideId: string) {
+  async completeRide(userId: string, rideId: string, note?: string) {
     const now = new Date();
 
     // Fetch driver plan type BEFORE the transaction (avoids external query inside tx)
@@ -837,6 +837,7 @@ export class DriverService {
             commissionAmount,
             netAmount,
             settlementDueDate: settlementDueDate.toISOString(),
+            ...(note && { note }),
           },
         },
       });

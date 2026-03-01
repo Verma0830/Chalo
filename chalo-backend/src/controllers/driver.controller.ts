@@ -14,6 +14,7 @@ import {
   DriverRideParam,
   WithdrawalIdParam,
   DeclineRideInput,
+  CompleteRideInput,
   EarningsQuery,
   TripHistoryQuery,
   WithdrawalInput,
@@ -188,8 +189,9 @@ export class DriverController {
     try {
       const userId = (req as AuthenticatedRequest).user.id;
       const { rideId } = req.params as DriverRideParam;
+      const { note } = req.body as CompleteRideInput;
 
-      const result = await driverService.completeRide(userId, rideId);
+      const result = await driverService.completeRide(userId, rideId, note);
       ApiResponse.success(res, result, 'Ride completed successfully');
     } catch (error) {
       next(error);

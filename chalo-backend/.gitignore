@@ -13,8 +13,8 @@ dist/
 firebase-service-account.json
 *-firebase-adminsdk-*.json
 
-# Prisma
-prisma/migrations/
+# Prisma (migrations are intentionally tracked — needed for prisma migrate deploy)
+tsconfig.build.tsbuildinfo
 
 # IDE
 .idea/
