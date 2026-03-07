@@ -120,11 +120,27 @@ export const withdrawalSchema = z
     }
   );
 
+/**
+ * Submit KYC documents for verification
+ */
+export const submitDocumentsSchema = z.object({
+  licenseNumber: z.string().trim().min(1, 'License number is required'),
+  licenseUrl:    z.string().url('licenseUrl must be a valid URL'),
+  rcNumber:      z.string().trim().min(1, 'RC number is required'),
+  rcUrl:         z.string().url('rcUrl must be a valid URL'),
+  aadharNumber:  z.string().trim().regex(/^\d{12}$/, 'Aadhar number must be 12 digits'),
+  aadharUrl:     z.string().url('aadharUrl must be a valid URL'),
+  vehicleNumber: z.string().trim().min(1, 'Vehicle number is required'),
+  vehicleModel:  z.string().trim().min(1, 'Vehicle model is required'),
+  bikePhotoUrl:  z.string().url('bikePhotoUrl must be a valid URL').optional(),
+});
+
 // -------------------------------------------------------
 // Inferred types — controllers cast validated req.body to these
 // -------------------------------------------------------
 
 export type GoOnlineInput = z.infer<typeof goOnlineSchema>;
+export type SubmitDocumentsInput = z.infer<typeof submitDocumentsSchema>;
 export type UpdateLocationInput = z.infer<typeof updateLocationSchema>;
 export type DriverRideParam = z.infer<typeof driverRideParamSchema>;
 export type WithdrawalIdParam = z.infer<typeof withdrawalIdParamSchema>;

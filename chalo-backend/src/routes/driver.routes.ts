@@ -18,6 +18,7 @@ import {
   earningsQuerySchema,
   tripHistoryQuerySchema,
   withdrawalSchema,
+  submitDocumentsSchema,
 } from '../validators/driver.validator';
 
 const router = Router();
@@ -25,6 +26,17 @@ const router = Router();
 // All driver routes require a valid Firebase token AND DRIVER role
 router.use(authenticate);
 router.use(authorize('DRIVER'));
+
+// -----------------------------------------------------------------------
+// Document Submission
+// -----------------------------------------------------------------------
+
+// POST /api/v1/driver/documents
+router.post(
+  '/documents',
+  validateBody(submitDocumentsSchema),
+  driverController.submitDocuments.bind(driverController)
+);
 
 // -----------------------------------------------------------------------
 // Online / Offline

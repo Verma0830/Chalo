@@ -170,7 +170,7 @@ export const optionalAuth = async (
 
     const decodedToken = await getAuth().verifyIdToken(token);
     const user = await prisma.user.findUnique({
-      where: { phone: decodedToken.phone_number },
+      where: { id: decodedToken.uid },
     });
 
     if (user && user.isActive) {

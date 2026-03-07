@@ -18,9 +18,30 @@ import {
   EarningsQuery,
   TripHistoryQuery,
   WithdrawalInput,
+  SubmitDocumentsInput,
 } from '../validators/driver.validator';
 
 export class DriverController {
+  // -----------------------------------------------------------------------
+  // DOCUMENT SUBMISSION
+  // -----------------------------------------------------------------------
+
+  /**
+   * POST /driver/documents
+   * Submit KYC documents; moves verification status to UNDER_REVIEW.
+   */
+  async submitDocuments(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as AuthenticatedRequest).user.id;
+      const input = req.body as SubmitDocumentsInput;
+
+      const result = await driverService.submitDocuments(userId, input);
+      ApiResponse.created(res, result, 'Documents submitted. Your account is under review.');
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // -----------------------------------------------------------------------
   // ONLINE / OFFLINE
   // -----------------------------------------------------------------------

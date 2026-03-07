@@ -84,6 +84,70 @@ type TripHistoryItem = Prisma.RideGetPayload<{ select: typeof TRIP_HISTORY_SELEC
 
 export class DriverService {
   // -----------------------------------------------------------------------
+  // DOCUMENT SUBMISSION
+  // -----------------------------------------------------------------------
+
+  /**
+   * Save driver KYC documents and move status to UNDER_REVIEW.
+   * Can be re-submitted if previously REJECTED.
+   */
+  async submitDocuments(userId: string, docs: {
+    licenseNumber: string;
+    licenseUrl: string;
+    rcNumber: string;
+    rcUrl: string;
+    aadharNumber: string;
+    aadharUrl: string;
+    vehicleNumber: string;
+    vehicleModel: string;
+    bikePhotoUrl?: string;
+  }) {
+    const profile = await prisma.driverProfile.findUnique({
+      where: { userId },
+      select: { id: true, verificationStatus: true },
+    });
+
+    if (!profile) {
+      throw ApiError.notFound('Driver profile not found', ErrorCode.DRIVER_NOT_FOUND);
+    }
+
+    if (profile.verificationStatus === VerificationStatus.VERIFIED) {
+      throw ApiError.conflict(
+        'Your account is already verified. Documents cannot be re-submitted.',
+        ErrorCode.VALIDATION_ERROR
+      );
+    }
+
+    const updated = await prisma.driverProfile.update({
+      where: { userId },
+      data: {
+        licenseNumber: docs.licenseNumber,
+        licenseUrl:    docs.licenseUrl,
+        rcNumber:      docs.rcNumber,
+        rcUrl:         docs.rcUrl,
+        aadharNumber:  docs.aadharNumber,
+        aadharUrl:     docs.aadharUrl,
+        vehicleNumber: docs.vehicleNumber,
+        vehicleModel:  docs.vehicleModel,
+        bikePhotoUrl:  docs.bikePhotoUrl,
+        verificationStatus: VerificationStatus.UNDER_REVIEW,
+        rejectionReason: null,
+      },
+      select: {
+        verificationStatus: true,
+        licenseNumber:      true,
+        rcNumber:           true,
+        aadharNumber:       true,
+        vehicleNumber:      true,
+        vehicleModel:       true,
+      },
+    });
+
+    logger.info('Driver submitted documents — status: UNDER_REVIEW', { userId });
+    return updated;
+  }
+
+  // -----------------------------------------------------------------------
   // ONLINE / OFFLINE MANAGEMENT
   // -----------------------------------------------------------------------
 
