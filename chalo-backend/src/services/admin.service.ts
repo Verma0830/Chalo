@@ -206,7 +206,7 @@ class AdminService {
     const [rides, total] = await Promise.all([
       prisma.ride.findMany({
         where: {
-          status: { in: [RideStatus.DRIVER_ASSIGNED, RideStatus.IN_PROGRESS] },
+          status: { in: [RideStatus.DRIVER_ASSIGNED, RideStatus.DRIVER_ARRIVED, RideStatus.IN_PROGRESS] },
         },
         include: {
           customer: { select: { id: true, name: true, phone: true } },
@@ -225,7 +225,7 @@ class AdminService {
       }),
       prisma.ride.count({
         where: {
-          status: { in: [RideStatus.DRIVER_ASSIGNED, RideStatus.IN_PROGRESS] },
+          status: { in: [RideStatus.DRIVER_ASSIGNED, RideStatus.DRIVER_ARRIVED, RideStatus.IN_PROGRESS] },
         },
       }),
     ]);

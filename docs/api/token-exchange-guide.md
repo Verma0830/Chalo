@@ -20,7 +20,7 @@ After calling `/auth/otp/verify`, copy the value of `"token"` from the response.
 - **Method:** `POST`
 - **URL:**
 ```
-https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=AIzaSyAc5GtdMi2qgUuvzJB3h9lkwVeSV7qsRvM
+https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=XXXXX-Your_API_KEY
 ```
 - **Body:** raw → JSON
 ```json
