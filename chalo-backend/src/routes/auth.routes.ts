@@ -14,6 +14,7 @@ import {
   completeProfileSchema,
   updateEmergencyContactSchema,
   registerDeviceTokenSchema,
+  registerDriverSchema,
 } from '../validators/auth.validator';
 import { savedLocationSchema } from '../validators/ride.validator';
 
@@ -37,6 +38,14 @@ router.post(
   authRateLimiter,
   validateBody(verifyOTPSchema),
   authController.verifyOTP.bind(authController)
+);
+
+// Register as driver (OTP + profile in one step)
+router.post(
+  '/register-driver',
+  authRateLimiter,
+  validateBody(registerDriverSchema),
+  authController.registerDriver.bind(authController)
 );
 
 // -------------------------------------------------------

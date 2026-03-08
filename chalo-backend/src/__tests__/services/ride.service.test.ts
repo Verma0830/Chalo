@@ -25,6 +25,9 @@ jest.mock('../../config/database', () => {
     customerProfile: {
       update: jest.fn(),
     },
+    platformConfig: {
+      findUnique: jest.fn().mockResolvedValue(null),
+    },
     $transaction: jest.fn(),
   };
   // Transaction callback receives the same mock so per-test mockResolvedValue works inside tx
@@ -388,6 +391,179 @@ describe('RideService', () => {
       expect(result.rideId).toBe('ride_001');
       expect(result.rating).toBe(5);
       expect(result.comment).toBe('Great ride!');
+    });
+  });
+
+  // -------------------------------------------------------
+  // getRideReceipt
+  // -------------------------------------------------------
+
+  describe('getRideReceipt', () => {
+    const completedRide = {
+      id: 'ride_001',
+      customerId: 'customer_001',
+      status: RideStatus.COMPLETED,
+      pickupAddress: 'Sector 14, Faridabad',
+      dropAddress: 'Old Faridabad',
+      distanceKm: 4.2,
+      durationMins: 18,
+      baseFare: 86,
+      surgeMultiplier: 1.0,
+      finalFare: 91,
+      commissionAmount: 13,
+      driverEarning: 78,
+      paymentMethod: 'CASH',
+      paymentStatus: 'PENDING',
+      customerRating: 5,
+      requestedAt: new Date('2026-03-01T10:00:00Z'),
+      startedAt: new Date('2026-03-01T10:10:00Z'),
+      completedAt: new Date('2026-03-01T10:28:00Z'),
+      driver: {
+        name: 'Ravi Kumar',
+        driverProfile: {
+          vehicleNumber: 'HR26AB1234',
+          vehicleModel: 'Honda Activa 6G',
+          ratingAvg: 4.7,
+        },
+      },
+    };
+
+    it('throws RIDE_NOT_FOUND when ride does not exist', async () => {
+      (prisma.ride.findUnique as jest.Mock).mockResolvedValue(null);
+
+      await expect(
+        rideService.getRideReceipt('nonexistent', 'customer_001')
+      ).rejects.toMatchObject({ code: ErrorCode.RIDE_NOT_FOUND });
+    });
+
+    it('throws FORBIDDEN when customer does not own the ride', async () => {
+      (prisma.ride.findUnique as jest.Mock).mockResolvedValue({
+        ...completedRide,
+        customerId: 'other_customer',
+      });
+
+      await expect(
+        rideService.getRideReceipt('ride_001', 'customer_001')
+      ).rejects.toMatchObject({ code: ErrorCode.FORBIDDEN });
+    });
+
+    it('throws RIDE_NOT_COMPLETED for an in-progress ride', async () => {
+      (prisma.ride.findUnique as jest.Mock).mockResolvedValue({
+        ...completedRide,
+        status: RideStatus.IN_PROGRESS,
+      });
+
+      await expect(
+        rideService.getRideReceipt('ride_001', 'customer_001')
+      ).rejects.toMatchObject({ message: expect.stringContaining('completed rides') });
+    });
+
+    it('returns full receipt for a completed ride', async () => {
+      (prisma.ride.findUnique as jest.Mock).mockResolvedValue(completedRide);
+
+      const result = await rideService.getRideReceipt('ride_001', 'customer_001');
+
+      expect(result.rideId).toBe('ride_001');
+      expect(result.fare.baseFare).toBe(86);
+      expect(result.fare.totalFare).toBe(91);
+      expect(result.fare.surgeCharge).toBe(0); // surgeMultiplier = 1.0, no surcharge
+      expect(result.route.distanceKm).toBe(4.2);
+      expect(result.payment.method).toBe('CASH');
+      expect(result.driver?.name).toBe('Ravi Kumar');
+      expect(result.driver?.vehicleNumber).toBe('HR26AB1234');
+    });
+
+    it('calculates surge charge correctly when surgeMultiplier > 1', async () => {
+      (prisma.ride.findUnique as jest.Mock).mockResolvedValue({
+        ...completedRide,
+        baseFare: 86,
+        surgeMultiplier: 1.5,
+        finalFare: 129,
+      });
+
+      const result = await rideService.getRideReceipt('ride_001', 'customer_001');
+
+      // surgeCharge = finalFare - baseFare = 129 - 86 = 43
+      expect(result.fare.surgeCharge).toBe(43);
+      expect(result.fare.surgeMultiplier).toBe(1.5);
+    });
+  });
+
+  // -------------------------------------------------------
+  // cancelRide — cancellation fee logic
+  // -------------------------------------------------------
+
+  describe('cancelRide (cancellation fee)', () => {
+    it('applies cancellation fee when driver is assigned and free window expired', async () => {
+      const assignedAt = new Date(Date.now() - 3 * 60 * 1000); // 3 min ago (> 2 min window)
+
+      (prisma.ride.findUnique as jest.Mock).mockResolvedValue({
+        id: 'ride_001',
+        customerId: 'customer_001',
+        status: RideStatus.DRIVER_ASSIGNED,
+        driverId: 'driver_001',
+        driverAssignedAt: assignedAt,
+      });
+
+      // No platform_config overrides — uses defaults
+      (prisma.platformConfig.findUnique as jest.Mock) = jest.fn().mockResolvedValue(null);
+
+      (prisma.ride.update as jest.Mock).mockResolvedValue({
+        id: 'ride_001',
+        status: RideStatus.CANCELLED,
+      });
+
+      (prisma.customerProfile.update as jest.Mock).mockResolvedValue({});
+
+      const result = await rideService.cancelRide('ride_001', 'customer_001', 'Changed my mind');
+
+      expect(result.cancellationFee).toBe(20); // DEFAULT_CANCEL_FEE
+    });
+
+    it('waives cancellation fee within the free window', async () => {
+      const assignedAt = new Date(Date.now() - 30 * 1000); // 30s ago (< 2 min window)
+
+      (prisma.ride.findUnique as jest.Mock).mockResolvedValue({
+        id: 'ride_001',
+        customerId: 'customer_001',
+        status: RideStatus.DRIVER_ASSIGNED,
+        driverId: 'driver_001',
+        driverAssignedAt: assignedAt,
+      });
+
+      (prisma.platformConfig.findUnique as jest.Mock) = jest.fn().mockResolvedValue(null);
+
+      (prisma.ride.update as jest.Mock).mockResolvedValue({
+        id: 'ride_001',
+        status: RideStatus.CANCELLED,
+      });
+
+      (prisma.customerProfile.update as jest.Mock).mockResolvedValue({});
+
+      const result = await rideService.cancelRide('ride_001', 'customer_001');
+
+      expect(result.cancellationFee).toBe(0);
+    });
+
+    it('waives fee when no driver is assigned (REQUESTED state)', async () => {
+      (prisma.ride.findUnique as jest.Mock).mockResolvedValue({
+        id: 'ride_001',
+        customerId: 'customer_001',
+        status: RideStatus.REQUESTED,
+        driverId: null,
+        driverAssignedAt: null,
+      });
+
+      (prisma.ride.update as jest.Mock).mockResolvedValue({
+        id: 'ride_001',
+        status: RideStatus.CANCELLED,
+      });
+
+      (prisma.customerProfile.update as jest.Mock).mockResolvedValue({});
+
+      const result = await rideService.cancelRide('ride_001', 'customer_001');
+
+      expect(result.cancellationFee).toBe(0);
     });
   });
 });

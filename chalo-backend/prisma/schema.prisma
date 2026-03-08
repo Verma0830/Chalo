@@ -261,7 +261,12 @@ model Ride {
   // Rating
   customerRating    Int?          // 1-5 stars given by customer to driver
   customerComment   String?
-  
+  driverRating      Int?          // 1-5 stars given by driver to customer
+  driverComment     String?
+
+  // OTP ride start — generated when driver is assigned, required to start ride
+  rideStartOtp      String?       // 4-digit OTP sent to customer
+
   // Manual ride flag
   isManualRide      Boolean       @default(false)
   

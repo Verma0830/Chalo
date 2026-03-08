@@ -16,9 +16,12 @@ import {
   DeclineRideInput,
   CompleteRideInput,
   EarningsQuery,
+  EarningsSummaryQuery,
   TripHistoryQuery,
   WithdrawalInput,
   SubmitDocumentsInput,
+  StartRideInput,
+  RateCustomerInput,
 } from '../validators/driver.validator';
 
 export class DriverController {
@@ -195,7 +198,8 @@ export class DriverController {
       const userId = (req as AuthenticatedRequest).user.id;
       const { rideId } = req.params as DriverRideParam;
 
-      const result = await driverService.startRide(userId, rideId);
+      const { otp } = req.body as StartRideInput;
+      const result = await driverService.startRide(userId, rideId, otp);
       ApiResponse.success(res, result, 'Ride started');
     } catch (error) {
       next(error);
@@ -259,6 +263,21 @@ export class DriverController {
   // -----------------------------------------------------------------------
   // EARNINGS
   // -----------------------------------------------------------------------
+
+  /**
+   * GET /driver/earnings/summary
+   * Lightweight earnings aggregate for the dashboard card.
+   */
+  async getEarningsSummary(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as AuthenticatedRequest).user.id;
+      const { period } = req.query as unknown as EarningsSummaryQuery;
+      const result = await driverService.getEarningsSummary(userId, period);
+      ApiResponse.success(res, result, 'Earnings summary retrieved');
+    } catch (error) {
+      next(error);
+    }
+  }
 
   /**
    * GET /driver/earnings
@@ -331,6 +350,22 @@ export class DriverController {
 
       const result = await driverService.getWithdrawalStatus(userId, withdrawalId);
       ApiResponse.success(res, result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /driver/rides/:rideId/rate-customer
+   * Driver rates a customer after ride completion.
+   */
+  async rateCustomer(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as AuthenticatedRequest).user.id;
+      const { rideId } = req.params as DriverRideParam;
+      const { rating, comment } = req.body as RateCustomerInput;
+      const result = await driverService.rateCustomer(userId, rideId, rating, comment);
+      ApiResponse.success(res, result, 'Customer rated successfully');
     } catch (error) {
       next(error);
     }

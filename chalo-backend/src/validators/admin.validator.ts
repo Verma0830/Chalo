@@ -35,3 +35,11 @@ export const updateConfigSchema = z.object({
   value: z.string().min(1),
 });
 export type UpdateConfigInput = z.infer<typeof updateConfigSchema>;
+
+export const promoteAdminSchema = z.object({
+  phone: z
+    .string()
+    .trim()
+    .regex(/^\+91[6-9]\d{9}$/, 'Invalid Indian mobile number. Format: +91XXXXXXXXXX'),
+});
+export type PromoteAdminInput = z.infer<typeof promoteAdminSchema>;

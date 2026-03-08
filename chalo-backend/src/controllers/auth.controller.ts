@@ -13,6 +13,7 @@ import {
   CompleteProfileInput,
   UpdateEmergencyContactInput,
   RegisterDeviceTokenInput,
+  RegisterDriverInput,
 } from '../validators/auth.validator';
 import { SavedLocationInput } from '../validators/ride.validator';
 
@@ -109,6 +110,20 @@ export class AuthController {
         input.address
       );
       ApiResponse.success(res, result, `${input.type} location saved`);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /auth/register-driver
+   * Verify OTP + create driver account atomically
+   */
+  async registerDriver(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const input = req.body as RegisterDriverInput;
+      const result = await authService.registerDriver(input);
+      ApiResponse.success(res, result, result.isNewUser ? 'Driver registered successfully' : 'Welcome back!');
     } catch (error) {
       next(error);
     }

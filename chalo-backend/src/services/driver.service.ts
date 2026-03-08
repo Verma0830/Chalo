@@ -8,7 +8,7 @@ import prisma from '../config/database';
 import { ApiError, ErrorCode } from '../utils/apiError';
 import { notificationService } from './notification.service';
 import { buildPaginationMeta } from '../utils/apiResponse';
-import { maskPhone, calculateCommission, calculateSettlementDate } from '../utils/helpers';
+import { maskPhone, calculateCommission, calculateSettlementDate, generateOTP } from '../utils/helpers';
 import CONSTANTS from '../utils/constants';
 import logger from '../config/logger';
 import { getDatabase } from '../config/firebase';
@@ -534,13 +534,20 @@ export class DriverService {
     }
 
     if (!updated.idempotent) {
-      // Notify customer — fire-and-forget (FCM failure must not fail this response)
+      // Generate OTP and store it — customer shows this to driver to start the ride
+      const otp = generateOTP();
+      await prisma.ride.update({
+        where: { id: rideId },
+        data: { rideStartOtp: otp },
+      });
+
+      // Notify customer with OTP — fire-and-forget
       void notificationService
         .sendPushNotification({
           userId: ride.customerId,
           title: 'Driver Found!',
-          body: 'Your driver is on the way to pick you up.',
-          data: { rideId, type: 'DRIVER_ASSIGNED', driverId: userId },
+          body: `Your driver is on the way. Ride OTP: ${otp}`,
+          data: { rideId, type: 'DRIVER_ASSIGNED', driverId: userId, rideOtp: otp },
         })
         .catch((err) => {
           logger.error('Customer notification failed after ride acceptance', { rideId, error: err });
@@ -729,9 +736,28 @@ export class DriverService {
 
   /**
    * Start the ride — transition DRIVER_ARRIVED → IN_PROGRESS.
+   * Requires OTP that was sent to customer when driver was assigned.
    */
-  async startRide(userId: string, rideId: string) {
+  async startRide(userId: string, rideId: string, otp: string) {
     const now = new Date();
+
+    // Validate OTP before state transition
+    const rideToCheck = await prisma.ride.findUnique({
+      where: { id: rideId },
+      select: { rideStartOtp: true, driverId: true, status: true },
+    });
+
+    if (!rideToCheck) throw ApiError.notFound('Ride not found', ErrorCode.RIDE_NOT_FOUND);
+    if (rideToCheck.driverId !== userId) throw ApiError.forbidden('Not your ride', ErrorCode.FORBIDDEN);
+    if (rideToCheck.status !== RideStatus.DRIVER_ARRIVED) {
+      throw ApiError.badRequest(
+        `Cannot start ride in ${rideToCheck.status} status. Mark arrived first.`,
+        'INVALID_RIDE_STATUS'
+      );
+    }
+    if (!rideToCheck.rideStartOtp || rideToCheck.rideStartOtp !== otp) {
+      throw ApiError.badRequest('Invalid OTP. Ask the customer to share their ride OTP.', 'INVALID_OTP');
+    }
 
     await prisma.$transaction(async (tx) => {
       const updated = await tx.ride.updateMany({
@@ -743,21 +769,13 @@ export class DriverService {
         data: {
           status: RideStatus.IN_PROGRESS,
           startedAt: now,
+          rideStartOtp: null, // Clear OTP after successful use
         },
       });
 
       if (updated.count === 0) {
-        const ride = await tx.ride.findUnique({
-          where: { id: rideId },
-          select: { status: true, driverId: true },
-        });
-
-        if (!ride) throw ApiError.notFound('Ride not found', ErrorCode.RIDE_NOT_FOUND);
-        if (ride.driverId !== userId) throw ApiError.forbidden('Not your ride', ErrorCode.FORBIDDEN);
-        throw ApiError.badRequest(
-          `Cannot start ride in ${ride.status} status. Mark arrived first.`,
-          'INVALID_RIDE_STATUS'
-        );
+        // Race condition — another request already started the ride
+        throw ApiError.conflict('Ride already started', 'INVALID_RIDE_STATUS');
       }
 
       await tx.rideEvent.create({
@@ -1143,6 +1161,59 @@ export class DriverService {
   }
 
   /**
+   * Earnings summary — aggregate totals for a period without paginated trip list.
+   * Lighter than getEarnings; used by the dashboard header card.
+   */
+  async getEarningsSummary(userId: string, period: 'week' | 'month') {
+    const driverProfile = await prisma.driverProfile.findUnique({
+      where: { userId },
+      select: { id: true, totalEarnings: true, totalRides: true, ratingAvg: true },
+    });
+
+    if (!driverProfile) {
+      throw ApiError.notFound('Driver profile not found', ErrorCode.DRIVER_NOT_FOUND);
+    }
+
+    const now = new Date();
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const todayIST = new Date(
+      Date.UTC(
+        new Date(now.getTime() + istOffset).getUTCFullYear(),
+        new Date(now.getTime() + istOffset).getUTCMonth(),
+        new Date(now.getTime() + istOffset).getUTCDate()
+      ) - istOffset
+    );
+
+    const fromDate = period === 'week'
+      ? new Date(todayIST.getTime() - 6 * 24 * 60 * 60 * 1000)
+      : new Date(todayIST.getTime() - 29 * 24 * 60 * 60 * 1000);
+
+    const aggregate = await prisma.earning.aggregate({
+      where: {
+        driverProfileId: driverProfile.id,
+        createdAt: { gte: fromDate },
+      },
+      _sum: { grossAmount: true, commissionAmount: true, netAmount: true },
+      _count: { id: true },
+      _avg: { netAmount: true },
+    });
+
+    return {
+      period,
+      fromDate,
+      toDate: now,
+      rides: aggregate._count.id,
+      grossEarnings: aggregate._sum.grossAmount ?? 0,
+      commission: aggregate._sum.commissionAmount ?? 0,
+      netEarnings: aggregate._sum.netAmount ?? 0,
+      avgPerRide: Math.round((aggregate._avg.netAmount ?? 0) * 100) / 100,
+      allTimeRides: driverProfile.totalRides,
+      allTimeEarnings: driverProfile.totalEarnings,
+      ratingAvg: driverProfile.ratingAvg,
+    };
+  }
+
+  /**
    * Get settlement breakdown — pending, processing, settled amounts.
    */
   async getSettlementSummary(userId: string) {
@@ -1393,6 +1464,34 @@ export class DriverService {
       logger.warn('RTDB unavailable — skipping ride sync', { rideId, error: String(err) });
       return Promise.resolve();
     }
+  }
+
+  /**
+   * Rate a customer after ride completion (driver → customer rating).
+   */
+  async rateCustomer(userId: string, rideId: string, rating: number, comment?: string) {
+    const ride = await prisma.ride.findUnique({
+      where: { id: rideId },
+      select: { driverId: true, status: true, driverRating: true },
+    });
+
+    if (!ride) throw ApiError.notFound('Ride not found', ErrorCode.RIDE_NOT_FOUND);
+    if (ride.driverId !== userId) throw ApiError.forbidden('Not your ride', ErrorCode.FORBIDDEN);
+    if (ride.status !== RideStatus.COMPLETED) {
+      throw ApiError.badRequest('Can only rate a completed ride', 'INVALID_RIDE_STATUS');
+    }
+    if (ride.driverRating !== null) {
+      throw ApiError.conflict('You have already rated this customer', 'ALREADY_RATED');
+    }
+
+    await prisma.ride.update({
+      where: { id: rideId },
+      data: { driverRating: rating, driverComment: comment ?? null },
+    });
+
+    logger.info('Driver rated customer', { rideId, driverId: userId, rating });
+
+    return { rideId, rating, comment: comment ?? null };
   }
 }
 

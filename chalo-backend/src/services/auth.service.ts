@@ -11,7 +11,7 @@ import config from '../config';
 import logger from '../config/logger';
 import crypto from 'crypto';
 import { UserRole } from '@prisma/client';
-import { SendOTPInput, VerifyOTPInput, CompleteProfileInput } from '../validators/auth.validator';
+import { SendOTPInput, VerifyOTPInput, CompleteProfileInput, RegisterDriverInput } from '../validators/auth.validator';
 
 /**
  * Hash OTP with SHA-256 before storing in database.
@@ -201,6 +201,110 @@ export class AuthService {
     });
 
     return updated;
+  }
+
+  /**
+   * Register a new driver account — verifies OTP + atomically creates User + DriverProfile
+   * Separate from customer OTP verify so drivers always get the correct role.
+   */
+  async registerDriver(input: RegisterDriverInput): Promise<{
+    isNewUser: boolean;
+    user: { id: string; phone: string; name: string | null; role: UserRole };
+  }> {
+    const { phone, otp, name } = input;
+    const hashedOtp = hashOTP(otp);
+
+    // Verify OTP atomically (same logic as verifyOTP)
+    const otpRecord = await prisma.$transaction(async (tx) => {
+      const record = await tx.oTPVerification.findFirst({
+        where: {
+          phone,
+          otpCode: hashedOtp,
+          verified: false,
+          expiresAt: { gte: new Date() },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (!record) return null;
+
+      if (record.attempts >= CONSTANTS.MAX_OTP_ATTEMPTS) {
+        return 'MAX_ATTEMPTS' as const;
+      }
+
+      await tx.oTPVerification.update({
+        where: { id: record.id },
+        data: { verified: true, attempts: { increment: 1 } },
+      });
+
+      return record;
+    });
+
+    if (otpRecord === 'MAX_ATTEMPTS') {
+      throw ApiError.tooManyRequests('Maximum OTP attempts exceeded. Request a new OTP.');
+    }
+
+    if (!otpRecord) {
+      const expiredOTP = await prisma.oTPVerification.findFirst({
+        where: { phone, otpCode: hashedOtp, verified: false },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (expiredOTP) throw ApiError.badRequest('OTP has expired. Please request a new one.');
+      throw ApiError.badRequest('Invalid OTP. Please check and try again.');
+    }
+
+    // Check if phone already registered
+    const existingUser = await prisma.user.findUnique({ where: { phone } });
+
+    if (existingUser) {
+      if (existingUser.role === UserRole.DRIVER) {
+        // Already a driver — return existing (idempotent)
+        await prisma.user.update({
+          where: { id: existingUser.id },
+          data: { lastLoginAt: new Date() },
+        });
+        return {
+          isNewUser: false,
+          user: {
+            id: existingUser.id,
+            phone: existingUser.phone,
+            name: existingUser.name,
+            role: existingUser.role,
+          },
+        };
+      }
+      // Registered as CUSTOMER — cannot auto-upgrade, must contact support
+      throw ApiError.conflict(
+        'This phone is already registered as a customer. Please use a different number or contact support.'
+      );
+    }
+
+    // Atomically create User (DRIVER) + DriverProfile
+    const newUser = await prisma.$transaction(async (tx) => {
+      return tx.user.create({
+        data: {
+          phone,
+          name,
+          role: UserRole.DRIVER,
+          lastLoginAt: new Date(),
+          driverProfile: {
+            create: {},
+          },
+        },
+      });
+    });
+
+    logger.info(`New driver registered: ${phone}`, { userId: newUser.id });
+
+    return {
+      isNewUser: true,
+      user: {
+        id: newUser.id,
+        phone: newUser.phone,
+        name: newUser.name,
+        role: newUser.role,
+      },
+    };
   }
 
   /**

@@ -488,6 +488,34 @@ export class RideService {
       );
     }
 
+    // --- Cancellation fee logic ---
+    // Fee applies if customer cancels AFTER the free window AND a driver is assigned.
+    let cancellationFee = 0;
+    if (
+      ride.driverId &&
+      ride.driverAssignedAt &&
+      (ride.status === RideStatus.DRIVER_ASSIGNED || ride.status === RideStatus.DRIVER_ARRIVED)
+    ) {
+      const [windowConfig, feeConfig] = await Promise.all([
+        prisma.platformConfig.findUnique({
+          where: { key: CONSTANTS.CONFIG_KEYS.FREE_CANCEL_WINDOW_SECS },
+          select: { value: true },
+        }),
+        prisma.platformConfig.findUnique({
+          where: { key: CONSTANTS.CONFIG_KEYS.CANCEL_FEE_AMOUNT },
+          select: { value: true },
+        }),
+      ]);
+
+      const windowSecs = windowConfig ? Number(windowConfig.value) : CONSTANTS.FREE_CANCEL_WINDOW_SECS;
+      const feeAmount  = feeConfig   ? Number(feeConfig.value)   : CONSTANTS.DEFAULT_CANCEL_FEE;
+
+      const secsSinceAssigned = (Date.now() - ride.driverAssignedAt.getTime()) / 1000;
+      if (secsSinceAssigned > windowSecs) {
+        cancellationFee = feeAmount;
+      }
+    }
+
     // Use transaction for atomic updates
     const cancelled = await prisma.$transaction(async (tx) => {
       // Update ride status
@@ -501,13 +529,13 @@ export class RideService {
           rideEvents: {
             create: {
               eventType: 'CANCELLED',
-              metadata: { cancelledBy: 'CUSTOMER', reason },
+              metadata: { cancelledBy: 'CUSTOMER', reason, cancellationFee },
             },
           },
         },
       });
 
-      // Increment cancellation count (for V2 penalty logic + driver visibility)
+      // Increment cancellation count (for penalty logic + driver visibility)
       await tx.customerProfile.update({
         where: { userId: customerId },
         data: { cancellationCount: { increment: 1 } },
@@ -532,9 +560,9 @@ export class RideService {
       });
     }
 
-    logger.info('Ride cancelled by customer', { rideId, customerId, reason });
+    logger.info('Ride cancelled by customer', { rideId, customerId, reason, cancellationFee });
 
-    return { rideId: cancelled.id, status: cancelled.status };
+    return { rideId: cancelled.id, status: cancelled.status, cancellationFee };
   }
 
   /**
@@ -851,6 +879,85 @@ export class RideService {
     logger.info('Batch dispatched', { rideId, driverCount: driverUserIds.length, nextBatchStart });
   }
 
+  /**
+   * Get full ride receipt — only for completed rides the customer owns.
+   */
+  async getRideReceipt(rideId: string, customerId: string) {
+    const ride = await prisma.ride.findUnique({
+      where: { id: rideId },
+      select: {
+        id: true,
+        customerId: true,
+        status: true,
+        pickupAddress: true,
+        dropAddress: true,
+        distanceKm: true,
+        durationMins: true,
+        baseFare: true,
+        surgeMultiplier: true,
+        finalFare: true,
+        commissionAmount: true,
+        driverEarning: true,
+        paymentMethod: true,
+        paymentStatus: true,
+        customerRating: true,
+        startedAt: true,
+        completedAt: true,
+        requestedAt: true,
+        driver: {
+          select: {
+            name: true,
+            driverProfile: {
+              select: { vehicleNumber: true, vehicleModel: true, ratingAvg: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!ride) throw ApiError.notFound('Ride not found', ErrorCode.RIDE_NOT_FOUND);
+    if (ride.customerId !== customerId) throw ApiError.forbidden('Not your ride', ErrorCode.FORBIDDEN);
+    if (ride.status !== RideStatus.COMPLETED) {
+      throw ApiError.badRequest('Receipt is only available for completed rides', 'RIDE_NOT_COMPLETED');
+    }
+
+    const surgeCharge = ride.surgeMultiplier > 1
+      ? Math.round((ride.finalFare - ride.baseFare) * 100) / 100
+      : 0;
+
+    return {
+      rideId: ride.id,
+      requestedAt: ride.requestedAt,
+      startedAt: ride.startedAt,
+      completedAt: ride.completedAt,
+      route: {
+        pickup: ride.pickupAddress,
+        drop: ride.dropAddress,
+        distanceKm: ride.distanceKm,
+        durationMins: ride.durationMins,
+      },
+      fare: {
+        baseFare: ride.baseFare,
+        surgeMultiplier: ride.surgeMultiplier,
+        surgeCharge,
+        totalFare: ride.finalFare,
+      },
+      payment: {
+        method: ride.paymentMethod,
+        status: ride.paymentStatus,
+        amountPaid: ride.finalFare,
+      },
+      driver: ride.driver
+        ? {
+            name: ride.driver.name,
+            vehicleNumber: ride.driver.driverProfile?.vehicleNumber ?? null,
+            vehicleModel: ride.driver.driverProfile?.vehicleModel ?? null,
+            rating: ride.driver.driverProfile?.ratingAvg ?? null,
+          }
+        : null,
+      customerRating: ride.customerRating,
+    };
+  }
 }
 
 

@@ -3,10 +3,11 @@
 // All endpoints require a valid Firebase token AND ADMIN role
 // ============================================================
 
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { authenticate, authorize } from '../middleware/auth';
 import { validateBody, validateParams, validateQuery } from '../middleware/validate';
 import { adminController } from '../controllers/admin.controller';
+import { ApiError } from '../utils/apiError';
 import {
   adminPaginationSchema,
   adminDriverParamSchema,
@@ -14,11 +15,32 @@ import {
   rejectDriverSchema,
   configKeyParamSchema,
   updateConfigSchema,
+  promoteAdminSchema,
 } from '../validators/admin.validator';
 
 const router = Router();
 
-// All admin routes require authentication + ADMIN role
+// -------------------------------------------------------
+// Internal-only: promote first admin (no Firebase auth required)
+// Protected by INTERNAL_API_KEY header instead of role check.
+// -------------------------------------------------------
+function requireInternalKey(req: Request, _res: Response, next: NextFunction) {
+  const key = req.headers['x-internal-api-key'];
+  if (!process.env.INTERNAL_API_KEY || key !== process.env.INTERNAL_API_KEY) {
+    return next(ApiError.forbidden('Invalid or missing internal API key'));
+  }
+  return next();
+}
+
+// POST /api/v1/admin/promote
+router.post(
+  '/promote',
+  requireInternalKey,
+  validateBody(promoteAdminSchema),
+  adminController.promoteToAdmin.bind(adminController)
+);
+
+// All other admin routes require authentication + ADMIN role
 router.use(authenticate);
 router.use(authorize('ADMIN'));
 

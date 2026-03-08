@@ -13,6 +13,7 @@ import {
   RejectDriverInput,
   ConfigKeyParam,
   UpdateConfigInput,
+  PromoteAdminInput,
 } from '../validators/admin.validator';
 
 export class AdminController {
@@ -106,6 +107,16 @@ export class AdminController {
       const { value } = req.body as UpdateConfigInput;
       const config = await adminService.updateConfig(key, value);
       ApiResponse.success(res, config, 'Platform config updated');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async promoteToAdmin(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { phone } = req.body as PromoteAdminInput;
+      const result = await adminService.promoteToAdmin(phone);
+      ApiResponse.success(res, result, 'User promoted to ADMIN');
     } catch (error) {
       next(error);
     }

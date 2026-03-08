@@ -212,6 +212,21 @@ export class RideController {
       next(error);
     }
   }
+
+  /**
+   * GET /rides/:rideId/receipt
+   * Full fare breakdown for a completed ride.
+   */
+  async getRideReceipt(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as AuthenticatedRequest).user.id;
+      const { rideId } = req.params;
+      const result = await rideService.getRideReceipt(rideId, userId);
+      ApiResponse.success(res, result, 'Ride receipt retrieved');
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export const rideController = new RideController();

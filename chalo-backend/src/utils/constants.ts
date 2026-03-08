@@ -72,6 +72,10 @@ export const CONSTANTS = {
   CIRCUIT_BREAKER_RESET_MS: 30000,
   CIRCUIT_BREAKER_MIN_REQUESTS: 5,
 
+  // --- Cancellation fee defaults (overridden by platform_config) ---
+  FREE_CANCEL_WINDOW_SECS: 120,   // 2 min free window after driver assignment
+  DEFAULT_CANCEL_FEE: 20,         // ₹20 if customer cancels after free window
+
   // --- Platform Config Keys (in DB) ---
   CONFIG_KEYS: {
     COMMISSION_PERCENTAGE: 'commission_percentage',
@@ -82,6 +86,8 @@ export const CONSTANTS = {
     BASE_FARE_PER_KM: 'base_fare_per_km',
     BASE_FARE_PER_MIN: 'base_fare_per_min',
     SETTLEMENT_DAYS: 'settlement_days',
+    FREE_CANCEL_WINDOW_SECS: 'free_cancel_window_secs',
+    CANCEL_FEE_AMOUNT: 'cancel_fee_amount',
   },
 } as const;
 

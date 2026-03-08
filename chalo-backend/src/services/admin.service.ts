@@ -9,7 +9,7 @@ import { buildPaginationMeta } from '../utils/apiResponse';
 import { notificationService } from './notification.service';
 import { getKYCProvider } from './kyc';
 import logger from '../config/logger';
-import { VerificationStatus, RideStatus } from '@prisma/client';
+import { VerificationStatus, RideStatus, UserRole } from '@prisma/client';
 
 const AUTO_VERIFY_CONFIDENCE_THRESHOLD = 0.85;
 
@@ -250,6 +250,37 @@ class AdminService {
 
     logger.info('Platform config updated', { key, value });
     return config;
+  }
+
+  // -------------------------------------------------------
+  // Admin Promotion
+  // -------------------------------------------------------
+
+  /**
+   * Promote a user to ADMIN by phone number.
+   * Protected by INTERNAL_API_KEY — not reachable without the secret.
+   * Idempotent: returns existing admin without error.
+   */
+  async promoteToAdmin(phone: string): Promise<{ id: string; phone: string; role: UserRole }> {
+    const user = await prisma.user.findUnique({ where: { phone } });
+
+    if (!user) {
+      throw ApiError.notFound(`No user found with phone ${phone}`);
+    }
+
+    if (user.role === UserRole.ADMIN) {
+      logger.info('User is already ADMIN — idempotent', { userId: user.id, phone });
+      return { id: user.id, phone: user.phone, role: user.role };
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: user.id },
+      data: { role: UserRole.ADMIN },
+      select: { id: true, phone: true, role: true },
+    });
+
+    logger.info('User promoted to ADMIN', { userId: updated.id, phone });
+    return updated;
   }
 }
 

@@ -14,7 +14,10 @@ import {
   driverRideParamSchema,
   withdrawalIdParamSchema,
   declineRideSchema,
+  startRideSchema,
   completeRideSchema,
+  rateCustomerSchema,
+  earningsSummaryQuerySchema,
   earningsQuerySchema,
   tripHistoryQuerySchema,
   withdrawalSchema,
@@ -113,6 +116,7 @@ router.post(
 router.post(
   '/rides/:rideId/start',
   validateParams(driverRideParamSchema),
+  validateBody(startRideSchema),
   driverController.startRide.bind(driverController)
 );
 
@@ -132,6 +136,14 @@ router.post(
   driverController.cancelRide.bind(driverController)
 );
 
+// POST /api/v1/driver/rides/:rideId/rate-customer
+router.post(
+  '/rides/:rideId/rate-customer',
+  validateParams(driverRideParamSchema),
+  validateBody(rateCustomerSchema),
+  driverController.rateCustomer.bind(driverController)
+);
+
 // -----------------------------------------------------------------------
 // Trip History
 // -----------------------------------------------------------------------
@@ -146,6 +158,13 @@ router.get(
 // -----------------------------------------------------------------------
 // Earnings
 // -----------------------------------------------------------------------
+
+// GET /api/v1/driver/earnings/summary (before /earnings to avoid collision)
+router.get(
+  '/earnings/summary',
+  validateQuery(earningsSummaryQuerySchema),
+  driverController.getEarningsSummary.bind(driverController)
+);
 
 // GET /api/v1/driver/earnings/settlement  (before /earnings to avoid collision)
 router.get(

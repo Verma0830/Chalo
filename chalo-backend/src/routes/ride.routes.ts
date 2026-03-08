@@ -83,6 +83,14 @@ router.get(
   rideController.getScheduledRides.bind(rideController)
 );
 
+// Ride receipt (completed rides only)
+router.get(
+  '/:rideId/receipt',
+  authorize('CUSTOMER'),
+  validateParams(rideIdParamSchema),
+  rideController.getRideReceipt.bind(rideController)
+);
+
 // Ride details
 router.get(
   '/:rideId',

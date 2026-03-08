@@ -49,10 +49,35 @@ export const declineRideSchema = z.object({
 });
 
 /**
+ * Rate a customer after ride completion
+ */
+export const rateCustomerSchema = z.object({
+  rating: z.number().int().min(1, 'Rating must be at least 1').max(5, 'Rating must be at most 5'),
+  comment: z.string().trim().max(300, 'Comment too long').optional(),
+});
+
+/**
+ * Start ride — driver enters OTP shown by customer
+ */
+export const startRideSchema = z.object({
+  otp: z
+    .string()
+    .length(4, 'OTP must be exactly 4 digits')
+    .regex(/^\d{4}$/, 'OTP must contain only digits'),
+});
+
+/**
  * Complete ride — optional note from driver
  */
 export const completeRideSchema = z.object({
   note: z.string().trim().max(500).optional(),
+});
+
+/**
+ * Earnings summary query
+ */
+export const earningsSummaryQuerySchema = z.object({
+  period: z.enum(['week', 'month']).default('week'),
 });
 
 /**
@@ -139,6 +164,9 @@ export const submitDocumentsSchema = z.object({
 // Inferred types — controllers cast validated req.body to these
 // -------------------------------------------------------
 
+export type EarningsSummaryQuery = z.infer<typeof earningsSummaryQuerySchema>;
+export type RateCustomerInput = z.infer<typeof rateCustomerSchema>;
+export type StartRideInput = z.infer<typeof startRideSchema>;
 export type GoOnlineInput = z.infer<typeof goOnlineSchema>;
 export type SubmitDocumentsInput = z.infer<typeof submitDocumentsSchema>;
 export type UpdateLocationInput = z.infer<typeof updateLocationSchema>;

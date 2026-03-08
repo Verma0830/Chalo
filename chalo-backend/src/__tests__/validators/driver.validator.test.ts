@@ -12,6 +12,10 @@ import {
   earningsQuerySchema,
   tripHistoryQuerySchema,
   withdrawalSchema,
+  rateCustomerSchema,
+  startRideSchema,
+  earningsSummaryQuerySchema,
+  submitDocumentsSchema,
 } from '../../validators/driver.validator';
 
 // ─── goOnlineSchema ───────────────────────────────────────────
@@ -266,5 +270,156 @@ describe('withdrawalSchema', () => {
 
   it('rejects invalid method', () => {
     expect(withdrawalSchema.safeParse({ amount: 500, method: 'CRYPTO' }).success).toBe(false);
+  });
+});
+
+// ─── rateCustomerSchema ───────────────────────────────────────
+describe('rateCustomerSchema', () => {
+  it('accepts rating 1 with no comment', () => {
+    expect(rateCustomerSchema.safeParse({ rating: 1 }).success).toBe(true);
+  });
+
+  it('accepts rating 5 with comment', () => {
+    expect(rateCustomerSchema.safeParse({ rating: 5, comment: 'Polite customer' }).success).toBe(true);
+  });
+
+  it('rejects rating 0', () => {
+    expect(rateCustomerSchema.safeParse({ rating: 0 }).success).toBe(false);
+  });
+
+  it('rejects rating 6', () => {
+    expect(rateCustomerSchema.safeParse({ rating: 6 }).success).toBe(false);
+  });
+
+  it('rejects float rating', () => {
+    expect(rateCustomerSchema.safeParse({ rating: 4.5 }).success).toBe(false);
+  });
+
+  it('rejects missing rating', () => {
+    expect(rateCustomerSchema.safeParse({}).success).toBe(false);
+  });
+
+  it('rejects comment over 300 chars', () => {
+    expect(rateCustomerSchema.safeParse({ rating: 3, comment: 'x'.repeat(301) }).success).toBe(false);
+  });
+
+  it('trims whitespace from comment', () => {
+    const result = rateCustomerSchema.safeParse({ rating: 4, comment: '  Good  ' });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.comment).toBe('Good');
+    }
+  });
+});
+
+// ─── startRideSchema ──────────────────────────────────────────
+describe('startRideSchema', () => {
+  it('accepts valid 4-digit OTP', () => {
+    expect(startRideSchema.safeParse({ otp: '1234' }).success).toBe(true);
+  });
+
+  it('accepts OTP with leading zero', () => {
+    expect(startRideSchema.safeParse({ otp: '0123' }).success).toBe(true);
+  });
+
+  it('rejects OTP shorter than 4 digits', () => {
+    expect(startRideSchema.safeParse({ otp: '123' }).success).toBe(false);
+  });
+
+  it('rejects OTP longer than 4 digits', () => {
+    expect(startRideSchema.safeParse({ otp: '12345' }).success).toBe(false);
+  });
+
+  it('rejects OTP with non-digit characters', () => {
+    expect(startRideSchema.safeParse({ otp: '12ab' }).success).toBe(false);
+  });
+
+  it('rejects missing OTP', () => {
+    expect(startRideSchema.safeParse({}).success).toBe(false);
+  });
+
+  it('rejects empty string', () => {
+    expect(startRideSchema.safeParse({ otp: '' }).success).toBe(false);
+  });
+});
+
+// ─── earningsSummaryQuerySchema ───────────────────────────────
+describe('earningsSummaryQuerySchema', () => {
+  it('accepts period=week', () => {
+    expect(earningsSummaryQuerySchema.safeParse({ period: 'week' }).success).toBe(true);
+  });
+
+  it('accepts period=month', () => {
+    expect(earningsSummaryQuerySchema.safeParse({ period: 'month' }).success).toBe(true);
+  });
+
+  it('defaults to week when period is missing', () => {
+    const result = earningsSummaryQuerySchema.safeParse({});
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.period).toBe('week');
+    }
+  });
+
+  it('rejects invalid period=today', () => {
+    expect(earningsSummaryQuerySchema.safeParse({ period: 'today' }).success).toBe(false);
+  });
+
+  it('rejects period=year', () => {
+    expect(earningsSummaryQuerySchema.safeParse({ period: 'year' }).success).toBe(false);
+  });
+});
+
+// ─── submitDocumentsSchema ────────────────────────────────────
+describe('submitDocumentsSchema', () => {
+  const validDocs = {
+    licenseNumber: 'DL-1234567890',
+    licenseUrl: 'https://storage.example.com/license.jpg',
+    rcNumber: 'HR26AB1234',
+    rcUrl: 'https://storage.example.com/rc.jpg',
+    aadharNumber: '123456789012',
+    aadharUrl: 'https://storage.example.com/aadhar.jpg',
+    vehicleNumber: 'HR26AB1234',
+    vehicleModel: 'Honda Activa 6G',
+  };
+
+  it('accepts all required fields', () => {
+    expect(submitDocumentsSchema.safeParse(validDocs).success).toBe(true);
+  });
+
+  it('accepts with optional bikePhotoUrl', () => {
+    expect(submitDocumentsSchema.safeParse({
+      ...validDocs,
+      bikePhotoUrl: 'https://storage.example.com/bike.jpg',
+    }).success).toBe(true);
+  });
+
+  it('rejects missing licenseNumber', () => {
+    const { licenseNumber: _, ...rest } = validDocs;
+    expect(submitDocumentsSchema.safeParse(rest).success).toBe(false);
+  });
+
+  it('rejects invalid licenseUrl (not a URL)', () => {
+    expect(submitDocumentsSchema.safeParse({ ...validDocs, licenseUrl: 'not-a-url' }).success).toBe(false);
+  });
+
+  it('rejects aadharNumber with 11 digits', () => {
+    expect(submitDocumentsSchema.safeParse({ ...validDocs, aadharNumber: '12345678901' }).success).toBe(false);
+  });
+
+  it('rejects aadharNumber with 13 digits', () => {
+    expect(submitDocumentsSchema.safeParse({ ...validDocs, aadharNumber: '1234567890123' }).success).toBe(false);
+  });
+
+  it('rejects aadharNumber with letters', () => {
+    expect(submitDocumentsSchema.safeParse({ ...validDocs, aadharNumber: '12345678901a' }).success).toBe(false);
+  });
+
+  it('rejects invalid bikePhotoUrl', () => {
+    expect(submitDocumentsSchema.safeParse({ ...validDocs, bikePhotoUrl: 'not-a-url' }).success).toBe(false);
+  });
+
+  it('rejects empty vehicleModel', () => {
+    expect(submitDocumentsSchema.safeParse({ ...validDocs, vehicleModel: '' }).success).toBe(false);
   });
 });

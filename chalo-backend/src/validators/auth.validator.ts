@@ -73,8 +73,28 @@ export const registerDeviceTokenSchema = z.object({
     .max(512, 'FCM token too long'),
 });
 
+/**
+ * Driver registration — verifies OTP + creates driver account in one step
+ */
+export const registerDriverSchema = z.object({
+  phone: z
+    .string()
+    .trim()
+    .regex(/^\+91[6-9]\d{9}$/, 'Invalid Indian mobile number. Format: +91XXXXXXXXXX'),
+  otp: z
+    .string()
+    .length(4, 'OTP must be exactly 4 digits')
+    .regex(/^\d{4}$/, 'OTP must contain only digits'),
+  name: z
+    .string()
+    .trim()
+    .min(2, 'Name must be at least 2 characters')
+    .max(100, 'Name too long'),
+});
+
 export type SendOTPInput = z.infer<typeof sendOTPSchema>;
 export type VerifyOTPInput = z.infer<typeof verifyOTPSchema>;
 export type CompleteProfileInput = z.infer<typeof completeProfileSchema>;
 export type UpdateEmergencyContactInput = z.infer<typeof updateEmergencyContactSchema>;
 export type RegisterDeviceTokenInput = z.infer<typeof registerDeviceTokenSchema>;
+export type RegisterDriverInput = z.infer<typeof registerDriverSchema>;
