@@ -1,0 +1,3152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[Updated] Chalo ਚਲੋ — Wireframe Descriptions</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,700;1,300&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --saffron: #F95C00;
+  --saffron-dim: rgba(249,92,0,0.12);
+  --navy: #0F1629;
+  --green: #34D399;
+  --green-dim: rgba(52,211,153,0.1);
+  --red: #E74C3C;
+  --amber: #F39C12;
+  --bg: #0A0C12;
+  --surface: #12151E;
+  --card: #191D2A;
+  --card2: #1E2335;
+  --border: rgba(255,255,255,0.06);
+  --border2: rgba(255,255,255,0.1);
+  --text: #DDE1EF;
+  --muted: #5C6380;
+  --mono: 'DM Mono', monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+}
+
+/* ── TOP NAV ── */
+.topnav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(10,12,18,0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 60px;
+  gap: 20px;
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.nav-logo {
+  width: 32px; height: 32px;
+  background: var(--saffron);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+}
+
+.nav-brand h1 {
+  font-family: 'Fraunces', serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.nav-brand p {
+  font-size: 10px;
+  color: var(--muted);
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.nav-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: 4px;
+}
+
+.nav-tab {
+  padding: 6px 20px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-family: 'DM Sans', sans-serif;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.nav-tab.active-c { background: var(--saffron); color: #fff; }
+.nav-tab.active-d { background: var(--green); color: #0A0C12; }
+
+.nav-step {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.step-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--saffron);
+}
+
+/* ── HERO ── */
+.hero {
+  padding: 56px 40px 40px;
+  border-bottom: 1px solid var(--border);
+}
+
+.hero-eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--saffron);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 12px;
+}
+
+.hero h2 {
+  font-family: 'Fraunces', serif;
+  font-size: 40px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.1;
+  max-width: 600px;
+}
+
+.hero h2 em {
+  font-style: italic;
+  color: var(--saffron);
+}
+
+.hero p {
+  margin-top: 16px;
+  color: var(--muted);
+  font-size: 14px;
+  max-width: 520px;
+  line-height: 1.7;
+}
+
+.hero-meta {
+  display: flex;
+  gap: 24px;
+  margin-top: 28px;
+  flex-wrap: wrap;
+}
+
+.meta-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.meta-pill strong { color: var(--text); }
+
+/* ── SECTION HEADER ── */
+.section-header {
+  padding: 40px 40px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.section-stripe {
+  width: 4px;
+  height: 28px;
+  border-radius: 2px;
+}
+
+.section-header h3 {
+  font-family: 'Fraunces', serif;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.section-header .count {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  padding: 3px 10px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+}
+
+/* ── SCREENS GRID ── */
+.screens-container {
+  padding: 28px 40px 0;
+  display: none;
+}
+
+.screens-container.visible { display: block; }
+
+.screens-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(720px, 1fr));
+  gap: 24px;
+  padding-bottom: 80px;
+}
+
+/* ── SCREEN CARD ── */
+.screen-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 220px 1fr;
+}
+
+.screen-card.wide {
+  grid-template-columns: 240px 1fr;
+}
+
+/* Phone Mockup */
+.phone-col {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.screen-num {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.phone-frame {
+  width: 160px;
+  min-height: 290px;
+  background: #0D0F18;
+  border-radius: 22px;
+  border: 2px solid rgba(255,255,255,0.12);
+  overflow: hidden;
+  position: relative;
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.5),
+    0 8px 32px rgba(0,0,0,0.5),
+    inset 0 0 0 1px rgba(255,255,255,0.04);
+  flex-shrink: 0;
+}
+
+.phone-notch {
+  width: 52px;
+  height: 14px;
+  background: #0D0F18;
+  border-radius: 0 0 10px 10px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 10;
+  border: 2px solid rgba(255,255,255,0.08);
+  border-top: none;
+}
+
+.phone-screen {
+  width: 100%;
+  min-height: 260px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Screen-specific mockup styles */
+.mock-splash {
+  background: linear-gradient(160deg, #F95C00 0%, #CC4A00 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 280px;
+}
+
+.mock-splash .logo-box {
+  width: 52px; height: 52px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px;
+}
+
+.mock-splash .app-name {
+  font-family: 'Fraunces', serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.mock-splash .tagline {
+  font-size: 8px;
+  color: rgba(255,255,255,0.7);
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+
+.mock-auth {
+  background: #FFFDF9;
+  min-height: 280px;
+  padding: 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mock-auth .top-bar {
+  display: flex; justify-content: flex-end;
+}
+
+.mock-auth .skip-btn {
+  font-size: 8px;
+  color: #7F8C8D;
+  padding: 3px 8px;
+  background: rgba(0,0,0,0.06);
+  border-radius: 100px;
+}
+
+.mock-auth .illus {
+  height: 70px;
+  background: linear-gradient(135deg, rgba(249,92,0,0.15), rgba(249,92,0,0.05));
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+}
+
+.mock-auth .title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #0F1629;
+  line-height: 1.3;
+}
+
+.mock-auth .sub {
+  font-size: 8px;
+  color: #7F8C8D;
+  line-height: 1.4;
+}
+
+.mock-input {
+  height: 28px;
+  background: #fff;
+  border: 1.5px solid #E0E0E0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  gap: 5px;
+}
+
+.mock-input .prefix {
+  font-size: 8px;
+  color: #2D2D2D;
+  font-weight: 600;
+}
+
+.mock-input .field {
+  flex: 1;
+  height: 2px;
+  background: #E0E0E0;
+  border-radius: 1px;
+}
+
+.mock-btn {
+  height: 28px;
+  border-radius: 8px;
+  background: #F95C00;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.04em;
+}
+
+.mock-btn.green { background: #34D399; color: #0A0C12; }
+.mock-btn.outline { background: transparent; border: 1.5px solid #F95C00; color: #F95C00; }
+.mock-btn.red { background: #E74C3C; }
+
+.mock-home {
+  min-height: 280px;
+  background: #e8ead4;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.mock-map-area {
+  flex: 1;
+  background: linear-gradient(180deg, #d4dba8 0%, #c8d4a0 100%);
+  position: relative;
+  min-height: 155px;
+}
+
+.mock-map-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(150,160,120,0.4) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(150,160,120,0.4) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.mock-map-road {
+  position: absolute;
+  background: rgba(255,255,255,0.6);
+  border-radius: 2px;
+}
+
+.mock-map-pin {
+  position: absolute;
+  width: 14px; height: 18px;
+  background: var(--saffron);
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(249,92,0,0.5);
+}
+
+.mock-map-pin::after {
+  content: '';
+  width: 5px; height: 5px;
+  background: #fff;
+  border-radius: 50%;
+  transform: rotate(45deg);
+}
+
+.mock-bottom-sheet {
+  background: #fff;
+  border-radius: 18px 18px 0 0;
+  padding: 10px 12px 12px;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.12);
+}
+
+.mock-drag-handle {
+  width: 28px; height: 3px;
+  background: #E0E0E0;
+  border-radius: 2px;
+  margin: 0 auto 8px;
+}
+
+.mock-search-bar {
+  height: 30px;
+  background: #FFFDF9;
+  border: 1.5px solid #E8E8E8;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  gap: 6px;
+}
+
+.mock-search-bar .s-icon { font-size: 10px; }
+.mock-search-bar .s-text { font-size: 8px; color: #7F8C8D; }
+
+.mock-chips {
+  display: flex;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.mock-chip {
+  padding: 3px 8px;
+  background: #F0F0F0;
+  border-radius: 100px;
+  font-size: 7px;
+  color: #5C6380;
+  display: flex; align-items: center; gap: 3px;
+}
+
+.mock-fare-preview {
+  background: #FFFDF9;
+  min-height: 280px;
+}
+
+.mock-fare-map {
+  height: 110px;
+  background: linear-gradient(180deg, #d4dba8 0%, #c8d4a0 100%);
+  position: relative;
+}
+
+.mock-fare-route {
+  position: absolute;
+  top: 30px; left: 30px; right: 30px;
+  height: 2px;
+  background: var(--saffron);
+  border-radius: 1px;
+}
+
+.mock-fare-route::before, .mock-fare-route::after {
+  content: '';
+  position: absolute;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  top: -2px;
+}
+.mock-fare-route::before { left: 0; background: #0F1629; }
+.mock-fare-route::after { right: 0; background: var(--saffron); }
+
+.mock-fare-body {
+  padding: 10px 12px;
+}
+
+.mock-fare-num {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0F1629;
+  line-height: 1;
+}
+
+.mock-fare-sub {
+  font-size: 7px;
+  color: #7F8C8D;
+  margin-top: 2px;
+}
+
+.mock-pay-row {
+  display: flex;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.mock-pay-opt {
+  flex: 1;
+  height: 26px;
+  border-radius: 8px;
+  border: 1.5px solid #E0E0E0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 7px; color: #7F8C8D; gap: 3px;
+}
+
+.mock-pay-opt.selected {
+  border-color: var(--saffron);
+  background: rgba(249,92,0,0.06);
+  color: var(--saffron);
+  font-weight: 600;
+}
+
+.mock-searching {
+  background: #FFFDF9;
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px;
+}
+
+.mock-ripple {
+  width: 60px; height: 60px;
+  border-radius: 50%;
+  background: rgba(249,92,0,0.15);
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+
+.mock-ripple::before, .mock-ripple::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid rgba(249,92,0,0.3);
+  animation: ripple 2s infinite ease-out;
+}
+
+.mock-ripple::before { width: 80px; height: 80px; animation-delay: 0.5s; }
+.mock-ripple::after { width: 100px; height: 100px; animation-delay: 1s; }
+
+@keyframes ripple {
+  0% { transform: scale(0.8); opacity: 1; }
+  100% { transform: scale(1.2); opacity: 0; }
+}
+
+.mock-driver-found {
+  background: #FFFDF9;
+  min-height: 280px;
+}
+
+.mock-df-map {
+  height: 130px;
+  background: linear-gradient(180deg, #d4dba8 0%, #c8d4a0 100%);
+  position: relative;
+}
+
+.mock-df-sheet {
+  background: #fff;
+  border-radius: 16px 16px 0 0;
+  padding: 10px 12px;
+  margin-top: -12px;
+}
+
+.mock-driver-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+}
+
+.mock-avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #F95C00, #CC4A00);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.mock-driver-info { flex: 1; }
+
+.mock-driver-name {
+  font-size: 9px;
+  font-weight: 700;
+  color: #0F1629;
+}
+
+.mock-driver-sub {
+  font-size: 7px;
+  color: #7F8C8D;
+  margin-top: 1px;
+}
+
+.mock-eta-chip {
+  padding: 2px 7px;
+  background: rgba(52,211,153,0.12);
+  border-radius: 100px;
+  font-size: 7px;
+  font-weight: 700;
+  color: #34D399;
+}
+
+.mock-action-row {
+  display: flex;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.mock-action-btn {
+  flex: 1;
+  height: 26px;
+  border-radius: 8px;
+  border: 1.5px solid #E0E0E0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 8px; gap: 3px; color: #2D2D2D;
+}
+
+.mock-active-ride {
+  min-height: 280px;
+  background: #e8ead4;
+  position: relative;
+}
+
+.mock-ar-map {
+  height: 165px;
+  background: linear-gradient(180deg, #d4dba8 0%, #c8d4a0 100%);
+  position: relative;
+}
+
+.mock-ar-card {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: #fff;
+  border-radius: 16px 16px 0 0;
+  padding: 10px 12px;
+}
+
+.mock-sos-btn {
+  position: absolute;
+  bottom: 120px;
+  left: 10px;
+  width: 32px; height: 32px;
+  background: var(--red);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(231,76,60,0.5);
+}
+
+.mock-progress {
+  height: 4px;
+  background: #F0F0F0;
+  border-radius: 2px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+
+.mock-progress-fill {
+  height: 100%;
+  background: var(--saffron);
+  border-radius: 2px;
+  width: 60%;
+}
+
+/* Driver-specific mocks */
+.mock-dashboard-driver {
+  min-height: 280px;
+  position: relative;
+}
+
+.mock-dd-map {
+  height: 180px;
+  background: linear-gradient(180deg, #c8d4a0 0%, #b8c890 100%);
+  position: relative;
+}
+
+.mock-dd-overlay {
+  position: absolute;
+  top: 8px; left: 8px; right: 8px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.mock-online-chip {
+  padding: 4px 8px;
+  background: rgba(52,211,153,0.9);
+  border-radius: 100px;
+  font-size: 7px;
+  font-weight: 700;
+  color: #0A0C12;
+}
+
+.mock-earnings-chip {
+  padding: 4px 8px;
+  background: rgba(0,0,0,0.7);
+  border-radius: 100px;
+  font-size: 7px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.mock-dd-bottom {
+  background: #fff;
+  padding: 8px 10px;
+  border-radius: 12px 12px 0 0;
+}
+
+.mock-ride-request {
+  background: #FFFDF9;
+  min-height: 280px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mock-timer-ring {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: conic-gradient(var(--saffron) 60%, rgba(249,92,0,0.15) 0%);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto;
+  position: relative;
+}
+
+.mock-timer-inner {
+  width: 32px; height: 32px;
+  background: #FFFDF9;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--saffron);
+}
+
+.mock-request-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 8px 10px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+
+.mock-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.mock-label { font-size: 7px; color: #7F8C8D; }
+.mock-value { font-size: 8px; font-weight: 600; color: #0F1629; }
+.mock-fare-big { font-size: 18px; font-weight: 700; color: #0F1629; }
+
+.mock-cancel-hist {
+  padding: 2px 6px;
+  background: rgba(231,76,60,0.1);
+  border-radius: 4px;
+  font-size: 7px;
+  color: var(--red);
+}
+
+.mock-earnings-dash {
+  background: #FFFDF9;
+  min-height: 280px;
+  padding: 14px 12px;
+}
+
+.mock-ed-header {
+  margin-bottom: 10px;
+}
+
+.mock-total {
+  font-size: 22px;
+  font-weight: 700;
+  color: #0F1629;
+  line-height: 1;
+}
+
+.mock-total-sub { font-size: 7px; color: #7F8C8D; }
+
+.mock-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 50px;
+  margin: 10px 0;
+}
+
+.mock-bar {
+  flex: 1;
+  background: rgba(249,92,0,0.2);
+  border-radius: 3px 3px 0 0;
+  position: relative;
+}
+
+.mock-bar.active { background: var(--saffron); }
+
+.mock-settle-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.mock-settle-card {
+  flex: 1;
+  background: #fff;
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
+.mock-sc-label { font-size: 6px; color: #7F8C8D; text-transform: uppercase; }
+.mock-sc-val { font-size: 11px; font-weight: 700; color: #0F1629; }
+.mock-sc-val.green { color: var(--green); }
+.mock-sc-val.amber { color: var(--amber); }
+
+/* ── INFO PANEL ── */
+.info-col {
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  overflow: hidden;
+}
+
+.screen-tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 100px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  margin-bottom: 10px;
+}
+
+.tag-c { background: var(--saffron-dim); color: var(--saffron); }
+.tag-d { background: var(--green-dim); color: var(--green); }
+
+.screen-title {
+  font-family: 'Fraunces', serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.2;
+  margin-bottom: 6px;
+}
+
+.screen-purpose {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Elements list */
+.elements-title {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
+}
+
+.element-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-bottom: 18px;
+}
+
+.element-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.el-zone {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 1px;
+  min-width: 52px;
+  text-align: center;
+}
+
+.el-desc { font-size: 12px; color: var(--text); line-height: 1.5; }
+.el-desc strong { color: #fff; font-weight: 600; }
+.el-desc em { color: var(--amber); font-style: normal; font-size: 11px; }
+
+/* Specs row */
+.specs-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.spec-chip {
+  font-size: 10px;
+  padding: 3px 10px;
+  border-radius: 100px;
+  font-family: var(--mono);
+}
+
+.spec-chip.tap { background: rgba(249,92,0,0.1); color: var(--saffron); }
+.spec-chip.nav { background: rgba(123,156,255,0.1); color: #7B9CFF; }
+.spec-chip.push { background: rgba(52,211,153,0.1); color: var(--green); }
+.spec-chip.auto { background: rgba(243,156,18,0.1); color: var(--amber); }
+.spec-chip.crit { background: rgba(231,76,60,0.1); color: var(--red); }
+.spec-chip.opt { background: var(--surface); color: var(--muted); border: 1px solid var(--border); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+
+@media (max-width: 900px) {
+  .screens-grid { grid-template-columns: 1fr; }
+  .screen-card { grid-template-columns: 1fr; }
+  .phone-col { border-right: none; border-bottom: 1px solid var(--border); }
+  .topnav, .hero, .section-header, .screens-container { padding-left: 20px; padding-right: 20px; }
+}
+
+.mock-doc-wizard {
+  background: #FFFDF9;
+  min-height: 280px;
+  padding: 14px 12px;
+}
+
+.mock-progress-steps {
+  display: flex;
+  gap: 3px;
+  margin-bottom: 12px;
+}
+
+.mock-step-dot {
+  flex: 1;
+  height: 3px;
+  border-radius: 2px;
+  background: #E0E0E0;
+}
+
+.mock-step-dot.done { background: var(--saffron); }
+.mock-step-dot.active { background: rgba(249,92,0,0.4); }
+
+.mock-doc-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: #0F1629;
+  margin-bottom: 4px;
+}
+
+.mock-doc-sub {
+  font-size: 7px;
+  color: #7F8C8D;
+  margin-bottom: 10px;
+}
+
+.mock-upload-box {
+  height: 80px;
+  border: 1.5px dashed rgba(249,92,0,0.4);
+  border-radius: 10px;
+  background: rgba(249,92,0,0.04);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.mock-upload-icon { font-size: 20px; }
+.mock-upload-text { font-size: 7px; color: #7F8C8D; }
+.mock-upload-cta { font-size: 7px; color: var(--saffron); font-weight: 600; }
+
+.mock-pending {
+  background: #FFFDF9;
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  gap: 8px;
+  text-align: center;
+}
+
+.mock-pending-icon { font-size: 40px; }
+.mock-pending-title { font-size: 10px; font-weight: 700; color: #0F1629; }
+.mock-pending-sub { font-size: 7px; color: #7F8C8D; line-height: 1.4; }
+.mock-pending-badge {
+  padding: 3px 10px;
+  background: rgba(243,156,18,0.12);
+  border-radius: 100px;
+  font-size: 7px;
+  color: var(--amber);
+  font-weight: 600;
+}
+
+.mock-profile {
+  background: #FFFDF9;
+  min-height: 280px;
+}
+
+.mock-profile-header {
+  background: linear-gradient(135deg, #0F1629, #2D3461);
+  padding: 20px 12px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.mock-profile-body {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mock-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  background: #fff;
+  border-radius: 8px;
+}
+
+.mock-li-left { display: flex; align-items: center; gap: 6px; }
+.mock-li-icon { font-size: 12px; }
+.mock-li-text { font-size: 8px; color: #0F1629; font-weight: 500; }
+.mock-li-arrow { font-size: 8px; color: #7F8C8D; }
+
+.mock-history {
+  background: #FFFDF9;
+  min-height: 280px;
+  padding: 12px;
+}
+
+.mock-hist-item {
+  background: #fff;
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+}
+
+.mock-hist-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.mock-hist-route {
+  font-size: 8px;
+  font-weight: 600;
+  color: #0F1629;
+}
+
+.mock-hist-date { font-size: 7px; color: #7F8C8D; }
+.mock-hist-fare { font-size: 9px; font-weight: 700; color: var(--saffron); }
+
+.mock-hist-sub {
+  font-size: 7px;
+  color: #7F8C8D;
+  margin-top: 2px;
+}
+
+.mock-stars { font-size: 8px; color: var(--amber); margin-top: 3px; }
+
+.mock-withdrawal {
+  background: #FFFDF9;
+  min-height: 280px;
+  padding: 14px 12px;
+}
+
+.mock-balance-card {
+  background: linear-gradient(135deg, #0F1629, #2D3461);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+
+.mock-balance-label { font-size: 7px; color: rgba(255,255,255,0.6); }
+.mock-balance-val { font-size: 20px; font-weight: 700; color: #fff; }
+.mock-balance-sub { font-size: 7px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+.mock-balance-badge {
+  padding: 2px 6px;
+  background: rgba(243,156,18,0.2);
+  border-radius: 4px;
+  font-size: 6px;
+  color: var(--amber);
+  margin-top: 4px;
+  display: inline-block;
+}
+
+.mock-wd-method {
+  background: #fff;
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  border: 1.5px solid transparent;
+}
+
+.mock-wd-method.selected { border-color: var(--saffron); }
+
+.mock-wd-title { font-size: 8px; font-weight: 600; color: #0F1629; }
+.mock-wd-sub { font-size: 7px; color: #7F8C8D; }
+
+.mock-plan-manager {
+  background: #FFFDF9;
+  min-height: 280px;
+  padding: 14px 12px;
+}
+
+.mock-plan-card {
+  border-radius: 12px;
+  padding: 10px;
+  margin-bottom: 8px;
+}
+
+.mock-plan-card.commission {
+  background: rgba(249,92,0,0.08);
+  border: 1.5px solid rgba(249,92,0,0.3);
+}
+
+.mock-plan-card.subscription {
+  background: rgba(52,211,153,0.06);
+  border: 1.5px solid rgba(52,211,153,0.2);
+}
+
+.mock-plan-title { font-size: 9px; font-weight: 700; color: #0F1629; }
+.mock-plan-desc { font-size: 7px; color: #7F8C8D; margin-top: 2px; }
+.mock-plan-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 100px;
+  font-size: 6px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+.mock-plan-badge.orange { background: var(--saffron); color: #fff; }
+.mock-plan-badge.green { background: var(--green); color: #0A0C12; }
+</style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="topnav">
+  <div class="nav-brand">
+    <div class="nav-logo">🛵</div>
+    <div>
+      <h1>Chalo ਚਲੋ</h1>
+      <p>Wireframe Descriptions</p>
+    </div>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active-c" onclick="switchTab('customer', this)">🧍 Customer · 14 screens</button>
+    <button class="nav-tab" onclick="switchTab('driver', this)">🏍️ Driver · 14 screens</button>
+  </div>
+  <div class="nav-step">
+    <div class="step-dot"></div>
+    Step 2 of 4 — Screen Wireframes
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">Step 2 / 4 — Screen-by-Screen Wireframe Descriptions</div>
+  <h2>Every screen. Every <em>element.</em> Every tap target.</h2>
+  <p>Complete layout specifications for all 28 screens across both apps. Each screen includes visual mockup, element inventory, positioning logic, and developer handoff notes.</p>
+  <div class="hero-meta">
+    <div class="meta-pill">📱 <strong>Platform:</strong> Android-first (API 28+)</div>
+    <div class="meta-pill">🎯 <strong>Tap targets:</strong> 54px minimum</div>
+    <div class="meta-pill">🌐 <strong>Language:</strong> Punjabi + English</div>
+    <div class="meta-pill">📐 <strong>Base grid:</strong> 360×800dp</div>
+  </div>
+</div>
+
+<!-- ===================== CUSTOMER SCREENS ===================== -->
+<div class="screens-container visible" id="tab-customer">
+  <div class="section-header" style="margin-top:40px;">
+    <div class="section-stripe" style="background:var(--saffron);"></div>
+    <h3 style="color:var(--saffron);">Customer App</h3>
+    <span class="count">14 Screens</span>
+  </div>
+
+  <div class="screens-grid">
+
+    <!-- C-01 Splash -->
+    <div class="screen-card">
+      <div class="phone-col">
+        <div class="screen-num">C-01</div>
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="mock-splash">
+              <div class="logo-box">🛵</div>
+              <div class="app-name">Chalo ਚਲੋ</div>
+              <div class="tagline">Faridabad da apna safar<br>ਫਰੀਦਾਬਾਦ ਦਾ ਆਪਣਾ ਸਫ਼ਰ</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="info-col">
+        <div class="screen-tag tag-c">● Customer</div>
+        <div class="screen-title">Splash Screen</div>
+        <div class="screen-purpose">Brand first impression. Full-screen saffron. Auto-advances after 2 seconds. No user action needed. Sets the emotional tone before any functionality.</div>
+        <div class="elements-title">Element Inventory</div>
+        <div class="element-list">
+          <div class="element-item">
+            <div class="el-zone">CENTER</div>
+            <div class="el-desc"><strong>App logo</strong> — 80×80dp rounded square (14dp radius), white auto-rickshaw/bike icon on rgba(255,255,255,0.2) fill</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">CENTER</div>
+            <div class="el-desc"><strong>App name</strong> — "Chalo ਚਲੋ" in Fraunces serif, 36sp Bold, pure white</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">BELOW</div>
+            <div class="el-desc"><strong>Tagline</strong> — Punjabi + English, 13sp, rgba(255,255,255,0.75), centered, 24dp spacing below name</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">BOTTOM</div>
+            <div class="el-desc"><strong>Loading indicator</strong> — Thin white horizontal progress bar, 120dp wide, animates left-to-right over 2 seconds</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">BG</div>
+            <div class="el-desc"><strong>Background</strong> — Saffron gradient: <em>#F95C00 → #CC4A00</em>, 160° angle. No image assets needed.</div>
+          </div>
+        </div>
+        <div class="specs-row">
+          <span class="spec-chip auto">Auto-advances 2s</span>
+          <span class="spec-chip nav">→ Auth Check</span>
+          <span class="spec-chip opt">No user action</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- C-02 Onboarding -->
+    <div class="screen-card">
+      <div class="phone-col">
+        <div class="screen-num">C-02</div>
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="mock-auth">
+              <div class="top-bar"><div class="skip-btn">Skip →</div></div>
+              <div class="illus">🛵</div>
+              <div class="title">ਕੁਝ ਸਕਿੰਟਾਂ ਵਿੱਚ ਬੁੱਕ ਕਰੋ<br>Book in seconds</div>
+              <div class="sub">Enter your destination and get a ride instantly. No calls, no waiting.</div>
+              <div style="display:flex; gap:4px; justify-content:center; margin-top:4px;">
+                <div style="width:16px;height:3px;background:var(--saffron);border-radius:2px;"></div>
+                <div style="width:6px;height:3px;background:#E0E0E0;border-radius:2px;"></div>
+                <div style="width:6px;height:3px;background:#E0E0E0;border-radius:2px;"></div>
+              </div>
+              <div class="mock-btn" style="margin-top:6px;">Next →</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="info-col">
+        <div class="screen-tag tag-c">● Customer</div>
+        <div class="screen-title">Onboarding (3 Slides)</div>
+        <div class="screen-purpose">First-time value proposition. Three swipeable slides, each communicating one core benefit. Skippable from any slide. Leads to login.</div>
+        <div class="elements-title">Element Inventory (per slide)</div>
+        <div class="element-list">
+          <div class="element-item">
+            <div class="el-zone">TOP-R</div>
+            <div class="el-desc"><strong>"Skip →"</strong> button — 44dp tap target, ghost style, color #7F8C8D. Present on all 3 slides.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">UPPER</div>
+            <div class="el-desc"><strong>Illustration area</strong> — 200dp height, light saffron-tinted background card. Simple line-art illustration per slide. Rounded 16dp.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">MID</div>
+            <div class="el-desc"><strong>Slide headline</strong> — Punjabi line (first), English line (second), 18sp SemiBold, navy #0F1629</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">MID</div>
+            <div class="el-desc"><strong>Body copy</strong> — 13sp Regular, #7F8C8D, max 2 lines, centered</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">BELOW</div>
+            <div class="el-desc"><strong>Dot indicators</strong> — 3 dots: active=16dp wide saffron pill, inactive=6dp grey circle</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">BOTTOM</div>
+            <div class="el-desc"><strong>Primary CTA</strong> — "Next →" / "Get Started" on slide 3. Full-width, 54dp height, saffron fill. <em>Leads to Login on slide 3.</em></div>
+          </div>
+        </div>
+        <div class="specs-row">
+          <span class="spec-chip tap">Swipeable slides</span>
+          <span class="spec-chip opt">Skip any time</span>
+          <span class="spec-chip nav">→ Login Screen</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- C-03 Login -->
+    <div class="screen-card">
+      <div class="phone-col">
+        <div class="screen-num">C-03</div>
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="mock-auth">
+              <div style="height:20px;"></div>
+              <div class="title" style="font-size:13px; text-align:center;">Welcome to Chalo ਚਲੋ</div>
+              <div class="sub" style="text-align:center;">Enter your mobile number to get started</div>
+              <div style="height:8px;"></div>
+              <div class="mock-input">
+                <div class="prefix">🇮🇳 +91</div>
+                <div style="width:1px;height:14px;background:#E0E0E0;"></div>
+                <div class="field"></div>
+              </div>
+              <div class="mock-btn" style="margin-top:8px;">ਓਟੀਪੀ ਭੇਜੋ / Get OTP</div>
+              <div style="text-align:center; font-size:7px; color:#7F8C8D; margin-top:8px; line-height:1.4;">By continuing you agree to our<br>Terms of Service & Privacy Policy</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="info-col">
+        <div class="screen-tag tag-c">● Customer</div>
+        <div class="screen-title">Phone Login + OTP</div>
+        <div class="screen-purpose">Single-field auth. Minimal friction. +91 pre-populated. OTP screen follows immediately. Bilingual CTA label builds trust with Punjabi-speaking users.</div>
+        <div class="elements-title">Element Inventory</div>
+        <div class="element-list">
+          <div class="element-item">
+            <div class="el-zone">TOP</div>
+            <div class="el-desc"><strong>App logo</strong> — Small 40dp centered logo, maintains brand continuity from splash</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">MID</div>
+            <div class="el-desc"><strong>Headline</strong> — "Welcome to Chalo ਚਲੋ", 22sp Bold, centered</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">MID</div>
+            <div class="el-desc"><strong>Phone input field</strong> — 56dp height, left section: 🇮🇳 +91 flag + code (non-editable), divider line, right: numeric keypad auto-opens. 10-digit max. Border: 1.5dp #E0E0E0, focus: saffron.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">BELOW</div>
+            <div class="el-desc"><strong>Primary CTA</strong> — "ਓਟੀਪੀ ਭੇਜੋ / Get OTP", full-width 54dp, saffron. Disabled until 10 digits entered.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">BOTTOM</div>
+            <div class="el-desc"><strong>Legal text</strong> — 11sp, #7F8C8D, links to Terms + Privacy (underlined). Not a blocker.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">OTP</div>
+            <div class="el-desc"><strong>OTP Screen</strong> — 4 large 56dp input boxes in a row. Auto-advances between boxes. Auto-submits on 4th digit. Resend timer counts down from 30s. <em>Auto-read from SMS if READ_SMS permission granted.</em></div>
+          </div>
+        </div>
+        <div class="specs-row">
+          <span class="spec-chip auto">Auto-read SMS OTP</span>
+          <span class="spec-chip crit">3 OTP attempts max</span>
+          <span class="spec-chip nav">→ Home Screen</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- C-04 Home Screen -->
+    <div class="screen-card wide">
+      <div class="phone-col">
+        <div class="screen-num">C-04</div>
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="mock-home">
+              <div class="mock-map-area">
+                <div class="mock-map-grid"></div>
+                <div class="mock-map-road" style="top:50%;left:0;right:0;height:5px;"></div>
+                <div class="mock-map-road" style="top:0;bottom:0;left:40%;width:5px;"></div>
+                <div class="mock-map-pin" style="top:38%;left:36%;"></div>
+                <div style="position:absolute;top:10px;left:10px;background:rgba(0,0,0,0.6);border-radius:6px;padding:3px 7px;font-size:7px;color:#fff;">📍 Sector 15, Faridabad</div>
+                <div style="position:absolute;top:10px;right:10px;background:#fff;border-radius:6px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;box-shadow:0 2px 6px rgba(0,0,0,0.2);">👤</div>
+              </div>
+              <div class="mock-bottom-sheet">
+                <div class="mock-drag-handle"></div>
+                <div class="mock-search-bar">
+                  <span class="s-icon">🔍</span>
+                  <span class="s-text">ਕਿੱਥੇ ਜਾਣਾ ਹੈ? / Where to go?</span>
+                </div>
+                <div class="mock-chips">
+                  <div class="mock-chip">🏠 Home</div>
+                  <div class="mock-chip">💼 Work</div>
+                  <div class="mock-chip">⭐ Market</div>
+                </div>
+                <div style="display:flex;gap:4px;margin-top:6px;">
+                  <div style="flex:1;height:26px;background:rgba(249,92,0,0.1);border:1.5px solid var(--saffron);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;color:var(--saffron);">🏍️ Bike</div>
+                  <div style="flex:1;height:26px;background:#F8F8F8;border:1.5px solid #E0E0E0;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:7px;color:#7F8C8D;opacity:0.5;">🛺 Auto</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="info-col">
+        <div class="screen-tag tag-c">● Customer</div>
+        <div class="screen-title">Home Screen — Command Center</div>
+        <div class="screen-purpose">The most important screen. Everything starts here. Map occupies 55%, persistent bottom sheet occupies 45%. Customer should never feel lost. This screen is the resting state after every completed action.</div>
+        <div class="elements-title">Element Inventory</div>
+        <div class="element-list">
+          <div class="element-item">
+            <div class="el-zone">MAP 55%</div>
+            <div class="el-desc"><strong>Google Maps</strong> — Punjabi locale. Blue pulsing dot for customer location. Saffron custom pin for user marker. Gradient fade at bottom edge merging into sheet. Map controls (zoom) hidden — not needed.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">MAP TOP-L</div>
+            <div class="el-desc"><strong>Location pill</strong> — Current area name (e.g. "Sector 15, Faridabad"), dark semi-transparent chip. Tappable to change pickup.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">MAP TOP-R</div>
+            <div class="el-desc"><strong>Profile icon</strong> — 44dp circle, user initials, white card with shadow. Opens Profile screen.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">SHEET TOP</div>
+            <div class="el-desc"><strong>Drag handle</strong> — 32dp wide, 4dp height, #E0E0E0, centered. Allows sheet to expand to full-screen.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">SHEET</div>
+            <div class="el-desc"><strong>Search bar</strong> — 54dp height, placeholder "ਕਿੱਥੇ ਜਾਣਾ ਹੈ? / Where to go?", saffron focus ring. Tapping opens Destination screen.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">SHEET</div>
+            <div class="el-desc"><strong>Saved places chips</strong> — Horizontal scroll: 🏠 Home, 💼 Work, ⭐ Recent. Each chip 36dp height, tap fills destination field.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">SHEET</div>
+            <div class="el-desc"><strong>Vehicle type row</strong> — "🏍️ Bike" (active, saffron border) | "🛺 Auto" (disabled, greyed, V2). Future-proof component. When Auto launches, it simply enables.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">BOTTOM NAV</div>
+            <div class="el-desc"><strong>Bottom Tab Bar</strong> — 4 tabs: 🏠 Home | 📋 Rides | 🔔 Alerts | 👤 Profile. 56dp height, icon+label each, 54dp tap targets.</div>
+          </div>
+        </div>
+        <div class="specs-row">
+          <span class="spec-chip auto">GPS auto-detects location</span>
+          <span class="spec-chip tap">Sheet drag-expandable</span>
+          <span class="spec-chip nav">→ Enter Destination</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- C-05 Enter Destination -->
+    <div class="screen-card">
+      <div class="phone-col">
+        <div class="screen-num">C-05</div>
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="mock-auth" style="background:#fff;">
+              <div style="display:flex;gap:6px;margin-bottom:8px;">
+                <div style="width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:14px;">←</div>
+                <div style="font-size:10px;font-weight:700;color:#0F1629;align-self:center;">Enter Destination</div>
+              </div>
+              <div style="background:#FFFDF9;border-radius:10px;padding:8px 10px;margin-bottom:8px;">
+                <div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid #E8E8E8;">
+                  <div style="width:10px;height:10px;border-radius:50%;background:#0F1629;flex-shrink:0;"></div>
+                  <div style="font-size:8px;color:#0F1629;">Sector 15, Faridabad</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;padding:5px 0;">
+                  <div style="width:10px;height:10px;border-radius:50%;background:var(--saffron);flex-shrink:0;"></div>
+                  <div style="font-size:8px;color:#7F8C8D;">ਮੰਜ਼ਿਲ ਟਾਈਪ ਕਰੋ...</div>
+                </div>
+              </div>
+              <div style="font-size:7px;color:#7F8C8D;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.06em;">Recent</div>
+              <div style="display:flex;flex-direction:column;gap:4px;">
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #F0F0F0;">
+                  <div style="font-size:12px;">🕐</div>
+                  <div><div style="font-size:8px;font-weight:600;color:#0F1629;">BSES Colony Market</div><div style="font-size:7px;color:#7F8C8D;">Sector 2, Faridabad</div></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #F0F0F0;">
+                  <div style="font-size:12px;">🕐</div>
+                  <div><div style="font-size:8px;font-weight:600;color:#0F1629;">NIT Faridabad</div><div style="font-size:7px;color:#7F8C8D;">Sector 21</div></div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 0;">
+                  <div style="font-size:12px;">📍</div>
+                  <div><div style="font-size:8px;font-weight:600;color:#0F1629;">Crown Interior Mall</div><div style="font-size:7px;color:#7F8C8D;">Sector 14, Faridabad</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="info-col">
+        <div class="screen-tag tag-c">● Customer</div>
+        <div class="screen-title">Enter Destination</div>
+        <div class="screen-purpose">Fullscreen takeover from home. Keyboard opens immediately. Two input fields stacked. Landmark-friendly search — handles "Ajit Sweets Sector 16" not just addresses.</div>
+        <div class="elements-title">Element Inventory</div>
+        <div class="element-list">
+          <div class="element-item">
+            <div class="el-zone">TOP</div>
+            <div class="el-desc"><strong>Back arrow</strong> — 44dp tap target, returns to Home Screen with map state preserved.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">UPPER</div>
+            <div class="el-desc"><strong>Input card</strong> — White rounded card (12dp radius), two rows separated by divider: Row 1 = Pickup (blue dot, auto-filled GPS, editable). Row 2 = Destination (saffron dot, cursor blinking, keyboard opens).</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">BELOW</div>
+            <div class="el-desc"><strong>Search results list</strong> — Appears as user types. Icon (clock for recent, pin for search), place name (Bold 14sp), area/sector below (12sp grey). Divider between items.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">LIST</div>
+            <div class="el-desc"><strong>Recent places</strong> — Last 5 destinations shown before typing starts. Labeled "Recent" section header in uppercase monospace.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">LIST</div>
+            <div class="el-desc"><strong>Landmark results</strong> — Google Places API + local landmark database. <em>Must handle Punjabi-language landmark names and Faridabad-specific sector references.</em></div>
+          </div>
+        </div>
+        <div class="specs-row">
+          <span class="spec-chip auto">Keyboard auto-opens</span>
+          <span class="spec-chip crit">Landmark search required</span>
+          <span class="spec-chip nav">→ Fare Estimate</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- C-06 Fare Estimate -->
+    <div class="screen-card">
+      <div class="phone-col">
+        <div class="screen-num">C-06</div>
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="mock-fare-preview">
+              <div class="mock-fare-map">
+                <div class="mock-map-grid" style="opacity:0.5;"></div>
+                <div class="mock-fare-route"></div>
+              </div>
+              <div class="mock-fare-body">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                  <div>
+                    <div class="mock-fare-num">₹ 48 – ₹ 58</div>
+                    <div class="mock-fare-sub">4.2 km · ~18 min · Bike ride</div>
+                  </div>
+                  <div style="text-align:right;">
+                    <div style="font-size:7px;color:#7F8C8D;">Book Now or</div>
+                    <div style="font-size:8px;color:var(--saffron);font-weight:600;">📅 Schedule</div>
+                  </div>
+                </div>
+                <div class="mock-pay-row">
+                  <div class="mock-pay-opt selected">💵 Cash</div>
+                  <div class="mock-pay-opt">📱 UPI</div>
+                </div>
+                <div class="mock-btn" style="margin-top:8px;">ਰਾਈਡ ਬੁੱਕ ਕਰੋ / Confirm Booking</div>
+                <div style="text-align:center;font-size:7px;color:#7F8C8D;margin-top:5px;">Fare may vary based on traffic</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="info-col">
+        <div class="screen-tag tag-c">● Customer</div>
+        <div class="screen-title">Fare Estimate + Payment</div>
+        <div class="screen-purpose">Critical trust-building screen. Fare is ALWAYS shown before booking is confirmed — this is non-negotiable. Payment method selection lives here. Schedule toggle appears here too.</div>
+        <div class="elements-title">Element Inventory</div>
+        <div class="element-list">
+          <div class="element-item">
+            <div class="el-zone">MAP 40%</div>
+            <div class="el-desc"><strong>Route preview</strong> — Map shrinks to 40%. Orange polyline from pickup to drop. Both pins visible. Non-interactive (display only).</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">SHEET</div>
+            <div class="el-desc"><strong>Fare range</strong> — "₹ 48 – ₹ 58" in 28sp Bold, navy. Range (not fixed) shown because traffic affects final. Below: "4.2 km · ~18 min · Bike ride" in 12sp grey.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">SHEET</div>
+            <div class="el-desc"><strong>Schedule toggle</strong> — "Book Now" default | "📅 Schedule" link top-right of fare. Tapping opens Schedule Ride screen. Does not replace booking — adds to it.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">SHEET</div>
+            <div class="el-desc"><strong>Payment selector</strong> — Two equal-width pill buttons: "💵 Cash" | "📱 UPI". Active state: saffron border + light fill. Inactive: grey border. <em>Preference saved for next booking.</em></div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">BOTTOM</div>
+            <div class="el-desc"><strong>Confirm CTA</strong> — "ਰਾਈਡ ਬੁੱਕ ਕਰੋ / Confirm Booking", full-width 54dp saffron. Below: small grey disclaimer about fare variance.</div>
+          </div>
+        </div>
+        <div class="specs-row">
+          <span class="spec-chip crit">Fare shown before booking</span>
+          <span class="spec-chip tap">Payment preference saved</span>
+          <span class="spec-chip nav">→ Searching Screen</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- C-07 Schedule Ride -->
+    <div class="screen-card">
+      <div class="phone-col">
+        <div class="screen-num">C-07</div>
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="mock-auth" style="background:#fff;">
+              <div style="font-size:11px;font-weight:700;color:#0F1629;margin-bottom:8px;">📅 Schedule Your Ride</div>
+              <div style="font-size:7px;color:#7F8C8D;margin-bottom:10px;">Book up to 7 days in advance</div>
+              <div style="background:#FFFDF9;border-radius:10px;padding:8px;margin-bottom:8px;">
+                <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;">
+                  <div style="font-size:6px;color:#7F8C8D;">S</div><div style="font-size:6px;color:#7F8C8D;">M</div><div style="font-size:6px;color:#7F8C8D;">T</div><div style="font-size:6px;color:#7F8C8D;">W</div><div style="font-size:6px;color:#7F8C8D;">T</div><div style="font-size:6px;color:#7F8C8D;">F</div><div style="font-size:6px;color:#7F8C8D;">S</div>
+                  <div style="font-size:7px;color:#ccc;">22</div><div style="font-size:7px;font-weight:700;background:var(--saffron);color:#fff;border-radius:50%;">23</div><div style="font-size:7px;">24</div><div style="font-size:7px;">25</div><div style="font-size:7px;">26</div><div style="font-size:7px;">27</div><div style="font-size:7px;">28</div>
+                </div>
+              </div>
+              <div style="font-size:8px;font-weight:600;color:#0F1629;margin-bottom:5px;">Select Time</div>
+              <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                <div style="padding:3px 7px;background:rgba(249,92,0,0.1);border:1.5px solid var(--saffron);border-radius:6px;font-size:7px;color:var(--saffron);font-weight:600;">8:00 AM</div>
+                <div style="padding:3px 7px;background:#F0F0F0;border-radius:6px;font-size:7px;color:#7F8C8D;">9:00 AM</div>
+                <div style="padding:3px 7px;background:#F0F0F0;border-radius:6px;font-size:7px;color:#7F8C8D;">10:00 AM</div>
+                <div style="padding:3px 7px;background:#F0F0F0;border-radius:6px;font-size:7px;color:#7F8C8D;">11:00 AM</div>
+              </div>
+              <div class="mock-btn" style="margin-top:10px;">Confirm Schedule</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="info-col">
+        <div class="screen-tag tag-c">● Customer</div>
+        <div class="screen-title">Schedule Ride</div>
+        <div class="screen-purpose">Book a ride up to 7 days ahead. Calendar shows only 7 days from today. Past dates and past times are greyed out and untappable. Hourly time slots. One date + one time selected, then confirm.</div>
+        <div class="elements-title">Element Inventory</div>
+        <div class="element-list">
+          <div class="element-item">
+            <div class="el-zone">TOP</div>
+            <div class="el-desc"><strong>Header</strong> — "📅 Schedule Your Ride", 18sp Bold, with back arrow (44dp). Subtitle: "Book up to 7 days in advance" in grey 12sp.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">CALENDAR</div>
+            <div class="el-desc"><strong>7-day grid</strong> — Mon–Sun, current week only. Past date (today −1) greyed. Selected date = saffron circle. Future dates beyond 7 days greyed and disabled.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">TIME</div>
+            <div class="el-desc"><strong>Time slot chips</strong> — Horizontal scroll grid of hourly slots: 6:00 AM to 10:00 PM. Selected = saffron border + fill. Past times disabled (grey). Each chip 44dp height.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">SUMMARY</div>
+            <div class="el-desc"><strong>Booking summary card</strong> — Shows: destination, selected date+time, fare estimate, payment method. Appears below time selector after both are chosen.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">BOTTOM</div>
+            <div class="el-desc"><strong>Confirm CTA</strong> — Active only after date + time selected. "Confirm Schedule" full-width 54dp saffron.</div>
+          </div>
+        </div>
+        <div class="specs-row">
+          <span class="spec-chip crit">7-day window only</span>
+          <span class="spec-chip push">Reminder 30min before</span>
+          <span class="spec-chip nav">→ Scheduled Rides List</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- C-08 Searching -->
+    <div class="screen-card">
+      <div class="phone-col">
+        <div class="screen-num">C-08</div>
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="mock-searching">
+              <div class="mock-ripple">🏍️</div>
+              <div style="font-size:10px;font-weight:700;color:#0F1629;text-align:center;margin-top:8px;">ਰਾਈਡਰ ਲੱਭ ਰਹੇ ਹਾਂ...<br><span style="font-size:8px;font-weight:400;color:#7F8C8D;">Finding your rider…</span></div>
+              <div style="padding:6px 12px;background:rgba(249,92,0,0.08);border-radius:8px;text-align:center;">
+                <div style="font-size:7px;color:var(--saffron);font-weight:600;">Usually 3–5 min in your area</div>
+              </div>
+              <div style="width:100%;height:3px;background:#F0F0F0;border-radius:2px;overflow:hidden;margin-top:4px;">
+                <div style="height:100%;width:40%;background:var(--saffron);border-radius:2px;animation:ripple 1.5s ease-in-out infinite;"></div>
+              </div>
+              <div class="mock-btn mock-btn outline" style="margin-top:12px;font-size:8px;border:1.5px solid #E0E0E0;color:#7F8C8D;background:transparent;">Cancel Search</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="info-col">
+        <div class="screen-tag tag-c">● Customer</div>
+        <div class="screen-title">Searching for Rider</div>
+        <div class="screen-purpose">Active waiting state. Never feels dead. Animated to show the system is working. Local wait time sets realistic expectations. Cancel is available but not prominent.</div>
+        <div class="elements-title">Element Inventory</div>
+        <div class="element-list">
+          <div class="element-item">
+            <div class="el-zone">CENTER</div>
+            <div class="el-desc"><strong>Ripple animation</strong> — Saffron ripple expanding from bike icon. CSS animation, 3 concentric rings expanding outward, opacity fading. Represents GPS search radius expanding.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">CENTER</div>
+            <div class="el-desc"><strong>Status text</strong> — Punjabi line: "ਰਾਈਡਰ ਲੱਭ ਰਹੇ ਹਾਂ..." above English: "Finding your rider…". 16sp SemiBold navy.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">BELOW</div>
+            <div class="el-desc"><strong>Local wait hint</strong> — "Usually 3–5 min in your area" in saffron-tinted card. Based on actual local data (hardcoded initially, dynamic V2).</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">BELOW</div>
+            <div class="el-desc"><strong>Progress bar</strong> — Animated loading bar, not a spinner. Feels more alive. Indeterminate bounce animation. Saffron fill.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">BOTTOM</div>
+            <div class="el-desc"><strong>Cancel Search</strong> — Ghost button, 44dp, light grey border. Tapping opens confirmation dialog: "Cancel this search?" before actually cancelling.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">EDGE</div>
+            <div class="el-desc"><strong>Timeout state</strong> — After 3 min with no rider: screen changes to "No riders nearby" with retry button and schedule option. <em>Never leaves user stranded on loading screen.</em></div>
+          </div>
+        </div>
+        <div class="specs-row">
+          <span class="spec-chip auto">3-min timeout</span>
+          <span class="spec-chip crit">Never an infinite spinner</span>
+          <span class="spec-chip nav">→ Rider Found</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- C-09 Rider Found -->
+    <div class="screen-card">
+      <div class="phone-col">
+        <div class="screen-num">C-09</div>
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="mock-driver-found">
+              <div class="mock-df-map">
+                <div class="mock-map-grid" style="opacity:0.4;"></div>
+                <div style="position:absolute;top:35%;left:55%;font-size:16px;">🏍️</div>
+                <div class="mock-map-pin" style="bottom:25%;left:40%;"></div>
+              </div>
+              <div class="mock-df-sheet">
+                <div class="mock-drag-handle"></div>
+                <div style="font-size:7px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;">✓ ਰਾਈਡਰ ਮਿਲ ਗਿਆ / Rider Found</div>
+                <div class="mock-driver-row">
+                  <div class="mock-avatar">👦</div>
+                  <div class="mock-driver-info">
+                    <div class="mock-driver-name">Gurpreet Singh</div>
+                    <div class="mock-driver-sub">⭐ 4.8 · HR 29 AB 1234 · Bike</div>
+                  </div>
+                  <div class="mock-eta-chip">~4 min</div>
+                </div>
+                <div class="mock-action-row">
+                  <div class="mock-action-btn">📞 Call</div>
+                  <div class="mock-action-btn">💬 Message</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="info-col">
+        <div class="screen-tag tag-c">● Customer</div>
+        <div class="screen-title">Rider Found — Details Card</div>
+        <div class="screen-purpose">Moment of delight. A real human is coming. Card slides up with spring animation. Shows exactly who is coming, their bike number, and ETA. Live rider dot on map moving toward customer.</div>
+        <div class="elements-title">Element Inventory</div>
+        <div class="element-list">
+          <div class="element-item">
+            <div class="el-zone">MAP 50%</div>
+            <div class="el-desc"><strong>Live map</strong> — Rider marker (animated 🏍️ icon) moving toward customer's blue dot. Route line visible. Updates in real-time via WebSocket.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">SHEET</div>
+            <div class="el-desc"><strong>Status label</strong> — "✓ ਰਾਈਡਰ ਮਿਲ ਗਿਆ / Rider Found" in green, uppercase, 11sp. Sets positive tone immediately.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">SHEET</div>
+            <div class="el-desc"><strong>Rider row</strong> — Left: 56dp circular avatar (photo or initials). Middle: Name (16sp Bold), rating (⭐ X.X), vehicle number + type. Right: ETA chip (green background, bold).</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">SHEET</div>
+            <div class="el-desc"><strong>Action buttons</strong> — Two equal buttons side-by-side: "📞 ਕਾਲ / Call" and "💬 ਸੁਨੇਹਾ / Message". Each 44dp height, outlined style. Call opens native dialer.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">SHEET</div>
+            <div class="el-desc"><strong>Pickup note</strong> — "Meet at: [pickup landmark]" if available. Small 12sp grey. Helps customer know exactly where to stand.</div>
+          </div>
+        </div>
+        <div class="specs-row">
+          <span class="spec-chip auto">Live rider location</span>
+          <span class="spec-chip tap">Call opens native dialer</span>
+          <span class="spec-chip nav">→ Active Ride</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- C-10 Active Ride + SOS -->
+    <div class="screen-card">
+      <div class="phone-col">
+        <div class="screen-num">C-10</div>
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="mock-active-ride">
+              <div class="mock-ar-map">
+                <div class="mock-map-grid" style="opacity:0.4;"></div>
+                <div class="mock-map-road" style="top:50%;left:0;right:0;height:5px;"></div>
+                <div style="position:absolute;top:40%;left:30%;font-size:14px;">🏍️</div>
+                <div class="mock-map-pin" style="top:25%;right:25%;"></div>
+                <div style="position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.6);border-radius:6px;padding:3px 6px;font-size:7px;color:#fff;">📤 Share</div>
+              </div>
+              <div class="mock-sos-btn">SOS</div>
+              <div class="mock-ar-card">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                  <div style="font-size:9px;font-weight:700;color:#0F1629;">Crown Mall · 14 min</div>
+                  <div style="font-size:8px;color:var(--saffron);">📞 Gurpreet</div>
+                </div>
+                <div class="mock-progress"><div class="mock-progress-fill"></div></div>
+                <div style="display:flex;justify-content:space-between;margin-top:4px;">
+                  <div style="font-size:7px;color:#7F8C8D;">Picked up</div>
+                  <div style="font-size:7px;color:#7F8C8D;">Drop off</div>
+                </div>
+                <div style="text-align:center;font-size:7px;color:var(--red);margin-top:5px;">Cancel Ride</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="info-col">
+        <div class="screen-tag tag-c">● Customer</div>
+        <div class="screen-title">Active Ride + SOS Button</div>
+        <div class="screen-purpose">The ride is in progress. Map dominates. A minimal floating card shows destination + ETA + driver contact. SOS is always visible but requires a deliberate 2-second hold to avoid accidents.</div>
+        <div class="elements-title">Element Inventory</div>
+        <div class="element-list">
+          <div class="element-item">
+            <div class="el-zone">MAP 65%</div>
+            <div class="el-desc"><strong>Live tracking map</strong> — Rider marker moves in real-time. Blue dot = customer (stationary on bike, GPS). Orange line = remaining route to destination. Updates every 3–5 seconds.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">MAP OVER</div>
+            <div class="el-desc"><strong>"📤 Share Ride" button</strong> — Top-right map overlay, dark semi-transparent chip. Sends live tracking link via WhatsApp to any contact. Safety feature.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">FLOAT-L</div>
+            <div class="el-desc"><strong>SOS Button</strong> — 52dp circular button, red (#E74C3C), bottom-left overlay on map. Label "SOS ਐਮਰਜੈਂਸੀ". Requires 2-second press-and-hold. Haptic intensity increases during hold. Drop shadow glows red when active.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">CARD</div>
+            <div class="el-desc"><strong>Floating info card</strong> — Bottom, white, 16dp top radius. Destination name + ETA (Bold, large). Progress bar (pickup→drop, 60% animated). Rider name + phone icon (tappable for call).</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">CARD</div>
+            <div class="el-desc"><strong>Cancel Ride</strong> — Small red text link, bottom of card. Tapping opens confirmation dialog with 5-second delay before actual cancel. <em>Prevents accidental cancellation.</em></div>
+          </div>
+        </div>
+        <div class="specs-row">
+          <span class="spec-chip crit">SOS: 2s hold required</span>
+          <span class="spec-chip auto">Live GPS tracking</span>
+          <span class="spec-chip push">Contacts alerted on SOS</span>
+          <span class="spec-chip nav">→ Ride Complete</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- C-11 Ride Complete + Rating -->
+    <div class="screen-card">
+      <div class="phone-col">
+        <div class="screen-num">C-11</div>
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="mock-auth" style="align-items:center;text-align:center;background:#fff;">
+              <div style="font-size:36px;margin-top:10px;">✅</div>
+              <div style="font-size:11px;font-weight:700;color:#0F1629;">ਤੁਸੀਂ ਪਹੁੰਚ ਗਏ! / You've arrived!</div>
+              <div style="background:#FFFDF9;border-radius:10px;padding:8px;width:100%;text-align:left;margin-top:8px;">
+                <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+                  <div style="font-size:7px;color:#7F8C8D;">Total Fare</div>
+                  <div style="font-size:11px;font-weight:700;color:var(--saffron);">₹ 52</div>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+                  <div style="font-size:7px;color:#7F8C8D;">Distance</div>
+                  <div style="font-size:8px;color:#0F1629;">4.2 km</div>
+                </div>
+                <div style="display:flex;justify-content:space-between;">
+                  <div style="font-size:7px;color:#7F8C8D;">Payment</div>
+                  <div style="font-size:8px;color:#0F1629;">💵 Cash</div>
+                </div>
+              </div>
+              <div style="font-size:8px;color:#7F8C8D;margin-top:8px;">Rate your rider</div>
+              <div style="font-size:22px;letter-spacing:3px;color:var(--amber);">★★★★★</div>
+              <div class="mock-btn" style="width:100%;margin-top:6px;">Submit Rating</div>
+              <div style="font-size:8px;color:#7F8C8D;margin-top:4px;text-decoration:underline;cursor:pointer;">Skip</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="info-col">
+        <div class="screen-tag tag-c">● Customer</div>
+        <div class="screen-title">Ride Complete + Rating</div>
+        <div class="screen-purpose">Closure screen. Green checkmark animation plays. Fare summary with trip details. Star rating is offered but never mandatory. Skip is equally prominent. No dark patterns.</div>
+        <div class="elements-title">Element Inventory</div>
+        <div class="element-list">
+          <div class="element-item">
+            <div class="el-zone">TOP</div>
+            <div class="el-desc"><strong>Success animation</strong> — Large ✅ checkmark with scale-in animation (200ms ease-out). Green. Text: "ਤੁਸੀਂ ਪਹੁੰਚ ਗਏ! / You've arrived!"</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">MID</div>
+            <div class="el-desc"><strong>Fare summary card</strong> — Grey tinted card. Three rows: Total Fare (saffron, bold, 18sp) | Distance | Payment method. Clean and readable.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">MID</div>
+            <div class="el-desc"><strong>Star rating</strong> — 5 large tap targets (min 44dp each). Default = all hollow. Tapping fills stars up to tapped position. Amber color. Below: optional text field "Tell us more (optional)" appears after 3+ stars.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">BOTTOM</div>
+            <div class="el-desc"><strong>"Submit Rating"</strong> — Full-width 54dp saffron CTA. Active after any star is tapped.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">BELOW</div>
+            <div class="el-desc"><strong>"Skip"</strong> — Equally visible text link, underlined, 14sp. Returns to Home Screen. <em>Never hidden or deemphasized to pressure ratings.</em></div>
+          </div>
+        </div>
+        <div class="specs-row">
+          <span class="spec-chip opt">Rating optional</span>
+          <span class="spec-chip auto">Skip equally prominent</span>
+          <span class="spec-chip nav">→ Home Screen</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- C-12 Ride History -->
+    <div class="screen-card">
+      <div class="phone-col">
+        <div class="screen-num">C-12</div>
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="mock-history">
+              <div style="font-size:10px;font-weight:700;color:#0F1629;margin-bottom:8px;">ਰਾਈਡ ਇਤਿਹਾਸ / Ride History</div>
+              <div class="mock-hist-item">
+                <div class="mock-hist-row">
+                  <div><div class="mock-hist-route">Sector 15 → Crown Mall</div><div class="mock-hist-sub">Today, 2:30 PM · 4.2 km · Cash</div></div>
+                  <div class="mock-hist-fare">₹52</div>
+                </div>
+                <div class="mock-stars">★★★★★</div>
+              </div>
+              <div class="mock-hist-item">
+                <div class="mock-hist-row">
+                  <div><div class="mock-hist-route">Home → NIT Faridabad</div><div class="mock-hist-sub">Yesterday · 6.1 km · UPI</div></div>
+                  <div class="mock-hist-fare">₹78</div>
+                </div>
+                <div class="mock-stars">★★★★☆</div>
+              </div>
+              <div class="mock-hist-item" style="opacity:0.6;">
+                <div class="mock-hist-row">
+                  <div><div class="mock-hist-route">Sector 8 → Bus Stand</div><div class="mock-hist-sub">Feb 20 · 3.4 km · Cash</div></div>
+                  <div class="mock-hist-fare">₹40</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="info-col">
+        <div class="screen-tag tag-c">● Customer</div>
+        <div class="screen-title">Ride History</div>
+        <div class="screen-purpose">Complete record of all past rides. Useful for expense tracking, rebooking frequent routes, and reviewing past ratings. Cancellation history tracked silently here in V1.</div>
+        <div class="elements-title">Element Inventory</div>
+        <div class="element-list">
+          <div class="element-item">
+            <div class="el-zone">TOP</div>
+            <div class="el-desc"><strong>Header</strong> — "ਰਾਈਡ ਇਤਿਹਾਸ / Ride History", date range filter chip top-right (filter by: This Week, This Month, All).</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">LIST</div>
+            <div class="el-desc"><strong>Ride cards</strong> — Reverse chronological. Each card: Route summary ("Sector 15 → Crown Mall"), date + time + distance + payment method, fare (saffron, right-aligned), star rating given. 12dp radius cards, 8dp gap.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">EXPAND</div>
+            <div class="el-desc"><strong>Tap to expand</strong> — Tapping a ride card expands it to show: full pickup/drop addresses, rider name + rating, trip duration, receipt option.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">HIDDEN</div>
+            <div class="el-desc"><strong>Cancellation log</strong> — Cancelled rides appear with a "Cancelled" chip in red. V1: no fee shown. V2: fee will appear here. Data collected silently from Day 1.</div>
+          </div>
+        </div>
+        <div class="specs-row">
+          <span class="spec-chip tap">Expandable cards</span>
+          <span class="spec-chip auto">Silent cancel tracking</span>
+          <span class="spec-chip opt">Date filter</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- C-13 Scheduled Rides Manager -->
+    <div class="screen-card">
+      <div class="phone-col">
+        <div class="screen-num">C-13</div>
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="mock-auth" style="background:#fff;">
+              <div style="font-size:10px;font-weight:700;color:#0F1629;margin-bottom:8px;">📅 Scheduled Rides</div>
+              <div style="background:rgba(249,92,0,0.06);border:1.5px solid rgba(249,92,0,0.2);border-radius:10px;padding:8px;margin-bottom:6px;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                  <div>
+                    <div style="font-size:8px;font-weight:700;color:#0F1629;">Sector 15 → Crown Mall</div>
+                    <div style="font-size:7px;color:#7F8C8D;margin-top:2px;">Mon, Feb 24 · 8:00 AM · ₹48–58</div>
+                    <div style="font-size:7px;color:#7F8C8D;">💵 Cash</div>
+                  </div>
+                  <div style="font-size:16px;">🕗</div>
+                </div>
+                <div style="display:flex;gap:5px;margin-top:6px;">
+                  <div style="flex:1;height:22px;border:1px solid #E0E0E0;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:7px;color:#7F8C8D;">Modify</div>
+                  <div style="flex:1;height:22px;border:1px solid rgba(231,76,60,0.3);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:7px;color:var(--red);">Cancel</div>
+                </div>
+              </div>
+              <div style="opacity:0.5;background:#FFFDF9;border-radius:10px;padding:8px;">
+                <div style="font-size:8px;font-weight:600;color:#0F1629;">Home → NIT Faridabad</div>
+                <div style="font-size:7px;color:#7F8C8D;">Wed, Feb 26 · 7:30 AM · ₹70–80</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="info-col">
+        <div class="screen-tag tag-c">● Customer</div>
+        <div class="screen-title">Scheduled Rides Manager</div>
+        <div class="screen-purpose">Upcoming scheduled rides in chronological order. Modify or cancel before the ride triggers. Accessible from Rides tab. Completed scheduled rides move to Ride History automatically.</div>
+        <div class="elements-title">Element Inventory</div>
+        <div class="element-list">
+          <div class="element-item">
+            <div class="el-zone">LIST</div>
+            <div class="el-desc"><strong>Upcoming ride cards</strong> — Saffron-tinted border for upcoming. Shows: route, date+time, fare estimate, payment method. Clock icon indicates scheduled status.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">CARD</div>
+            <div class="el-desc"><strong>Modify / Cancel buttons</strong> — Side-by-side below each card. Modify: re-opens Schedule screen with prefilled data. Cancel: confirmation dialog "Cancel this scheduled ride?" — logs cancellation, returns to list.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">EMPTY</div>
+            <div class="el-desc"><strong>Empty state</strong> — Illustration + "No scheduled rides yet. Plan ahead and book!" + CTA button "Schedule a Ride" linking to home screen.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">NOTIF</div>
+            <div class="el-desc"><strong>30-minute reminder</strong> — Push notification: "ਤੁਹਾਡੀ ਰਾਈਡ 30 ਮਿੰਟ ਵਿੱਚ ਹੈ / Your ride is in 30 minutes." Deep-link opens this screen.</div>
+          </div>
+        </div>
+        <div class="specs-row">
+          <span class="spec-chip push">30-min push reminder</span>
+          <span class="spec-chip tap">Modify pre-fills schedule</span>
+          <span class="spec-chip nav">Rides tab (bottom nav)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- C-14 Profile + Emergency Contact -->
+    <div class="screen-card">
+      <div class="phone-col">
+        <div class="screen-num">C-14</div>
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="mock-profile">
+              <div class="mock-profile-header">
+                <div class="mock-avatar" style="width:44px;height:44px;font-size:22px;">👤</div>
+                <div style="font-size:10px;font-weight:700;color:#fff;">Rahul Kumar</div>
+                <div style="font-size:8px;color:rgba(255,255,255,0.6);">+91 98765 43210</div>
+              </div>
+              <div class="mock-profile-body">
+                <div class="mock-list-item">
+                  <div class="mock-li-left"><span class="mock-li-icon">🏠</span><span class="mock-li-text">Saved Places</span></div>
+                  <span class="mock-li-arrow">›</span>
+                </div>
+                <div class="mock-list-item" style="border:1.5px solid rgba(231,76,60,0.3);">
+                  <div class="mock-li-left"><span class="mock-li-icon">🆘</span><span class="mock-li-text" style="color:var(--red);font-weight:600;">Emergency Contacts</span></div>
+                  <span class="mock-li-arrow" style="color:var(--red);">›</span>
+                </div>
+                <div class="mock-list-item">
+                  <div class="mock-li-left"><span class="mock-li-icon">🌐</span><span class="mock-li-text">Language / ਭਾਸ਼ਾ</span></div>
+                  <span class="mock-li-arrow">›</span>
+                </div>
+                <div class="mock-list-item">
+                  <div class="mock-li-left"><span class="mock-li-icon">📋</span><span class="mock-li-text">Ride History</span></div>
+                  <span class="mock-li-arrow">›</span>
+                </div>
+                <div class="mock-list-item">
+                  <div class="mock-li-left"><span class="mock-li-icon">🚪</span><span class="mock-li-text" style="color:var(--red);">Logout</span></div>
+                  <span class="mock-li-arrow">›</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="info-col">
+        <div class="screen-tag tag-c">● Customer</div>
+        <div class="screen-title">Profile + Emergency Contact Setup</div>
+        <div class="screen-purpose">Settings and personal info. Emergency contact setup is the most critical item here — highlighted with red border. Without a saved emergency contact, the SOS feature cannot function. App prompts user to add one on first launch.</div>
+        <div class="elements-title">Element Inventory</div>
+        <div class="element-list">
+          <div class="element-item">
+            <div class="el-zone">HEADER</div>
+            <div class="el-desc"><strong>Profile header</strong> — Navy gradient background. 60dp circular avatar (photo or initials). Name (Bold white) + phone number below. Edit icon top-right.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">LIST</div>
+            <div class="el-desc"><strong>Menu items</strong> — Standard list rows, 54dp each, icon + label + chevron. White cards, 8dp radius, 6dp gap between.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">LIST</div>
+            <div class="el-desc"><strong>🆘 Emergency Contacts</strong> — Highlighted with red border to draw attention. Opens a sub-screen: add up to 3 contacts (name + phone). These receive SOS alerts. <em>First-launch nudge: banner on home screen if not set.</em></div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">LIST</div>
+            <div class="el-desc"><strong>Language toggle</strong> — Switch between Punjabi-primary and English-primary. Applies app-wide instantly. Default: Punjabi-primary.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">LIST</div>
+            <div class="el-desc"><strong>Saved Places</strong> — Set Home and Work addresses. These appear as quick chips on Home Screen.</div>
+          </div>
+        </div>
+        <div class="specs-row">
+          <span class="spec-chip crit">SOS requires emergency contact</span>
+          <span class="spec-chip auto">First-launch nudge</span>
+          <span class="spec-chip opt">Up to 3 contacts</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===================== DRIVER SCREENS ===================== -->
+<div class="screens-container" id="tab-driver">
+  <div class="section-header" style="margin-top:40px;">
+    <div class="section-stripe" style="background:var(--green);"></div>
+    <h3 style="color:var(--green);">Driver App</h3>
+    <span class="count">14 Screens</span>
+  </div>
+
+  <div class="screens-grid">
+
+    <!-- D-01 Driver Splash + Login (combined) -->
+    <div class="screen-card">
+      <div class="phone-col">
+        <div class="screen-num">D-01</div>
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="mock-splash" style="background:linear-gradient(160deg,#0F1629,#2D3461);">
+              <div class="logo-box" style="background:rgba(52,211,153,0.15);">🏍️</div>
+              <div class="app-name">Chalo ਚਲੋ</div>
+              <div class="tagline" style="color:rgba(255,255,255,0.6);">Driver Partner · ਡਰਾਈਵਰ ਪਾਰਟਨਰ</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="info-col">
+        <div class="screen-tag tag-d">● Driver</div>
+        <div class="screen-title">Driver Splash + Login</div>
+        <div class="screen-purpose">Visually distinct from the customer app — navy background instead of saffron. Same OTP login flow but app state is different: driver-mode. "Driver Partner" label in both languages builds professional identity.</div>
+        <div class="elements-title">Element Inventory</div>
+        <div class="element-list">
+          <div class="element-item">
+            <div class="el-zone">BG</div>
+            <div class="el-desc"><strong>Background</strong> — Deep navy gradient (<em>#0F1629 → #2D3461</em>). Immediately visually distinct from customer's saffron splash. Color alone signals "this is the driver app."</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">CENTER</div>
+            <div class="el-desc"><strong>Logo</strong> — 80dp, green-tinted (#34D399 at 15% opacity). 🏍️ icon. Bike-specific to set context.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">CENTER</div>
+            <div class="el-desc"><strong>Partner label</strong> — "Chalo ਚਲੋ · Driver Partner / ਡਰਾਈਵਰ ਪਾਰਟਨਰ". Fraunces serif. Creates sense of partnership, not employment.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">LOGIN</div>
+            <div class="el-desc"><strong>Login screen</strong> — Identical OTP flow to customer. After OTP: new driver → Document Upload. Returning driver → Dashboard. System detects account type automatically.</div>
+          </div>
+        </div>
+        <div class="specs-row">
+          <span class="spec-chip auto">Account type auto-detected</span>
+          <span class="spec-chip nav">New → Doc Upload | Return → Dashboard</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- D-02 Document Upload Wizard -->
+    <div class="screen-card">
+      <div class="phone-col">
+        <div class="screen-num">D-02</div>
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="mock-doc-wizard">
+              <div style="font-size:7px;color:#7F8C8D;margin-bottom:4px;">Step 1 of 4</div>
+              <div class="mock-progress-steps">
+                <div class="mock-step-dot done"></div>
+                <div class="mock-step-dot active"></div>
+                <div class="mock-step-dot"></div>
+                <div class="mock-step-dot"></div>
+              </div>
+              <div class="mock-doc-title">Driving License · ਡਰਾਈਵਿੰਗ ਲਾਇਸੈਂਸ</div>
+              <div class="mock-doc-sub">Take a clear photo of your driving license (front side)</div>
+              <div class="mock-upload-box">
+                <div class="mock-upload-icon">📷</div>
+                <div class="mock-upload-text">Tap to take photo</div>
+                <div class="mock-upload-cta">or upload from gallery</div>
+              </div>
+              <div style="height:26px;background:#F0F0F0;border-radius:6px;display:flex;align-items:center;padding:0 8px;gap:5px;margin-bottom:8px;">
+                <span style="font-size:8px;color:#7F8C8D;">License Number</span>
+                <div style="flex:1;height:1.5px;background:#E0E0E0;"></div>
+              </div>
+              <div class="mock-btn green">Next →</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="info-col">
+        <div class="screen-tag tag-d">● Driver</div>
+        <div class="screen-title">Document Upload Wizard</div>
+        <div class="screen-purpose">One document per screen to prevent overwhelm. Progress bar shows completion. Camera-first design (most drivers will photograph docs, not upload files). Each step validates before moving next.</div>
+        <div class="elements-title">Element Inventory (per step)</div>
+        <div class="element-list">
+          <div class="element-item">
+            <div class="el-zone">TOP</div>
+            <div class="el-desc"><strong>Step indicator</strong> — "Step X of 4" text + 4-segment progress bar. Completed segments: saffron fill. Current: amber partial. Remaining: grey.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">MID</div>
+            <div class="el-desc"><strong>Step title</strong> — Document name in English + Punjabi. 18sp Bold. Subtitle instruction (12sp grey) — what exactly to photograph.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">MID</div>
+            <div class="el-desc"><strong>Upload zone</strong> — Dashed saffron border, 120dp height, camera icon. "Tap to take photo" primary, "or upload from gallery" secondary. After upload: thumbnail shown with ✓ check. Re-upload option below thumbnail.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">MID</div>
+            <div class="el-desc"><strong>Number/ID field</strong> — Manual entry of doc number (e.g. License number). Validates format before allowing Next.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">STEPS</div>
+            <div class="el-desc"><strong>4 steps:</strong> 1) Driving License (front + number). 2) Vehicle RC (front + registration number). 3) Aadhar Card (front only). 4) Bike photo (front-facing, full bike visible).</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">BOTTOM</div>
+            <div class="el-desc"><strong>Next / Submit button</strong> — Green on steps 1–3. "Submit Documents" on step 4. Disabled until upload + field valid. Back arrow available on all steps.</div>
+          </div>
+        </div>
+        <div class="specs-row">
+          <span class="spec-chip crit">One doc per screen</span>
+          <span class="spec-chip auto">Format validation</span>
+          <span class="spec-chip nav">→ Verification Pending</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- D-03 Verification Pending -->
+    <div class="screen-card">
+      <div class="phone-col">
+        <div class="screen-num">D-03</div>
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="mock-pending">
+              <div class="mock-pending-icon">⏳</div>
+              <div class="mock-pending-badge">Under Review</div>
+              <div class="mock-pending-title">ਦਸਤਾਵੇਜ਼ ਜਾਂਚ ਹੋ ਰਹੇ ਹਨ<br>Documents Under Review</div>
+              <div class="mock-pending-sub">We're reviewing your documents. This usually takes 24 hours. You'll get a notification when approved.</div>
+              <div style="width:100%;background:#FFFDF9;border-radius:8px;padding:8px;margin-top:4px;">
+                <div style="display:flex;gap:6px;margin-bottom:4px;"><div style="font-size:10px;">✅</div><div style="font-size:8px;color:#0F1629;">Driving License</div></div>
+                <div style="display:flex;gap:6px;margin-bottom:4px;"><div style="font-size:10px;">✅</div><div style="font-size:8px;color:#0F1629;">Vehicle RC</div></div>
+                <div style="display:flex;gap:6px;margin-bottom:4px;"><div style="font-size:10px;">✅</div><div style="font-size:8px;color:#0F1629;">Aadhar Card</div></div>
+                <div style="display:flex;gap:6px;"><div style="font-size:10px;">✅</div><div style="font-size:8px;color:#0F1629;">Bike Photo</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="info-col">
+        <div class="screen-tag tag-d">● Driver</div>
+        <div class="screen-title">Verification Pending</div>
+        <div class="screen-purpose">Expectation-setting screen. Driver knows exactly what happens next. All submitted documents listed with checkmarks. Friendly tone — this is not rejection, just process. Push notification will unlock the dashboard.</div>
+        <div class="elements-title">Element Inventory</div>
+        <div class="element-list">
+          <div class="element-item">
+            <div class="el-zone">CENTER</div>
+            <div class="el-desc"><strong>Illustration</strong> — Friendly ⏳ or clock illustration. Warm, not bureaucratic. Amber tinted badge "Under Review" above title.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">CENTER</div>
+            <div class="el-desc"><strong>Title</strong> — Punjabi + English bilingual. "ਦਸਤਾਵੇਜ਼ ਜਾਂਚ ਹੋ ਰਹੇ ਹਨ / Documents Under Review". 18sp Bold.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">MID</div>
+            <div class="el-desc"><strong>Explanation text</strong> — "Usually 24 hours. We'll send a notification when your account is approved." Sets clear expectation. Prevents "is my app broken?" anxiety.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">MID</div>
+            <div class="el-desc"><strong>Submitted documents checklist</strong> — 4 rows, each with ✅ + document name. Confirms what was received. Reassures driver their submission was successful.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">PUSH</div>
+            <div class="el-desc"><strong>Approval notification</strong> — Push: "ਤੁਹਾਡਾ ਖਾਤਾ ਮਨਜ਼ੂਰ ਹੋ ਗਿਆ! / Account Approved! Start earning now." Deep-link opens Dashboard.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">REJECT</div>
+            <div class="el-desc"><strong>Rejection state</strong> — Push: "Document update needed." Specific reason + link to re-upload only the rejected document. Does not require full re-submission.</div>
+          </div>
+        </div>
+        <div class="specs-row">
+          <span class="spec-chip push">Push on approval</span>
+          <span class="spec-chip crit">Rejection: specific reason + re-upload</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- D-04 Driver Dashboard -->
+    <div class="screen-card wide">
+      <div class="phone-col">
+        <div class="screen-num">D-04</div>
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="mock-dashboard-driver">
+              <div class="mock-dd-map">
+                <div class="mock-map-grid" style="opacity:0.3;"></div>
+                <div class="mock-map-road" style="top:50%;left:0;right:0;height:4px;"></div>
+                <div class="mock-map-road" style="top:0;bottom:0;left:40%;width:4px;"></div>
+                <div style="position:absolute;top:40%;left:37%;font-size:16px;">🏍️</div>
+                <div class="mock-dd-overlay">
+                  <div class="mock-online-chip">🟢 ONLINE</div>
+                  <div class="mock-earnings-chip">💰 ₹640 today</div>
+                </div>
+                <div style="position:absolute;bottom:8px;left:8px;background:rgba(0,0,0,0.7);border-radius:6px;padding:3px 7px;font-size:7px;color:#fff;">6 trips</div>
+              </div>
+              <div class="mock-dd-bottom">
+                <div style="font-size:8px;color:#7F8C8D;margin-bottom:4px;">ਨਵੀਂ ਰਾਈਡ ਉਡੀਕ ਕਰੋ / Waiting for rides</div>
+                <div style="display:flex;gap:5px;">
+                  <div style="flex:1;background:rgba(231,76,60,0.08);border:1px solid rgba(231,76,60,0.2);border-radius:6px;padding:4px;text-align:center;font-size:7px;color:var(--red);">Go Offline</div>
+                  <div style="flex:1;background:rgba(249,92,0,0.08);border:1px solid rgba(249,92,0,0.2);border-radius:6px;padding:4px;text-align:center;font-size:7px;color:var(--saffron);">+ Create Ride</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="info-col">
+        <div class="screen-tag tag-d">● Driver</div>
+        <div class="screen-title">Driver Dashboard — Command Center</div>
+        <div class="screen-purpose">The driver's resting state between rides. Map always visible for spatial awareness. Online/Offline status immediately clear. Earnings always visible for motivation. Zero visual noise when waiting.</div>
+        <div class="elements-title">Element Inventory</div>
+        <div class="element-list">
+          <div class="element-item">
+            <div class="el-zone">MAP 70%</div>
+            <div class="el-desc"><strong>Google Maps</strong> — Punjabi locale. Driver's GPS position centered. Map zoomed to show ~500m radius. Real-time position update. When offline: map desaturates to grey overlay.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">MAP TOP-L</div>
+            <div class="el-desc"><strong>Online/Offline chip</strong> — "🟢 ONLINE" in green chip when active. Tapping opens confirmation: "Go offline? You won't receive new rides." Confirmation prevents accidental offline. When offline: "🔴 OFFLINE" in grey.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">MAP TOP-R</div>
+            <div class="el-desc"><strong>Today's earnings chip</strong> — "💰 ₹640 today" on dark semi-transparent chip. Always visible, updates in real-time after each ride. Primary motivational element.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">MAP BTM-L</div>
+            <div class="el-desc"><strong>Trip count chip</strong> — "6 trips" dark chip. Today's completed trips count.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">BOTTOM</div>
+            <div class="el-desc"><strong>Status text + actions</strong> — "ਨਵੀਂ ਰਾਈਡ ਉਡੀਕ ਕਰੋ / Waiting for rides…" when online. Two action buttons: "Go Offline" (red-tinted) | "+ Create Ride" (saffron-tinted, manual ride creation).</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">BOTTOM NAV</div>
+            <div class="el-desc"><strong>4-tab nav</strong> — 🏠 Dashboard | 💰 Earnings | 📅 Schedule | 👤 Profile. Green accent on active tab (vs saffron in customer app).</div>
+          </div>
+        </div>
+        <div class="specs-row">
+          <span class="spec-chip crit">Offline needs confirmation</span>
+          <span class="spec-chip auto">Earnings update real-time</span>
+          <span class="spec-chip push">Ride request via push</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- D-05 Incoming Ride Request -->
+    <div class="screen-card wide">
+      <div class="phone-col">
+        <div class="screen-num">D-05</div>
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="mock-ride-request">
+              <div style="text-align:center;font-size:8px;color:#7F8C8D;margin-bottom:6px;">New Ride Request · ਨਵੀਂ ਰਾਈਡ</div>
+              <div class="mock-timer-ring">
+                <div class="mock-timer-inner">42s</div>
+              </div>
+              <div class="mock-request-card">
+                <div class="mock-row">
+                  <div><div class="mock-label">Customer</div><div class="mock-value">Rahul K.</div></div>
+                  <div class="mock-cancel-hist">1 cancel</div>
+                </div>
+                <div class="mock-row">
+                  <div><div class="mock-label">Pickup</div><div class="mock-value">Sector 16 Market · 1.2 km</div></div>
+                </div>
+                <div class="mock-row">
+                  <div><div class="mock-label">Drop</div><div class="mock-value">Crown Interior Mall</div></div>
+                </div>
+                <div style="border-top:1px solid #F0F0F0;padding-top:6px;margin-top:4px;display:flex;justify-content:space-between;align-items:center;">
+                  <div><div class="mock-label">4.2 km · ~18 min</div><div style="font-size:7px;color:#7F8C8D;">💵 Cash</div></div>
+                  <div class="mock-fare-big">₹52</div>
+                </div>
+              </div>
+              <div class="mock-btn" style="font-size:9px;">✓ ਸਵੀਕਾਰ / Accept</div>
+              <div class="mock-btn" style="background:transparent;border:1.5px solid rgba(231,76,60,0.4);color:var(--red);font-size:9px;margin-top:4px;">✗ Reject</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="info-col">
+        <div class="screen-tag tag-d">● Driver</div>
+        <div class="screen-title">Incoming Ride Request</div>
+        <div class="screen-purpose">The most time-critical screen in the entire product. Designed for zero cognitive load. Driver needs to make a decision in 60 seconds, often while on a bike. Fare is the largest element. Timer is unmissable. Accept is the primary CTA.</div>
+        <div class="elements-title">Element Inventory</div>
+        <div class="element-list">
+          <div class="element-item">
+            <div class="el-zone">TOP</div>
+            <div class="el-desc"><strong>60-second countdown ring</strong> — Large circular progress ring (64dp diameter), centered. Saffron → amber at 20s → red at 10s. Inner text: remaining seconds in bold. Haptic pulse every 10s. This is the first thing the eye sees.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">CARD</div>
+            <div class="el-desc"><strong>Customer first name only</strong> — "Rahul K." — First name + last initial only, for privacy pre-acceptance. Full name shown after accept.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">CARD</div>
+            <div class="el-desc"><strong>Cancellation history chip</strong> — Red chip "X cancel" shown if customer has cancellation history. Allows driver to make informed decision. 0 cancellations = chip not shown.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">CARD</div>
+            <div class="el-desc"><strong>Pickup area</strong> — Landmark area + distance from driver ("Sector 16 Market · 1.2 km"). Not full address. Driver can quickly assess if pickup is accessible.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">CARD</div>
+            <div class="el-desc"><strong>Drop location</strong> — Destination area name. Enough to assess trip direction.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">CARD</div>
+            <div class="el-desc"><strong>Fare — LARGEST ELEMENT</strong> — "₹52" in 28sp Bold, navy. This is the primary decision factor. Distance + duration in 11sp grey below. Payment method chip (💵 Cash / 📱 UPI).</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">BOTTOM</div>
+            <div class="el-desc"><strong>Accept CTA</strong> — Full-width 60dp, green fill, "✓ ਸਵੀਕਾਰ / Accept". Extra tall for easy thumb tap under pressure.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">BELOW</div>
+            <div class="el-desc"><strong>Reject button</strong> — Full-width 48dp, outlined red border, "✗ Reject". Equally accessible — no shame, no penalty count displayed. Timer expiry = silent pass, not rejection.</div>
+          </div>
+        </div>
+        <div class="specs-row">
+          <span class="spec-chip crit">Exactly 60s countdown</span>
+          <span class="spec-chip crit">Fare is largest element</span>
+          <span class="spec-chip auto">Timer expire = silent pass</span>
+          <span class="spec-chip push">Full-screen intent (screen-off)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- D-06 Customer Details + Navigate -->
+    <div class="screen-card">
+      <div class="phone-col">
+        <div class="screen-num">D-06</div>
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="mock-auth" style="background:#FFFDF9;">
+              <div style="background:rgba(52,211,153,0.1);border-radius:8px;padding:5px 8px;font-size:7px;color:var(--green);font-weight:700;margin-bottom:8px;">✓ Ride Accepted!</div>
+              <div class="mock-driver-row" style="background:#fff;border-radius:10px;padding:8px;margin-bottom:8px;">
+                <div class="mock-avatar">👤</div>
+                <div class="mock-driver-info">
+                  <div class="mock-driver-name">Rahul Kumar</div>
+                  <div class="mock-driver-sub">+91 98765 43210</div>
+                  <div style="font-size:7px;color:var(--saffron);margin-top:2px;">💵 Cash · ₹52</div>
+                </div>
+                <div style="font-size:18px;">📞</div>
+              </div>
+              <div style="height:70px;background:#d4dba8;border-radius:10px;margin-bottom:8px;position:relative;overflow:hidden;">
+                <div class="mock-map-grid" style="opacity:0.4;"></div>
+                <div style="position:absolute;top:40%;left:30%;font-size:12px;">🏍️</div>
+                <div class="mock-map-pin" style="top:20%;right:25%;transform:scale(0.7);"></div>
+                <div style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,0.6);border-radius:4px;padding:2px 5px;font-size:6px;color:#fff;">1.2 km to pickup</div>
+              </div>
+              <div class="mock-btn green">🗺️ Navigate to Pickup</div>
+              <div class="mock-btn" style="background:transparent;border:1.5px solid #E0E0E0;color:#7F8C8D;font-size:8px;margin-top:5px;">I've Arrived ✓</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="info-col">
+        <div class="screen-tag tag-d">● Driver</div>
+        <div class="screen-title">Customer Details + Navigate to Pickup</div>
+        <div class="screen-purpose">Full customer info revealed post-accept. Primary action: navigate to pickup. "I've Arrived" button is greyed and disabled until driver is within 200m of pickup location (GPS-triggered activation).</div>
+        <div class="elements-title">Element Inventory</div>
+        <div class="element-list">
+          <div class="element-item">
+            <div class="el-zone">TOP</div>
+            <div class="el-desc"><strong>Accepted banner</strong> — Green confirmation chip "✓ Ride Accepted!" Micro-celebration. Sets positive momentum.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">CARD</div>
+            <div class="el-desc"><strong>Customer card</strong> — 56dp avatar, full name, phone number, payment method + fare. Phone number is tappable (opens native dialer). This is where privacy ends — full details now visible.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">MAP</div>
+            <div class="el-desc"><strong>Mini-map</strong> — Shows driver position + pickup pin + route. "X km to pickup" chip. Non-interactive — just for spatial reference.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">BOTTOM</div>
+            <div class="el-desc"><strong>"🗺️ Navigate to Pickup"</strong> — Full-width green 54dp. Tapping opens Google Maps (or native maps app) with pickup as destination. Launches external navigation.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">BOTTOM</div>
+            <div class="el-desc"><strong>"I've Arrived ✓"</strong> — Full-width outlined button, 48dp. <em>Disabled (grey) until GPS detects driver within 200m of pickup.</em> When enabled: turns green. Tapping notifies customer and transitions to Active Ride prep.</div>
+          </div>
+        </div>
+        <div class="specs-row">
+          <span class="spec-chip auto">I've Arrived: GPS-unlocked</span>
+          <span class="spec-chip nav">Navigate opens Google Maps</span>
+          <span class="spec-chip push">Customer: "Rider is here" push</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- D-07 Active Ride Screen (Driver) -->
+    <div class="screen-card">
+      <div class="phone-col">
+        <div class="screen-num">D-07</div>
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="mock-active-ride">
+              <div class="mock-ar-map" style="height:175px;">
+                <div class="mock-map-grid" style="opacity:0.35;"></div>
+                <div class="mock-map-road" style="top:50%;left:0;right:0;height:4px;"></div>
+                <div style="position:absolute;top:42%;left:20%;font-size:14px;">🏍️</div>
+                <div class="mock-map-pin" style="top:20%;right:20%;"></div>
+                <div style="position:absolute;top:8px;right:8px;background:#fff;border-radius:6px;padding:3px 6px;font-size:7px;color:#0F1629;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.2);">📞 Rahul</div>
+              </div>
+              <div class="mock-ar-card" style="bottom:0;">
+                <div style="font-size:9px;font-weight:700;color:#0F1629;margin-bottom:4px;">Crown Interior Mall · 14 min</div>
+                <div class="mock-progress"><div class="mock-progress-fill"></div></div>
+                <div style="margin-top:8px;">
+                  <div class="mock-btn" style="background:#34D399;color:#0A0C12;font-size:9px;">✓ Complete Ride</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="info-col">
+        <div class="screen-tag tag-d">● Driver</div>
+        <div class="screen-title">Active Ride Screen</div>
+        <div class="screen-purpose">Clean and minimal. Driver is focused on riding safely. Map + destination + ETA + Complete button. "Complete Ride" is geofence-locked — only activates when within ~200m of drop location. Prevents premature completion.</div>
+        <div class="elements-title">Element Inventory</div>
+        <div class="element-list">
+          <div class="element-item">
+            <div class="el-zone">MAP 70%</div>
+            <div class="el-desc"><strong>Navigation map</strong> — Driver marker moving in real-time. Destination pin visible. Orange route line remaining. Punjabi street names. Full screen as much as possible — driver needs maximum spatial info.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">MAP TOP-R</div>
+            <div class="el-desc"><strong>Customer contact chip</strong> — "📞 [Customer name]" floating white card. Tapping opens native dialer immediately. Accessible at a glance without scrolling.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">CARD</div>
+            <div class="el-desc"><strong>Destination + ETA</strong> — "[Drop location] · X min" in 16sp Bold. Progress bar below. Minimal info — driver doesn't need more while riding.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">CARD</div>
+            <div class="el-desc"><strong>"Complete Ride" CTA</strong> — Green, full-width 54dp. <em>Disabled (grey) until driver is within ~200m of drop location via geofence trigger.</em> When enabled: turns bright green. Prevents gaming the system.</div>
+          </div>
+        </div>
+        <div class="specs-row">
+          <span class="spec-chip crit">Complete: geofence-locked</span>
+          <span class="spec-chip auto">Live GPS tracking</span>
+          <span class="spec-chip nav">→ Fare Confirmation</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- D-08 Manual Ride Creation -->
+    <div class="screen-card">
+      <div class="phone-col">
+        <div class="screen-num">D-08</div>
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="mock-auth" style="background:#fff;">
+              <div style="font-size:10px;font-weight:700;color:#0F1629;margin-bottom:4px;">✋ Create Ride Manually</div>
+              <div style="font-size:7px;color:#7F8C8D;margin-bottom:10px;">Customer approached you directly</div>
+              <div style="background:#FFFDF9;border-radius:8px;padding:8px;margin-bottom:8px;">
+                <div style="font-size:7px;color:#7F8C8D;margin-bottom:3px;">📍 Pickup (Your location)</div>
+                <div style="font-size:8px;color:#0F1629;font-weight:600;">Sector 16 Market, Faridabad</div>
+              </div>
+              <div class="mock-search-bar" style="margin-bottom:8px;">
+                <span style="font-size:10px;">🔍</span>
+                <span style="font-size:8px;color:#7F8C8D;">Enter destination...</span>
+              </div>
+              <div style="background:rgba(249,92,0,0.06);border-radius:8px;padding:8px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;">
+                <div>
+                  <div style="font-size:7px;color:#7F8C8D;">Estimated Fare</div>
+                  <div style="font-size:16px;font-weight:700;color:#0F1629;">₹ 52</div>
+                </div>
+                <div style="font-size:7px;color:#7F8C8D;">4.2 km · 18 min</div>
+              </div>
+              <div class="mock-pay-row" style="margin-bottom:8px;">
+                <div class="mock-pay-opt selected">💵 Cash</div>
+                <div class="mock-pay-opt">📱 UPI</div>
+              </div>
+              <div class="mock-btn green">Start Ride</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="info-col">
+        <div class="screen-tag tag-d">● Driver</div>
+        <div class="screen-title">Manual Ride Creation</div>
+        <div class="screen-purpose">Unique to Chalo — handles the physical world. When a customer walks up to a driver on the street, the driver creates the trip digitally. This bridges physical and digital. Works even when driver is Offline. Fare shown before trip starts.</div>
+        <div class="elements-title">Element Inventory</div>
+        <div class="element-list">
+          <div class="element-item">
+            <div class="el-zone">TOP</div>
+            <div class="el-desc"><strong>Header + context</strong> — "✋ Create Ride Manually" + subtitle "Customer approached you directly." Sets context for this unique flow.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">PICKUP</div>
+            <div class="el-desc"><strong>Pickup card</strong> — Auto-filled with driver's current GPS location. Address shown. Not editable (driver is always the pickup). Grey tinted, clearly labeled "📍 Your Location."</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">DEST</div>
+            <div class="el-desc"><strong>Destination search</strong> — Same search component as customer app. Landmark-friendly. Driver types customer's stated destination. Shows suggestions as they type.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">FARE</div>
+            <div class="el-desc"><strong>Fare preview card</strong> — Appears after destination selected. Saffron-tinted card. Fare (large, bold). Distance + duration below. Driver shows this to the customer for agreement before starting.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">PAYMENT</div>
+            <div class="el-desc"><strong>Payment method selector</strong> — Cash / UPI. Driver selects based on what customer prefers. Defaults to Cash (primary).</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">OPT</div>
+            <div class="el-desc"><strong>Customer phone (optional)</strong> — Small text link "Add customer phone (optional)" below payment. Skippable. Expands to input field if tapped.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">BOTTOM</div>
+            <div class="el-desc"><strong>"Start Ride"</strong> — Green, full-width 54dp. Active only after destination selected.</div>
+          </div>
+        </div>
+        <div class="specs-row">
+          <span class="spec-chip crit">Works Offline too</span>
+          <span class="spec-chip crit">Fare shown before start</span>
+          <span class="spec-chip opt">Phone number optional</span>
+          <span class="spec-chip nav">→ Active Ride</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- D-09 Ride Complete + Fare Confirm -->
+    <div class="screen-card">
+      <div class="phone-col">
+        <div class="screen-num">D-09</div>
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="mock-auth" style="background:#fff;align-items:center;text-align:center;">
+              <div style="font-size:32px;">✅</div>
+              <div style="font-size:10px;font-weight:700;color:#0F1629;">ਰਾਈਡ ਪੂਰੀ ਹੋਈ! / Ride Complete!</div>
+              <div style="background:#F0FAF3;border:1.5px solid rgba(52,211,153,0.3);border-radius:10px;padding:10px;width:100%;text-align:left;margin:8px 0;">
+                <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                  <div style="font-size:7px;color:#7F8C8D;">Fare Earned</div>
+                  <div style="font-size:14px;font-weight:700;color:#34D399;">₹52</div>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                  <div style="font-size:7px;color:#7F8C8D;">Commission</div>
+                  <div style="font-size:8px;color:var(--red);">−₹7 (13%)</div>
+                </div>
+                <div style="border-top:1px solid rgba(52,211,153,0.2);padding-top:4px;display:flex;justify-content:space-between;">
+                  <div style="font-size:7px;color:#7F8C8D;">Net Earned</div>
+                  <div style="font-size:10px;font-weight:700;color:#0F1629;">₹45</div>
+                </div>
+              </div>
+              <div style="font-size:8px;color:#7F8C8D;margin-bottom:6px;">Payment Received?</div>
+              <div class="mock-pay-row">
+                <div class="mock-pay-opt selected">✓ Cash Collected</div>
+                <div class="mock-pay-opt">UPI Received</div>
+              </div>
+              <div class="mock-btn" style="margin-top:8px;background:#34D399;color:#0A0C12;">Done ✓</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="info-col">
+        <div class="screen-tag tag-d">● Driver</div>
+        <div class="screen-title">Ride Complete + Fare Confirmation</div>
+        <div class="screen-purpose">Driver sees exactly what they earned, with commission deducted (if commission model). Confirms payment was received. This is closure. Auto-returns to dashboard in 5 seconds or on tapping Done.</div>
+        <div class="elements-title">Element Inventory</div>
+        <div class="element-list">
+          <div class="element-item">
+            <div class="el-zone">TOP</div>
+            <div class="el-desc"><strong>Success animation</strong> — ✅ icon, scale-in animation. "ਰਾਈਡ ਪੂਰੀ ਹੋਈ! / Ride Complete!" Green-themed screen.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">CARD</div>
+            <div class="el-desc"><strong>Earnings breakdown (commission drivers)</strong> — 3 rows: Fare Earned (full fare, green) | Commission deducted (red, shows percentage + amount) | Net Earned (bold, what driver keeps). Subscription drivers: only one row — "₹52 earned (full fare)".</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">MID</div>
+            <div class="el-desc"><strong>Payment confirmation</strong> — "Payment Received?" label. Two options: "✓ Cash Collected" | "UPI Received". Driver taps whichever applies. This logs payment method in system.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">MID</div>
+            <div class="el-desc"><strong>Today's running total</strong> — Below payment confirm: "Today's total: ₹640 (6 trips)". Keeps driver aware of daily progress.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">BOTTOM</div>
+            <div class="el-desc"><strong>"Done ✓"</strong> — Green CTA. Returns to Dashboard. Also auto-returns after 5-second countdown if no action taken.</div>
+          </div>
+        </div>
+        <div class="specs-row">
+          <span class="spec-chip auto">Auto-returns in 5s</span>
+          <span class="spec-chip crit">Commission shown per trip</span>
+          <span class="spec-chip nav">→ Dashboard</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- D-10 Earnings Dashboard -->
+    <div class="screen-card">
+      <div class="phone-col">
+        <div class="screen-num">D-10</div>
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="mock-earnings-dash">
+              <div class="mock-ed-header">
+                <div style="font-size:7px;color:#7F8C8D;text-transform:uppercase;letter-spacing:0.06em;">Today's Earnings</div>
+                <div class="mock-total">₹640</div>
+                <div class="mock-total-sub">6 trips · 3.5 hrs online</div>
+              </div>
+              <div class="mock-chart">
+                <div class="mock-bar" style="height:40%;"></div>
+                <div class="mock-bar" style="height:65%;"></div>
+                <div class="mock-bar" style="height:55%;"></div>
+                <div class="mock-bar" style="height:80%;"></div>
+                <div class="mock-bar" style="height:45%;"></div>
+                <div class="mock-bar" style="height:70%;"></div>
+                <div class="mock-bar active" style="height:85%;"></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                <div style="font-size:6px;color:#7F8C8D;">Mon</div>
+                <div style="font-size:6px;color:#7F8C8D;">Tue</div>
+                <div style="font-size:6px;color:#7F8C8D;">Wed</div>
+                <div style="font-size:6px;color:#7F8C8D;">Thu</div>
+                <div style="font-size:6px;color:#7F8C8D;">Fri</div>
+                <div style="font-size:6px;color:#7F8C8D;">Sat</div>
+                <div style="font-size:6px;color:var(--saffron);font-weight:700;">Today</div>
+              </div>
+              <div class="mock-settle-row">
+                <div class="mock-settle-card">
+                  <div class="mock-sc-label">Settled</div>
+                  <div class="mock-sc-val green">₹1,240</div>
+                </div>
+                <div class="mock-settle-card">
+                  <div class="mock-sc-label">Pending T+2</div>
+                  <div class="mock-sc-val amber">₹640</div>
+                </div>
+              </div>
+              <div class="mock-btn" style="margin-top:8px;background:#34D399;color:#0A0C12;font-size:8px;">Withdraw ₹1,240</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="info-col">
+        <div class="screen-tag tag-d">● Driver</div>
+        <div class="screen-title">Earnings Dashboard</div>
+        <div class="screen-purpose">Complete financial picture. Motivational design — earnings are front-and-center, large, green. Weekly bar chart shows trends. T+2 settlement split makes pending vs available crystal clear. Subscription and commission drivers see different views.</div>
+        <div class="elements-title">Element Inventory</div>
+        <div class="element-list">
+          <div class="element-item">
+            <div class="el-zone">TOP</div>
+            <div class="el-desc"><strong>Today's hero number</strong> — "₹640" in 36sp Bold. Largest element on screen. Below: "6 trips · 3.5 hrs online" in 12sp grey. Motivational by design.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">CHART</div>
+            <div class="el-desc"><strong>7-day bar chart</strong> — Mon–Today. Today's bar is saffron, others are saffron at 20% opacity. Day labels below each bar. Y-axis unlabeled (relative heights are enough). Simple, clean.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">SETTLE</div>
+            <div class="el-desc"><strong>Settlement cards (Commission model)</strong> — Two side-by-side cards: "Settled ₹X" (green — withdrawable now) and "Pending T+2 ₹X" (amber — clearing in X days countdown). Subscription drivers: only one card "Available ₹X".</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">BELOW</div>
+            <div class="el-desc"><strong>Per-trip list</strong> — Scrollable list of today's rides: time, route, fare earned, commission deducted, net. Tappable for full trip details.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">BOTTOM</div>
+            <div class="el-desc"><strong>"Withdraw ₹X"</strong> — Green CTA showing available settled balance. Disabled if zero settled balance. Opens Withdrawal Screen.</div>
+          </div>
+        </div>
+        <div class="specs-row">
+          <span class="spec-chip crit">T+2 split must be clear</span>
+          <span class="spec-chip auto">Commission vs sub: different views</span>
+          <span class="spec-chip nav">Earnings tab → Withdrawal</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- D-11 Withdrawal Screen -->
+    <div class="screen-card">
+      <div class="phone-col">
+        <div class="screen-num">D-11</div>
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="mock-withdrawal">
+              <div class="mock-balance-card">
+                <div class="mock-balance-label">Available to Withdraw</div>
+                <div class="mock-balance-val">₹1,240</div>
+                <div class="mock-balance-badge">₹640 pending · clears in 2 days</div>
+              </div>
+              <div style="font-size:8px;font-weight:600;color:#0F1629;margin-bottom:6px;">Choose Method</div>
+              <div class="mock-wd-method selected">
+                <div class="mock-wd-title">🏦 Bank Transfer (UPI / NEFT)</div>
+                <div class="mock-wd-sub">HDFC ····4523 · Usually within 24 hrs</div>
+              </div>
+              <div class="mock-wd-method">
+                <div class="mock-wd-title">💵 Cash Collection</div>
+                <div class="mock-wd-sub">Field agent visits your location</div>
+              </div>
+              <div class="mock-btn green" style="margin-top:8px;">Withdraw ₹1,240</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="info-col">
+        <div class="screen-tag tag-d">● Driver</div>
+        <div class="screen-title">Withdrawal Screen</div>
+        <div class="screen-purpose">Simple two-option withdrawal. Available balance shown prominently. Pending balance with countdown is shown separately. Driver selects bank transfer (default) or cash collection via field agent. One-tap to initiate.</div>
+        <div class="elements-title">Element Inventory</div>
+        <div class="element-list">
+          <div class="element-item">
+            <div class="el-zone">TOP</div>
+            <div class="el-desc"><strong>Balance card</strong> — Navy gradient. "Available to Withdraw: ₹X" in large white text. Below: amber badge "₹X pending · clears in X days." Pending amount is never clickable — educational display only.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">LIST</div>
+            <div class="el-desc"><strong>Bank Transfer option</strong> — Selected by default. Shows saved bank/UPI account (last 4 digits). "Change" link to update details. Expected time: "Usually within 24 hrs."</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">LIST</div>
+            <div class="el-desc"><strong>Cash Collection option</strong> — "Field agent visits your location." On selection: shows an address/time slot picker to schedule the visit. No upfront fee for this service (V1).</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">BOTTOM</div>
+            <div class="el-desc"><strong>"Withdraw ₹X" CTA</strong> — Green, full-width. Amount auto-filled with full available balance. After tapping: confirmation dialog "Withdraw ₹1,240 via UPI?" then processing state → success screen with tracking.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">HISTORY</div>
+            <div class="el-desc"><strong>Withdrawal history</strong> — Collapsible section below method selector. List of past withdrawals: amount, date, method, status (Completed / Processing / Failed).</div>
+          </div>
+        </div>
+        <div class="specs-row">
+          <span class="spec-chip crit">Available vs pending clearly split</span>
+          <span class="spec-chip push">Push on completion</span>
+          <span class="spec-chip auto">Bank transfer default</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- D-12 Scheduled Rides Queue -->
+    <div class="screen-card">
+      <div class="phone-col">
+        <div class="screen-num">D-12</div>
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="mock-auth" style="background:#fff;">
+              <div style="font-size:10px;font-weight:700;color:#0F1629;margin-bottom:8px;">📅 Upcoming Scheduled Rides</div>
+              <div style="background:rgba(52,211,153,0.06);border:1.5px solid rgba(52,211,153,0.25);border-radius:10px;padding:8px;margin-bottom:6px;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
+                  <div>
+                    <div style="font-size:8px;font-weight:700;color:#0F1629;">Sector 15 → Crown Mall</div>
+                    <div style="font-size:7px;color:#7F8C8D;">Mon Feb 24 · 8:00 AM</div>
+                    <div style="font-size:7px;color:var(--green);font-weight:600;">₹52 · 💵 Cash</div>
+                  </div>
+                  <div style="padding:2px 6px;background:rgba(52,211,153,0.15);border-radius:4px;font-size:7px;color:var(--green);font-weight:600;">Confirmed</div>
+                </div>
+                <div style="font-size:7px;color:#7F8C8D;">Customer: Rahul K.</div>
+              </div>
+              <div style="background:#FFFDF9;border-radius:10px;padding:8px;margin-bottom:6px;opacity:0.7;">
+                <div style="font-size:8px;font-weight:600;color:#0F1629;">Home → NIT Faridabad</div>
+                <div style="font-size:7px;color:#7F8C8D;">Wed Feb 26 · 7:30 AM · ₹70</div>
+              </div>
+              <div style="text-align:center;font-size:7px;color:#7F8C8D;margin-top:8px;">Rides are assigned 30 min before scheduled time</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="info-col">
+        <div class="screen-tag tag-d">● Driver</div>
+        <div class="screen-title">Scheduled Rides Queue</div>
+        <div class="screen-purpose">Driver sees their upcoming scheduled ride commitments. Rides are assigned to drivers 30 minutes before scheduled time (matching algorithm). Driver gets a push alert to confirm. This screen shows the confirmed queue.</div>
+        <div class="elements-title">Element Inventory</div>
+        <div class="element-list">
+          <div class="element-item">
+            <div class="el-zone">LIST</div>
+            <div class="el-desc"><strong>Ride cards</strong> — Chronological. Each card: route, date/time, fare, payment method, customer first name + initial, "Confirmed" chip. Green tint for confirmed status.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">ASSIGN</div>
+            <div class="el-desc"><strong>Assignment process</strong> — 30 min before ride: push alert to available drivers "Scheduled ride: [route] at [time]. Accept?" 60-second accept window (same as regular requests). First driver to accept gets assigned.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">ALERT</div>
+            <div class="el-desc"><strong>15-min reminder</strong> — Push: "Scheduled ride in 15 minutes — [route]." Driver should navigate to pickup area. Deep-links to this queue.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">EMPTY</div>
+            <div class="el-desc"><strong>Empty state</strong> — "No upcoming scheduled rides. Go online to receive requests." Friendly illustration.</div>
+          </div>
+        </div>
+        <div class="specs-row">
+          <span class="spec-chip push">Assigned 30min before</span>
+          <span class="spec-chip push">15-min reminder push</span>
+          <span class="spec-chip nav">Schedule tab (bottom nav)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- D-13 Driver Profile + Plan Manager -->
+    <div class="screen-card">
+      <div class="phone-col">
+        <div class="screen-num">D-13</div>
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="mock-plan-manager">
+              <div class="mock-profile-header" style="background:linear-gradient(135deg,#0F1629,#2D3461);border-radius:12px;padding:12px;margin-bottom:8px;display:flex;flex-direction:column;align-items:center;gap:4px;">
+                <div class="mock-avatar" style="font-size:20px;">👦</div>
+                <div style="font-size:9px;font-weight:700;color:#fff;">Gurpreet Singh</div>
+                <div style="font-size:7px;color:rgba(255,255,255,0.6);">HR 29 AB 1234 · Bike</div>
+                <div style="padding:2px 8px;background:rgba(52,211,153,0.2);border-radius:100px;font-size:7px;color:#34D399;font-weight:600;">✓ Verified Driver</div>
+              </div>
+              <div style="font-size:8px;font-weight:600;color:#0F1629;margin-bottom:6px;">My Plan</div>
+              <div class="mock-plan-card commission">
+                <div class="mock-plan-title">📊 Commission Plan</div>
+                <div class="mock-plan-desc">13% per ride. Earnings settled T+2 days.</div>
+                <div class="mock-plan-badge orange">Active</div>
+              </div>
+              <div class="mock-plan-card subscription">
+                <div class="mock-plan-title">🔄 Subscription Plan</div>
+                <div class="mock-plan-desc">₹299/week flat. Keep 100% of every fare.</div>
+                <div class="mock-plan-badge" style="background:rgba(52,211,153,0.15);color:var(--green);">Switch Plan</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="info-col">
+        <div class="screen-tag tag-d">● Driver</div>
+        <div class="screen-title">Driver Profile + Plan Manager</div>
+        <div class="screen-purpose">Driver identity + financial plan selection. Verification status shown prominently. Both plans displayed side-by-side for informed comparison. Switching plans takes effect from next billing cycle (weekly). Document status visible for re-upload if rejected.</div>
+        <div class="elements-title">Element Inventory</div>
+        <div class="element-list">
+          <div class="element-item">
+            <div class="el-zone">HEADER</div>
+            <div class="el-desc"><strong>Driver profile card</strong> — Navy gradient. Avatar + name + vehicle number. "✓ Verified Driver" green chip. "Under Review" amber chip if pending. "Action Required" red chip if rejected.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">PLANS</div>
+            <div class="el-desc"><strong>Commission Plan card</strong> — Saffron-tinted. Title, description (X% per ride, T+2 settlement). "Active" badge if current plan. Tapping shows full details modal.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">PLANS</div>
+            <div class="el-desc"><strong>Subscription Plan card</strong> — Green-tinted. Title, description (₹X/week, keep 100% of fare). "Switch Plan" CTA if not current. "Active" if current. Tapping shows confirmation dialog with effective date.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">LIST</div>
+            <div class="el-desc"><strong>Profile menu items</strong> — Standard list below plans: 📄 My Documents (re-upload if needed) | 🌐 Language | 🏦 Bank Details | 📞 Support | 🚪 Logout.</div>
+          </div>
+        </div>
+        <div class="specs-row">
+          <span class="spec-chip crit">Plan switch: next cycle</span>
+          <span class="spec-chip auto">Doc status shows dynamically</span>
+          <span class="spec-chip nav">Profile tab (bottom nav)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- D-14 Standalone: Ride History (Driver) -->
+    <div class="screen-card">
+      <div class="phone-col">
+        <div class="screen-num">D-14</div>
+        <div class="phone-frame">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="mock-history" style="background:#FFFDF9;">
+              <div style="font-size:10px;font-weight:700;color:#0F1629;margin-bottom:2px;">ਸਾਰੀਆਂ ਰਾਈਡਾਂ / All Trips</div>
+              <div style="font-size:7px;color:#7F8C8D;margin-bottom:8px;">Today · 6 trips · ₹640</div>
+              <div class="mock-hist-item">
+                <div class="mock-hist-row">
+                  <div><div class="mock-hist-route">Sector 16 → Crown Mall</div><div class="mock-hist-sub">2:30 PM · 4.2 km · Cash · ✋ Manual</div></div>
+                  <div>
+                    <div class="mock-hist-fare">₹52</div>
+                    <div style="font-size:6px;color:var(--red);text-align:right;">−₹7</div>
+                  </div>
+                </div>
+              </div>
+              <div class="mock-hist-item">
+                <div class="mock-hist-row">
+                  <div><div class="mock-hist-route">NIT → Bus Stand</div><div class="mock-hist-sub">12:10 PM · 3.4 km · UPI</div></div>
+                  <div><div class="mock-hist-fare">₹42</div><div style="font-size:6px;color:var(--red);text-align:right;">−₹5</div></div>
+                </div>
+              </div>
+              <div class="mock-hist-item" style="opacity:0.6;">
+                <div class="mock-hist-row">
+                  <div><div class="mock-hist-route">Sector 8 → BSES Market</div><div class="mock-hist-sub">10:45 AM · 2.8 km · Cash</div></div>
+                  <div><div class="mock-hist-fare">₹35</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="info-col">
+        <div class="screen-tag tag-d">● Driver</div>
+        <div class="screen-title">Driver Trip History</div>
+        <div class="screen-purpose">Detailed record of every trip — regular and manual. Shows fare + commission deducted per trip for commission drivers. Manual rides clearly labeled. Filterable by date. Accessible from Earnings dashboard or Profile.</div>
+        <div class="elements-title">Element Inventory</div>
+        <div class="element-list">
+          <div class="element-item">
+            <div class="el-zone">TOP</div>
+            <div class="el-desc"><strong>Summary header</strong> — "Today · 6 trips · ₹640" — Current filter period summary. Filter chip (Today / This Week / Custom) in top-right.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">LIST</div>
+            <div class="el-desc"><strong>Trip cards</strong> — Each: Route, time, distance, payment method. Right side: fare earned (saffron) + commission deducted (red small text below). Net amount = fare − commission. Subscription drivers: only fare shown, no deduction row.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">TAGS</div>
+            <div class="el-desc"><strong>Trip type tags</strong> — "✋ Manual" chip on manually-created rides. "📅 Scheduled" chip on scheduled rides. Regular rides have no chip. Helps driver audit trip types.</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">EXPAND</div>
+            <div class="el-desc"><strong>Expandable details</strong> — Tap card: shows full pickup/drop address, customer name, payment method, trip duration, rating received from customer (if any).</div>
+          </div>
+          <div class="element-item">
+            <div class="el-zone">DISPUTE</div>
+            <div class="el-desc"><strong>Report Issue</strong> — "⚠️ Report issue" text link in expanded view. Opens text submission form for fare disputes, customer complaints, etc. V1: logged for admin review.</div>
+          </div>
+        </div>
+        <div class="specs-row">
+          <span class="spec-chip crit">Commission shown per trip</span>
+          <span class="spec-chip opt">Date filter</span>
+          <span class="spec-chip tap">Expandable with dispute report</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function switchTab(tab, btn) {
+  document.querySelectorAll('.screens-container').forEach(c => c.classList.remove('visible'));
+  document.querySelectorAll('.nav-tab').forEach(b => {
+    b.classList.remove('active-c', 'active-d');
+    b.style.cssText = '';
+  });
+  document.getElementById('tab-' + tab).classList.add('visible');
+  if (tab === 'customer') btn.classList.add('active-c');
+  else btn.classList.add('active-d');
+}
+</script>
+</body>
+</html>

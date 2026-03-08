@@ -1,6 +1,8 @@
 # Chalo Backend — Postman Testing Guide
 ### Complete beginner guide — start here if you've never used Postman
 
+**Status: Updated March 2026. 48 endpoints (41 original + 7 new P0 features). All original flows verified.**
+
 ---
 
 ## Step 1 — Download and Install Postman
@@ -730,41 +732,37 @@ Body:
 
 ---
 
-#### Step 4 — Promote this user to ADMIN in the database
+#### Step 4 — Promote this user to ADMIN via API
 
-Open a **new terminal** in VS Code (click the `+` button in the terminal panel). The server must still be running in the other terminal.
+No SQL or database access needed. Call the bootstrap endpoint directly in Postman:
 
-Run this command to open the database:
-```bash
-docker exec -it chalo-db psql -U postgres -d chalo
+```
+Method: POST
+URL: {{base_url}}/admin/promote
+Headers:
+  Content-Type: application/json
+  x-internal-api-key: chalo-internal-dev-key-change-in-prod
+Body:
+{
+  "phone": "+918800000001"
+}
 ```
 
-You will see the database prompt:
+**Expected Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "User promoted to ADMIN",
+  "data": {
+    "id": "clabcdef1234567890",
+    "phone": "+918800000001",
+    "role": "ADMIN"
+  }
+}
 ```
-chalo=#
-```
-
-Now run this SQL command. Replace `+918800000001` with the exact phone number you used in Step 1:
-```sql
-UPDATE users SET role = 'ADMIN' WHERE phone = '+918800000001';
-```
-
-You should see:
-```
-UPDATE 1
-```
-
-`UPDATE 1` means 1 row was updated. If you see `UPDATE 0` — the phone number is wrong, check for typos.
-
-Then exit the database:
-```sql
-\q
-```
-
-The terminal returns to normal. You can close this terminal.
 
 > **Why can't I just use the token I already have?**
-> The token is created at login time and the role is baked into it. Since you were `CUSTOMER` when you logged in, that token has `CUSTOMER` role. After promoting to ADMIN in the DB, you must log in again to get a new token that has `ADMIN` role.
+> The token is created at login time and the role is baked into it. Since you were `CUSTOMER` when you logged in, that token has `CUSTOMER` role. After promoting to ADMIN, you must log in again to get a new token that has `ADMIN` role.
 
 ---
 
@@ -911,16 +909,272 @@ Body:
 
 Valid keys you can update:
 
-| Key                      | What it controls             | Default |
-|--------------------------|------------------------------|---------|
-| `commission_percentage`  | Platform cut per ride (%)    | 15      |
-| `subscription_fee_weekly`| Driver weekly plan (₹)       | 199     |
-| `min_fare`               | Minimum ride fare (₹)        | 30      |
-| `base_fare_per_km`       | Rate per kilometer (₹)       | 12      |
-| `base_fare_per_min`      | Rate per minute (₹)          | 2       |
-| `surge_enabled`          | Turn surge pricing on/off    | false   |
-| `surge_multiplier`       | Surge multiplier (1.0–2.0)   | 1.0     |
-| `settlement_days`        | Payout delay (T+N days)      | 2       |
+| Key                       | What it controls                          | Default |
+|---------------------------|-------------------------------------------|---------|
+| `commission_percentage`   | Platform cut per ride (%)                 | 15      |
+| `subscription_fee_weekly` | Driver weekly plan (₹)                    | 199     |
+| `min_fare`                | Minimum ride fare (₹)                     | 30      |
+| `base_fare_per_km`        | Rate per kilometer (₹)                    | 12      |
+| `base_fare_per_min`       | Rate per minute (₹)                       | 2       |
+| `surge_enabled`           | Turn surge pricing on/off                 | false   |
+| `surge_multiplier`        | Surge multiplier (1.0–2.0)                | 1.0     |
+| `settlement_days`         | Payout delay (T+N days)                   | 2       |
+| `free_cancel_window_secs` | Seconds before cancellation fee kicks in  | 120     |
+| `cancel_fee_amount`       | Cancellation fee in ₹ (after window)      | 20      |
+
+---
+
+---
+
+## Flow 7 — Driver Registration (New — Replaces Manual SQL)
+
+Drivers now register via a single API call that verifies OTP and creates their account atomically.
+
+### Step 1 — Send OTP (same as customer)
+
+```
+Method: POST
+URL: {{base_url}}/auth/otp/send
+Headers: Content-Type: application/json
+Body:
+{
+  "phone": "+918800000002"
+}
+```
+
+Check terminal for the OTP code.
+
+### Step 2 — Register as Driver
+
+```
+Method: POST
+URL: {{base_url}}/auth/register-driver
+Headers: Content-Type: application/json
+Body:
+{
+  "phone": "+918800000002",
+  "otp": "XXXX",
+  "name": "Ravi Kumar"
+}
+```
+
+**Expected Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Driver registered successfully",
+  "data": {
+    "isNewUser": true,
+    "user": {
+      "id": "...",
+      "phone": "+918800000002",
+      "name": "Ravi Kumar",
+      "role": "DRIVER"
+    }
+  }
+}
+```
+
+Save the token as `driver_token` in your environment. The user is created with `DRIVER` role and a `DriverProfile` is automatically created — no manual SQL needed.
+
+---
+
+## Flow 8 — OTP Ride Start
+
+The ride start flow now requires a 4-digit OTP that the customer receives when a driver is assigned.
+
+### What happens automatically
+
+1. Driver calls `POST /driver/rides/:rideId/accept` → customer receives FCM notification with an OTP like `"Ride OTP: 4821"`
+2. Customer shows OTP to driver
+3. Driver enters OTP when starting the ride
+
+### Start Ride with OTP
+
+```
+Method: POST
+URL: {{base_url}}/driver/rides/{{ride_id}}/start
+Headers:
+  Content-Type: application/json
+  Authorization: Bearer {{driver_token}}
+Body:
+{
+  "otp": "4821"
+}
+```
+
+**Expected Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Ride started",
+  "data": {
+    "rideId": "...",
+    "status": "IN_PROGRESS",
+    "startedAt": "2026-03-08T10:30:00.000Z"
+  }
+}
+```
+
+If the OTP is wrong:
+```json
+{ "success": false, "message": "Invalid OTP. Ask the customer to share their ride OTP.", "code": "INVALID_OTP" }
+```
+
+---
+
+## Flow 9 — Driver Rates Customer
+
+After ride completion, the driver can rate the customer (separate from customer rating the driver).
+
+```
+Method: POST
+URL: {{base_url}}/driver/rides/{{ride_id}}/rate-customer
+Headers:
+  Content-Type: application/json
+  Authorization: Bearer {{driver_token}}
+Body:
+{
+  "rating": 5,
+  "comment": "Very polite, on time at pickup"
+}
+```
+
+**Expected Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Customer rated successfully",
+  "data": {
+    "rideId": "...",
+    "rating": 5,
+    "comment": "Very polite, on time at pickup"
+  }
+}
+```
+
+- `rating`: 1–5 (required)
+- `comment`: optional, max 300 characters
+- Can only be called once per ride (returns 409 if already rated)
+
+---
+
+## Flow 10 — Ride Receipt
+
+Get the full fare breakdown for a completed ride.
+
+```
+Method: GET
+URL: {{base_url}}/rides/{{ride_id}}/receipt
+Headers:
+  Authorization: Bearer {{customer_token}}
+```
+
+**Expected Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "rideId": "...",
+    "route": {
+      "pickup": "Sector 16A, Faridabad",
+      "drop": "BPTP Park Centra, Faridabad",
+      "distanceKm": 4.2,
+      "durationMins": 18
+    },
+    "fare": {
+      "baseFare": 55.40,
+      "surgeMultiplier": 1.0,
+      "surgeCharge": 0,
+      "totalFare": 55.40
+    },
+    "payment": {
+      "method": "CASH",
+      "status": "PENDING",
+      "amountPaid": 55.40
+    },
+    "driver": {
+      "name": "Ravi Kumar",
+      "vehicleNumber": "HR 51 AB 1234",
+      "vehicleModel": "Honda Activa 6G",
+      "rating": 4.7
+    },
+    "customerRating": 5
+  }
+}
+```
+
+Only works for `COMPLETED` rides owned by the authenticated customer.
+
+---
+
+## Flow 11 — Driver Earnings Summary
+
+Get a lightweight summary for the driver dashboard card.
+
+```
+Method: GET
+URL: {{base_url}}/driver/earnings/summary?period=week
+Headers:
+  Authorization: Bearer {{driver_token}}
+```
+
+Query params:
+- `period`: `week` (last 7 days) or `month` (last 30 days)
+
+**Expected Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "period": "week",
+    "rides": 23,
+    "grossEarnings": 3450.00,
+    "commission": 517.50,
+    "netEarnings": 2932.50,
+    "avgPerRide": 127.50,
+    "allTimeRides": 142,
+    "allTimeEarnings": 18600.00,
+    "ratingAvg": 4.6
+  }
+}
+```
+
+---
+
+## Flow 12 — Cancellation Fee
+
+If a customer cancels after a driver is assigned and the 2-minute free window has passed, a cancellation fee is returned.
+
+### Cancel a ride with a driver assigned (after 2 minutes)
+
+```
+Method: POST
+URL: {{base_url}}/rides/{{ride_id}}/cancel
+Headers:
+  Content-Type: application/json
+  Authorization: Bearer {{customer_token}}
+Body:
+{
+  "reason": "Changed plans"
+}
+```
+
+**Response within 2-minute window (no fee):**
+```json
+{
+  "data": { "rideId": "...", "status": "CANCELLED", "cancellationFee": 0 }
+}
+```
+
+**Response after 2-minute window (fee applies):**
+```json
+{
+  "data": { "rideId": "...", "status": "CANCELLED", "cancellationFee": 20 }
+}
+```
+
+The fee amount is configurable via `PUT /admin/config/cancel_fee_amount`. The window is configurable via `PUT /admin/config/free_cancel_window_secs`.
 
 ---
 
@@ -956,6 +1210,14 @@ Go through these in order. Put a tick next to each when it passes.
 **Verify ride lifecycle:**
 - [ ] Flow 2 passed — fare estimate returns a number
 - [ ] Flow 3 passed — ride created with `status: REQUESTED`
-- [ ] Flow 5 passed — full ride completed end-to-end (online → accept → arrive → start → complete → rate)
+- [ ] Flow 5 passed — full ride completed end-to-end (online → accept → arrive → start with OTP → complete → rate)
+- [ ] Flow 9 passed — driver rated customer after completion
+- [ ] Flow 10 passed — ride receipt returns fare breakdown
 
-**All 11 checked = backend is ready. Start the customer app.**
+**Verify new features:**
+- [ ] Flow 7 passed — driver registered via API (no SQL needed)
+- [ ] Flow 8 passed — ride start requires and validates OTP
+- [ ] Flow 11 passed — driver earnings summary returns totals
+- [ ] Flow 12 tested — cancellation fee returned correctly
+
+**All 15 checked = backend is ready. Start the customer app.**

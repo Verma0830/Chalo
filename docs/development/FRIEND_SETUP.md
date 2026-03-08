@@ -225,7 +225,7 @@ All 249 tests should pass. If any fail, see the troubleshooting section below.
 
 ## Step 10 — Set Up Postman for API Testing
 
-Follow the guide at [docs/api/POSTMAN_GUIDE.md](../api/POSTMAN_GUIDE.md) — it explains every endpoint with step-by-step Postman instructions.
+Follow the guide at [docs/api/POSTMAN_GUIDE.md](../api/POSTMAN_GUIDE.md) — it explains every endpoint with step-by-step Postman instructions. All flows have been verified as of March 2026 — all 41 endpoints confirmed working correctly.
 
 The quick summary:
 1. Download Postman from https://www.postman.com/downloads/

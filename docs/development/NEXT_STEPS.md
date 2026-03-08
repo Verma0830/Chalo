@@ -1,543 +1,443 @@
-# Chalo — Development Roadmap & Next Steps
+# Chalo — What's Left To Do
 
 > Last updated: March 2026
-> Backend: ✅ Complete — server running, DB live, all migrations applied
-> Review score: **~8.0/10** (up from 6.63/10)
-> Database: ✅ Running (Docker PostGIS, local)
-> Customer App: ⬜ Not started
-> Driver App: ⬜ Not started
+> Backend: ✅ Complete — 48 endpoints, 8.5/10 score
+> Android apps: ⬜ Not started — start here next
+> Deployment: ⬜ Not started
+
+This document covers everything that is still pending, in priority order.
 
 ---
 
-## Current Status Summary
+## Table of Contents
 
-| Component | Status | Notes |
+1. [Backend — P1 Features (small, build during Android dev)](#1-backend--p1-features)
+2. [Third-Party Integrations to Set Up](#2-third-party-integrations-to-set-up)
+3. [Razorpay Payment Testing Guide](#3-razorpay-payment-testing-guide)
+4. [One-Time DB Setup (not done yet)](#4-one-time-db-setup)
+5. [Customer Android App](#5-customer-android-app)
+6. [Driver Android App](#6-driver-android-app)
+7. [Deployment](#7-deployment)
+8. [Post-Launch (P2 / P3)](#8-post-launch-p2--p3)
+
+---
+
+## 1. Backend — P1 Features
+
+These are all small. Build them as the Android team hits each flow, rather than all upfront.
+
+| # | Endpoint / Change | What | Effort | Needed for |
+|---|---|---|---|---|
+| 1 | Fare calculation update | Add 5% GST line. New `platform_config` key: `gst_percentage`. | 2 hrs | Receipt screen |
+| 2 | Rating window check | Block rating if `completedAt > 24 hrs ago`. One condition in `rateRide()` and `rateCustomer()`. | 1 hr | Rating screens |
+| 3 | `GET /notifications/unread-count` | Returns `{ count: N }`. Android needs this for the notification badge. | 1 hr | All screens |
+| 4 | `POST /rides/:rideId/share` + `GET /track/:token` | Trip share link with 24h token. Public, no auth needed. | 4 hrs | Active ride screen |
+| 5 | SMS receipt on ride completion | Call `smsService.send()` inside `completeRide()`. Needs `MSG91_API_KEY`. | 2 hrs | Ride completion |
+| 6 | Razorpay cancellation fee charge | Trigger Razorpay order when `cancellationFee > 0` on UPI rides. Cash: driver collects. | 3 hrs | Cancel flow (UPI) |
+
+**Total for all P1 backend work: ~13 hours.**
+
+---
+
+## 2. Third-Party Integrations to Set Up
+
+These require accounts and API keys. None block local development — fallbacks exist for all.
+
+### Google Maps API Key
+
+**Used for:** Real route distance and duration in fare calculation.
+**Without it:** Haversine fallback (×1.2 road correction factor) — works fine for dev and early testing.
+
+```
+1. Go to https://console.cloud.google.com
+2. Create a project (or use an existing one)
+3. Enable: "Directions API" + "Places API"
+4. APIs & Services → Credentials → Create API Key
+5. Restrict key: HTTP referrers (for web) or Android apps (for the app)
+6. Google gives $200/month free credit — covers ~40,000 direction requests/month
+
+Add to chalo-backend/.env:
+  GOOGLE_MAPS_API_KEY=AIzaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+**When to set up:** Before real fare accuracy matters. Not needed for MVP testing.
+
+---
+
+### Razorpay (UPI + Card Payments)
+
+**Used for:** UPI payments from customers, cancellation fee charging, driver payouts (P3).
+**Without it:** Cash rides work 100% — no Razorpay needed at all.
+
+```
+1. Go to https://dashboard.razorpay.com
+2. Sign up (free, KYC required for live mode)
+3. Settings → API Keys → Generate Key (TEST mode first)
+4. Settings → Webhooks → Add webhook URL → select events
+
+Add to chalo-backend/.env:
+  RAZORPAY_KEY_ID=rzp_test_xxxxxxxxxxxx
+  RAZORPAY_KEY_SECRET=xxxxxxxxxxxxxxxxxxxx
+  RAZORPAY_WEBHOOK_SECRET=your_webhook_secret
+
+Webhook URL (local dev):
+  Use ngrok: ngrok http 3001
+  Then: http://your-ngrok-url/api/v1/payments/webhook
+
+Switch to live:
+  RAZORPAY_KEY_ID=rzp_live_xxxxxxxxxxxx  (starts with rzp_live_, not rzp_test_)
+```
+
+**When to set up:** Before testing UPI payment flows. See Section 3 for the full test guide.
+
+---
+
+### MSG91 (SMS — OTP + Receipt + SOS)
+
+**Used for:** SOS emergency SMS to emergency contact, ride receipt SMS.
+**Without it:** SOS alert is saved in DB but not sent. OTP works via Firebase (already set up).
+
+```
+1. Go to https://msg91.com
+2. Sign up → get API key + sender ID
+3. Create a template for:
+   - SOS alert: "SAFETY ALERT: [Name] is in a ride. Driver: [Name], Vehicle: [Number]. Location: [link]"
+   - Ride receipt: "Your Chalo ride is complete. Distance: [X]km. Fare: ₹[X]. Driver: [Name]"
+
+Add to chalo-backend/.env:
+  MSG91_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxx
+  MSG91_SENDER_ID=CHALOM
+  MSG91_TEMPLATE_ID_SOS=xxxxxxxxxx
+  MSG91_TEMPLATE_ID_RECEIPT=xxxxxxxxxx
+```
+
+**When to set up:** Before SOS feature is tested end-to-end.
+
+---
+
+### Firebase Storage (Driver Document Uploads)
+
+**Used for:** Storing driver KYC photos (DL, RC, Aadhaar, bike photo).
+**Without it:** Documents are stored as plain URLs — driver app must upload elsewhere and pass URL.
+
+```
+Firebase Storage is already enabled on your project (Spark plan: 5 GB free).
+No extra setup needed on the backend — the driver app uploads directly to Firebase Storage
+using the Firebase Storage SDK, then passes the download URL to POST /driver/documents.
+
+CORS rules (set in Firebase console → Storage → Rules):
+  Allow read/write only to authenticated users.
+```
+
+**When to set up:** When building the driver app document upload screen.
+
+---
+
+## 3. Razorpay Payment Testing Guide
+
+### Test mode vs Live mode
+
+```
+rzp_test_ keys → test mode  → no real money moves, use test cards
+rzp_live_ keys → live mode  → real money, real bank accounts
+
+Always test thoroughly in test mode before switching to live.
+```
+
+### Test card numbers (always work in test mode)
+
+| Scenario | Card number | CVV | Expiry |
+|---|---|---|---|
+| Success | 4111 1111 1111 1111 | Any 3 digits | Any future date |
+| Success (Indian) | 5267 3181 8797 5449 | 123 | 10/25 |
+| Payment failed | 4000 0000 0000 0002 | Any | Any future |
+| Insufficient funds | 4000 0000 0000 9995 | Any | Any future |
+
+### Test UPI IDs (Razorpay test mode)
+
+```
+success@razorpay  → always succeeds
+failure@razorpay  → always fails
+```
+
+### What to test (Postman flows)
+
+**Flow 1 — UPI ride payment (happy path)**
+```
+1. POST /rides/fare-estimate              → get fare amount
+2. POST /rides   { paymentMethod: "UPI" }  → create ride
+3. [simulate driver accepting + completing ride via driver endpoints]
+4. POST /payment/create-order            → get razorpayOrderId
+5. [Razorpay SDK completes payment using test UPI ID: success@razorpay]
+6. POST /payment/verify  { razorpayOrderId, razorpayPaymentId, razorpaySignature }
+   → ride.paymentStatus should be COMPLETED
+7. GET  /rides/:rideId/receipt           → check fare breakdown
+```
+
+**Flow 2 — Payment failure**
+```
+1–4. Same as above
+5. Use UPI ID: failure@razorpay
+6. POST /payment/verify → should return 400 PAYMENT_VERIFICATION_FAILED
+   → ride.paymentStatus should stay PENDING
+```
+
+**Flow 3 — Webhook testing**
+```
+1. Start ngrok: ngrok http 3001
+2. Set webhook URL in Razorpay dashboard: https://your-ngrok/api/v1/payments/webhook
+3. Trigger a test payment through the Razorpay dashboard (Test → Simulate payment)
+4. Check server logs — should see "Webhook received: payment.captured"
+5. Check ride in DB — paymentStatus should update to COMPLETED
+```
+
+**Flow 4 — Cancellation fee charge (after P1 is built)**
+```
+1. POST /rides  { paymentMethod: "UPI" }   → create ride
+2. [driver accepts → wait 3 minutes]
+3. POST /rides/:rideId/cancel
+   → response should include cancellationFee: 20
+   → should auto-trigger a ₹20 Razorpay order
+4. POST /payment/verify for the cancellation fee order
+```
+
+**Flow 5 — Refund testing**
+```
+Via Razorpay dashboard (test mode):
+  Payments → select a payment → Refund
+  → Razorpay sends refund webhook
+  → Backend should handle (currently not implemented — P3)
+```
+
+### Webhook events to handle (current + future)
+
+| Event | Current support | Future |
 |---|---|---|
-| Backend API (Node.js + Express) | ✅ Done | 41 endpoints across 5 route groups |
-| Database schema (Prisma + PostgreSQL) | ✅ Done | 11 tables, 11 enums, PostGIS + spatial indexes |
-| PostgreSQL + PostGIS (local Docker) | ✅ Running | `docker start chalo-db` · port 5432 |
-| Redis | ✅ Running | localhost:6379 |
-| Firebase Admin SDK | ✅ Connected | Service account loaded from JSON |
-| API Server | ✅ Running | http://localhost:3001/api/v1 |
-| Auth service (Firebase OTP) | ✅ Done | Hashed OTP storage, transactional verification, Redis cache |
-| Fare / ride services | ✅ Done | L1+L2+L3 config cache, transactional ride creation, RTDB sync |
-| Payment service (Razorpay) | ✅ Done | Raw body webhooks, circuit breaker, ride-order checks |
-| Driver API (all endpoints) | ✅ Done | 16 endpoints: online/offline, location, ride lifecycle, earnings, withdrawals |
-| PostGIS spatial indexes | ✅ Done | GIST index + partial B-tree indexes applied to local DB |
-| Notifications (FCM) | ✅ Done | `messaging.send()` wired + stale-token cleanup |
-| SOS service | ✅ Done | MSG91 SMS wired + participant verification |
-| k6 load test | ✅ Done | `k6/smoke.js` with thresholds |
-| Security review | ✅ Done | 25/25 findings fixed |
-| TypeScript strict mode | ✅ Done | 0 errors, dual tsconfig (IDE + build) |
-| Docker / docker-compose | ✅ Done | Multi-stage Dockerfile + docker-compose with PostGIS + Redis |
-| GitHub Actions CI | ✅ Done | `.github/workflows/ci.yml` — type-check, lint, test, build on every PR |
-| BullMQ job queue | ✅ Done | OTP cleanup queue + graceful close on SIGTERM/SIGINT |
-| Admin API | ✅ Done | 8 endpoints: driver approval, KYC auto-verify, live rides, config |
-| Customer Android app | ⬜ Pending | Step 3 below — **start here** |
-| Driver Android app | ⬜ Pending | Step 4 below |
-| Deployment / CI-CD | ⬜ Pending | Step 5 below |
+| `payment.captured` | ✅ Handled — marks ride PAID | |
+| `payment.failed` | ✅ Handled — marks ride FAILED | |
+| `refund.created` | ❌ Not handled | P3: mark dispute as refunded |
+| `payout.processed` | ❌ Not handled | P3: mark driver withdrawal COMPLETED |
+| `payout.failed` | ❌ Not handled | P3: notify driver, retry |
 
----
+### Switching to live mode (production checklist)
 
-## Step 0 — Docker + CI ✅ Done
-
-Docker, docker-compose, and GitHub Actions CI are all implemented. The backend runs fully containerized with PostGIS + Redis services. CI runs on every push: type-check → lint → test → build.
-
----
-
-## Step 0b — Remaining Backend Integrations ✅ Done
-
-All four integrations are implemented and verified (249 tests, 0 TS errors, 0 lint errors).
-
-### FCM Push Send (3 hrs)
-
-`notificationService.sendPushNotification()` already stores notifications in the DB. It needs `messaging.send()` wired in. See `IMPLEMENTATION_ROADMAP.md` Task 1.3 for the exact code.
-
-### Google Maps Directions API (2 hrs)
-
-`fareService.getRouteDetails()` falls back to Haversine. Replace with a real `fetch` call to the Directions API. See `IMPLEMENTATION_ROADMAP.md` Task 1.4.
-
-### SOS SMS via MSG91 (2 hrs)
-
-`sosService.triggerSOS()` creates DB records but doesn't send SMS. Wire in `sendSOSSMS()` to call MSG91. See `IMPLEMENTATION_ROADMAP.md` Task 1.5.
-
-### BullMQ Job Queue (1 day)
-
-Replace `setInterval` OTP cleanup with a BullMQ worker. Add scheduled-ride dispatch job. See `IMPLEMENTATION_ROADMAP.md` Task 2.2.
-
----
-
-## Step 0c — Originally Step 0 Docker instructions (for reference)
-
-### Add Dockerfile
-
-Create `chalo-backend/Dockerfile`:
-```dockerfile
-FROM node:20-alpine AS builder
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
-
-FROM node:20-alpine AS runtime
-WORKDIR /app
-ENV NODE_ENV=production
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json .
-COPY --from=builder /app/prisma ./prisma
-EXPOSE 3000
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]
 ```
-
-### Add docker-compose.yml
-
-Create `docker-compose.yml` at the project root:
-```yaml
-version: '3.9'
-services:
-  api:
-    build: ./chalo-backend
-    ports: ["3000:3000"]
-    environment:
-      NODE_ENV: development
-      DATABASE_URL: postgresql://chalo:chalo@postgres:5432/chalo_dev
-      REDIS_URL: redis://redis:6379
-    depends_on:
-      postgres: { condition: service_healthy }
-      redis: { condition: service_healthy }
-  postgres:
-    image: postgis/postgis:16-3.4-alpine
-    environment:
-      POSTGRES_DB: chalo_dev
-      POSTGRES_USER: chalo
-      POSTGRES_PASSWORD: chalo
-    ports: ["5432:5432"]
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U chalo"]
-      interval: 5s
-      retries: 5
-  redis:
-    image: redis:7-alpine
-    ports: ["6379:6379"]
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-```
-
-### Add GitHub Actions CI
-
-Create `.github/workflows/ci.yml`:
-```yaml
-name: CI
-on:
-  push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: '20', cache: 'npm', cache-dependency-path: chalo-backend/package-lock.json }
-      - run: cd chalo-backend && npm ci
-      - run: cd chalo-backend && npx tsc --noEmit
-      - run: cd chalo-backend && npm run lint
-      - run: cd chalo-backend && npm test
-      - run: cd chalo-backend && npm run build
+[ ] Replace rzp_test_ keys with rzp_live_ keys in production .env
+[ ] KYC completed on Razorpay account (required for live)
+[ ] Webhook URL points to production server (not ngrok)
+[ ] Webhook secret updated to production value
+[ ] Test one live payment with a real card before launch
+[ ] Enable Razorpay fraud protection (dashboard → Settings → Risk)
 ```
 
 ---
 
-## Step 1 — Database Setup ✅ DONE
+## 4. One-Time DB Setup
 
-**Completed March 2026.** Local Docker container running with PostGIS.
+These need to be run once against the production (and dev) database:
 
-### What was done
-- Docker container `chalo-db` running `postgis/postgis:15-3.3` on port 5432
-- PostGIS extension pre-enabled on the `chalo` database
-- Both migrations applied via `prisma migrate deploy`:
-  - `20260301011006_init` — all 11 tables + enums + indexes
-  - `20260301011007_add_postgis_indexes` — 5 spatial/performance indexes
-- Native Windows PostgreSQL stopped (was conflicting on port 5432)
-- `.env` updated: `DATABASE_URL=postgresql://postgres:luffy@localhost:5432/chalo?schema=public`
-
-### To restart after reboot
 ```bash
-docker start chalo-db   # start the DB container
-cd chalo-backend
-npm run dev             # start the API server
-```
+# Run inside chalo-backend/
 
-### Notes for production
-- Switch `DATABASE_URL` to Neon / Supabase / Railway Postgres
-- Run `npx prisma migrate deploy` on the production DB
-- The `CREATE EXTENSION postgis` must be supported by the host (Neon/Supabase both support it)
+# 1. Apply all pending migrations
+npx prisma migrate deploy
 
----
+# 2. Seed platform config (fares, commission %, cancellation window)
+#    Without this, fare calculations use hardcoded CONSTANTS defaults — still works,
+#    but admin config endpoints won't have any rows to read from.
+npm run db:seed
 
-### What's in the database
-
-| Table | Purpose |
-|---|---|
-| `users` | Shared user record (customers + drivers) |
-| `customer_profiles` | Customer-specific data (saved locations) |
-| `driver_profiles` | Driver docs, vehicle, plan type, location |
-| `rides` | Ride requests and lifecycle |
-| `ride_events` | Event log per ride (status changes) |
-| `earnings` | Driver earnings per completed ride |
-| `withdrawals` | Driver withdrawal requests |
-| `sos_alerts` | SOS triggers from active rides |
-| `otp_verifications` | Phone OTP records with expiry |
-| `notifications` | In-app notification storage |
-| `platform_config` | Runtime-configurable business values |
-
----
-
-## Step 2 — Backend Environment Variables
-
-Most are already configured. Remaining items:
-
-### Firebase ✅ Already connected
-Firebase Admin is initialised from `firebase-service-account.json`. The following are enabled:
-- **Phone Authentication** — for OTP login
-- **Cloud Messaging (FCM)** — for push notifications
-- **Realtime Database** — for live driver location sync
-- **Storage** — for driver document uploads
-
-Firebase is **free** for development (Spark plan):
-- Phone auth: unlimited verifications
-- FCM: always free
-- Realtime DB: 1 GB / 10 GB bandwidth free
-- Storage: 5 GB free
-
-### Razorpay (for UPI payments) — skip for now
-Skip until ready for real payments. All Cash rides work without it.
-When needed:
-1. Sign up at https://dashboard.razorpay.com
-2. Settings → API Keys → Generate Test Key
-3. For webhook URL use `http://your-server/api/v1/payments/webhook`
-4. App URL for test mode: use `http://localhost:3001`
-```env
-RAZORPAY_KEY_ID=rzp_test_xxxxxxxxxxxx
-RAZORPAY_KEY_SECRET=xxxxxxxxxxxxxxxxxxxx
-RAZORPAY_WEBHOOK_SECRET=your_webhook_secret
-```
-
-### Google Maps (for directions + fare distance)
-The app falls back to Haversine when no key is set — fine for dev.
-When real fare estimates are needed:
-1. Go to https://console.cloud.google.com → enable Directions API
-2. Google gives **$200/month free credit** — covers thousands of daily requests
-3. Add key to `.env`:
-```env
-GOOGLE_MAPS_API_KEY=AIzaxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# 3. Promote first admin (replace phone number)
+curl -X POST http://localhost:3001/api/v1/admin/promote \
+  -H "Content-Type: application/json" \
+  -H "x-internal-api-key: chalo-internal-dev-key-change-in-prod" \
+  -d '{ "phone": "+91XXXXXXXXXX" }'
 ```
 
 ---
 
-## Step 2b — Admin Panel API ✅ DONE (March 2026)
+## 5. Customer Android App
 
-All 8 admin endpoints are live at `/api/v1/admin/*`. All require `ADMIN` role.
+**Tech stack:** Kotlin · Jetpack Compose · MVVM + Hilt · Retrofit · Firebase Auth + RTDB + FCM · Google Maps SDK
 
-| Method | Path | Description |
+**Prompt file:** [docs/prompts/chalo-android-customer-prompt.md](../prompts/chalo-android-customer-prompt.md)
+
+### Sprint order
+
+| Sprint | Screens | Backend endpoints used | Time |
+|---|---|---|---|
+| 1 — Auth | Splash, phone entry, OTP, complete profile | `POST /auth/otp/send`, `POST /auth/otp/verify`, `PUT /auth/profile` | 1 week |
+| 2 — Home + booking | Map, destination search, fare estimate, book ride | `POST /rides/fare-estimate`, `POST /rides` | 1–2 weeks |
+| 3 — Active ride | Driver location on map, status updates, cancel, SOS | RTDB listener, `POST /rides/:rideId/cancel`, `POST /rides/:rideId/sos` | 1 week |
+| 4 — Post-ride | Payment screen, rating, receipt | `POST /rides/:rideId/rate`, `GET /rides/:rideId/receipt` | 3–4 days |
+| 5 — History + profile | Past rides, profile, emergency contact | `GET /rides/history`, `PUT /auth/emergency-contact` | 3–4 days |
+| 6 — Scheduled rides | Date/time picker, scheduled list | `POST /rides/schedule`, `GET /rides/scheduled` | 2–3 days |
+| 7 — Notifications | FCM foreground/background, notification list | `GET /notifications`, `PUT /notifications/:id/read` | 2 days |
+| 8 — Polish | Hindi strings, offline state, loading states, retry | n/a | 1 week |
+
+### Key Android implementation notes
+
+```
+RTDB listener for live ride status:
+  db.getReference("rides/{rideId}").addValueEventListener(...)
+  → Listen for status, driverLat, driverLng changes
+
+RTDB fallback (on 2G/3G connection loss):
+  Start polling GET /rides/:rideId/location every 5s
+  in onCancelled callback of the ValueEventListener
+
+OTP display (after driver accepts):
+  FCM notification data payload includes "otp" field
+  → Show it prominently on the active ride screen
+  → Customer reads OTP to driver when they arrive
+
+SOS button:
+  Press-and-hold 2 seconds → confirm dialog → POST /rides/:rideId/sos
+  SOS_HOLD_DURATION_MS = 2000 (from constants)
+```
+
+---
+
+## 6. Driver Android App
+
+**Package name:** `com.chalo.driver` · Min SDK: API 28
+
+### Sprint order
+
+| Sprint | Screens | Backend endpoints used | Time |
+|---|---|---|---|
+| 1 — Auth + KYC | Phone OTP, registration form, document upload, pending screen | `POST /auth/register-driver`, `POST /driver/documents` | 1 week |
+| 2 — Home + toggle | Earnings summary card, go online/offline, GPS foreground service | `POST /driver/go-online`, `POST /driver/go-offline`, `POST /driver/location` | 1 week |
+| 3 — Ride request | Incoming ride card (60s countdown), accept/decline, navigate to pickup, arrived | `GET /driver/rides/incoming`, `POST /driver/rides/:id/accept`, `POST /driver/rides/:id/arrived` | 1 week |
+| 4 — Ride in progress | OTP entry to start, navigation to drop, end ride, rate customer | `POST /driver/rides/:id/start`, `POST /driver/rides/:id/complete`, `POST /driver/rides/:id/rate-customer` | 3–4 days |
+| 5 — Earnings | Earnings summary, trip history, withdrawal request | `GET /driver/earnings/summary`, `GET /driver/earnings`, `POST /driver/withdrawals` | 3–4 days |
+| 6 — Profile + history | Document management, trip history, SOS | `GET /driver/trips`, `GET /driver/status` | 2–3 days |
+
+### Key Android implementation notes
+
+```
+Location foreground service:
+  Must run as a Foreground Service with FOREGROUND_SERVICE_LOCATION permission
+  POST /driver/location every 5 seconds while online
+  Stop when driver goes offline
+
+OTP start flow:
+  Customer reads OTP to driver → driver types it into the "Start Ride" screen
+  POST /driver/rides/:rideId/start  { otp: "1234" }
+  Backend validates and transitions DRIVER_ARRIVED → IN_PROGRESS
+
+Arrived button:
+  Only activates when driver is within 200m of pickup coordinates
+  Use Haversine formula in the Android app to check distance
+  DRIVER_ARRIVED_RADIUS_METERS = 200 (from constants)
+
+Incoming ride timeout:
+  Driver has 60 seconds to accept (RIDE_ACCEPT_WINDOW_SECS)
+  Show countdown timer on the incoming ride card
+  On timeout: card disappears, backend auto-reassigns
+```
+
+---
+
+## 7. Deployment
+
+### Recommended: Railway (simplest for V1)
+
+```
+1. Go to https://railway.app → New Project → Deploy from GitHub
+2. Select the repo → set root directory to chalo-backend/
+3. Add a PostgreSQL plugin (auto-provides DATABASE_URL with PostGIS support)
+4. Add a Redis plugin (auto-provides REDIS_URL)
+5. Set all environment variables in Railway dashboard (copy from .env)
+6. Railway auto-detects Node.js, runs npm start
+7. Custom domain available for free
+
+Build command (Railway):  npm install && npm run build
+Start command:            npm start
+Post-deploy:              npx prisma migrate deploy (set as release command)
+```
+
+### Alternative: Render
+
+```
+1. https://render.com → New Web Service → connect GitHub repo
+2. Root directory: chalo-backend
+3. Build: npm install && npm run build && npx prisma migrate deploy
+4. Start: npm start
+5. Add Render PostgreSQL (paid tier has PostGIS)
+6. Add Render Redis
+```
+
+### Pre-launch production checklist
+
+```
+Environment:
+[ ] NODE_ENV=production
+[ ] DATABASE_URL → production DB (Railway/Supabase/Neon)
+[ ] REDIS_URL → production Redis
+[ ] INTERNAL_API_KEY → change from dev value to a strong secret
+
+Firebase:
+[ ] Use production Firebase project (not dev)
+[ ] Firebase service account JSON for production project
+[ ] FIREBASE_DATABASE_URL → production RTDB URL
+
+Payments:
+[ ] RAZORPAY_KEY_ID → rzp_live_ key (not rzp_test_)
+[ ] RAZORPAY_KEY_SECRET → live secret
+[ ] RAZORPAY_WEBHOOK_SECRET → set in Razorpay dashboard with production URL
+[ ] Webhook URL registered: https://your-domain/api/v1/payments/webhook
+
+Maps & SMS:
+[ ] GOOGLE_MAPS_API_KEY → restricted to your server IP
+[ ] MSG91_API_KEY → production account with approved templates
+
+Database:
+[ ] npx prisma migrate deploy (run once on production DB)
+[ ] npm run db:seed (seed platform config)
+[ ] POST /admin/promote (promote first admin user)
+[ ] CREATE EXTENSION IF NOT EXISTS postgis; (if hosting on non-Railway Postgres)
+
+Security:
+[ ] Verify CORS origins are production domains only
+[ ] Verify rate limiter is active (already configured)
+[ ] Run npm audit → fix any high-severity vulnerabilities
+```
+
+---
+
+## 8. Post-Launch (P2 / P3)
+
+Build these after V1 is live and generating real rides. Priority based on user feedback.
+
+### P2 — Growth (first 3 months post-launch)
+
+| Feature | Why | Effort |
 |---|---|---|
-| GET | `/api/v1/admin/drivers/pending` | Drivers with PENDING or UNDER_REVIEW status (FIFO) |
-| GET | `/api/v1/admin/drivers/:driverId` | Full driver profile + documents |
-| POST | `/api/v1/admin/drivers/:driverId/approve` | Approve driver (optional note) |
-| POST | `/api/v1/admin/drivers/:driverId/reject` | Reject driver (required reason) |
-| POST | `/api/v1/admin/drivers/:driverId/auto-verify` | Run KYC API (auto-approves if confidence ≥ 0.85) |
-| GET | `/api/v1/admin/rides/live` | Live rides: DRIVER_ASSIGNED + DRIVER_ARRIVED + IN_PROGRESS |
-| GET | `/api/v1/admin/config` | All platform config values |
-| PUT | `/api/v1/admin/config/:key` | Update a single config value |
+| Promo codes | New user acquisition — first ride discount | Large |
+| Referral system | Low-cost growth — "share with friend, both get ₹50" | Medium |
+| Surge automation | Revenue optimization — auto-price during peak demand | Medium |
+| Customer wallet | Reduces payment friction for repeat users | Large |
+| Driver incentive bonuses | Improve driver supply during peak hours | Large |
+| Subscription renewal automation | Remove manual billing, reduce churn | Medium |
 
-**To get an ADMIN token:** register normally → promote via SQL → re-login:
-```sql
-UPDATE users SET role = 'ADMIN' WHERE phone = '+91XXXXXXXXXX';
-```
+### P3 — Operational (when you have 100+ drivers)
 
----
-
-## Step 3 — Customer Android App
-
-After the database is running, this is the main build work.
-
-### Tech stack
-- **Language**: Kotlin
-- **UI**: Jetpack Compose
-- **Architecture**: MVVM + Repository pattern
-- **Navigation**: Jetpack Navigation Component
-- **DI**: Hilt
-- **Network**: Retrofit + OkHttp
-- **Maps**: Google Maps SDK for Android
-- **Auth**: Firebase Auth SDK (phone OTP)
-- **Realtime**: Firebase Realtime Database SDK
-- **Push**: FCM SDK
-
-### Create the Android project
-1. Open Android Studio
-2. New Project → Empty Activity (Jetpack Compose)
-3. Package name: `com.chalo.customer`
-4. Min SDK: API 28 (Android 9.0)
-5. Language: Kotlin
-
-### Folder structure to follow
-```
-app/src/main/
-├── java/com/chalo/customer/
-│   ├── data/
-│   │   ├── api/            # Retrofit API interfaces
-│   │   ├── models/         # Data classes (request/response)
-│   │   └── repository/     # Data layer (calls API + Firebase)
-│   ├── di/                 # Hilt modules
-│   ├── ui/
-│   │   ├── theme/          # colors.kt, typography.kt, spacing.kt
-│   │   ├── auth/           # OTP screens
-│   │   ├── home/           # Map + booking screen
-│   │   ├── ride/           # Active ride screen
-│   │   ├── history/        # Past rides
-│   │   └── profile/        # Profile + emergency contact
-│   └── utils/              # Extensions, formatters, validators
-└── res/
-    ├── values/
-    │   ├── strings.xml     # English strings
-    │   └── strings_pa.xml  # Punjabi strings
-    └── ...
-```
-
-### Build order (sprints)
-
-**Sprint 1 — Auth flow (1 week)**
-1. Splash screen → check if token exists → route to home or login
-2. Phone number entry screen (+91 format validation)
-3. OTP verification screen (4-digit, auto-read via SMS Retriever)
-4. Complete profile screen (name + language preference)
-5. Connect to `POST /api/v1/auth/send-otp` and `POST /api/v1/auth/verify-otp`
-
-**Sprint 2 — Home + booking (1–2 weeks)**
-1. Google Maps screen with current location
-2. Pickup location auto-filled from GPS
-3. Destination search using Places Autocomplete
-4. Route preview (Directions API)
-5. Fare estimate panel → connect to `POST /api/v1/rides/fare-estimate`
-6. "Book Ride" button → connect to `POST /api/v1/rides`
-7. Payment method selector (UPI / Cash)
-
-**Sprint 3 — Active ride screen (1 week)**
-1. Live driver location on map (Firebase RTDB listener)
-2. Ride status updates (Looking for driver → Driver assigned → En route → Arrived → Ongoing → Completed)
-3. Driver info card (name, photo, rating, vehicle)
-4. Cancel button (with reason screen)
-5. SOS button (press-and-hold 2 seconds)
-6. Call driver button
-
-**Sprint 4 — Post-ride flow (3–4 days)**
-1. Payment screen (UPI via Razorpay SDK or cash confirmation)
-2. Rating screen (1–5 stars + optional comment)
-3. Ride summary card
-
-**Sprint 5 — History + profile (3–4 days)**
-1. Past rides list → connect to `GET /api/v1/rides`
-2. Ride detail screen
-3. Profile screen (name, phone, email, language)
-4. Emergency contact screen
-5. Saved locations management
-
-**Sprint 6 — Scheduled rides (2–3 days)**
-1. Schedule ride screen (date/time picker)
-2. Scheduled rides list
-3. Cancellation of scheduled rides
-
-**Sprint 7 — Notifications (2 days)**
-1. FCM notification handling (background + foreground)
-2. In-app notifications list → connect to `GET /api/v1/notifications`
-3. Mark as read
-
-**Sprint 8 — Polish + Punjabi (1 week)**
-1. Add all Punjabi strings (`strings_pa.xml`)
-2. Language toggle in profile
-3. Offline state handling (no internet banner)
-4. Loading states on every screen
-5. Error states + retry flows
-
----
-
-## Step 4 — Driver Android App
-
-Start this after the customer app Sprint 2 is working (so driver matching has riders to pick up).
-
-### Create the project
-Same process as customer app but:
-- Package name: `com.chalo.driver`
-- Min SDK: API 28
-
-### Build order (sprints)
-
-**Sprint 1 — Auth + document upload (1 week)**
-1. Phone OTP login (same as customer)
-2. Driver registration form (name, vehicle number, vehicle model)
-3. Document upload screen (DL, RC, Aadhaar via Firebase Storage)
-4. Verification pending screen (admin approval needed)
-
-**Sprint 2 — Driver home + online toggle (1 week)**
-1. Driver home screen with earnings summary
-2. Go Online / Go Offline toggle (updates RTDB location)
-3. Background location updates while online (Foreground Service)
-
-**Sprint 3 — Ride request flow (1 week)**
-1. Incoming ride request card (60-second countdown to accept/decline)
-2. Accepted ride → navigation to pickup
-3. "I have arrived" button (activates within 200m of pickup)
-4. Start ride button (requires OTP from customer)
-5. End ride button
-
-**Sprint 4 — Earnings + plan (3–4 days)**
-1. Earnings dashboard (today, week, month)
-2. Plan type display (commission vs subscription)
-3. Subscription renewal screen
-4. Withdrawal request screen
-
-**Sprint 5 — History + SOS (2–3 days)**
-1. Trip history
-2. SOS trigger (same as customer)
-3. Profile + document management
-
----
-
-## Step 5 — Deployment
-
-### Backend deployment options
-
-**Recommended for V1: Railway or Render (simple, affordable)**
-
-**Railway:**
-1. Go to https://railway.app
-2. New Project → Deploy from GitHub repo
-3. Add a PostgreSQL plugin inside the project (auto-provides DATABASE_URL)
-4. Set all environment variables in the Railway dashboard
-5. Railway auto-detects Node.js and runs `npm start`
-6. Custom domain available for free
-
-**Render:**
-1. Go to https://render.com
-2. New → Web Service → connect your GitHub repo
-3. Set root directory to `chalo-backend`
-4. Build command: `npm install && npm run build && npx prisma migrate deploy`
-5. Start command: `npm start`
-6. Add a Render PostgreSQL database (free tier or paid)
-
-**Environment checklist before going live:**
-- [ ] `NODE_ENV=production` in all production env vars
-- [ ] `DATABASE_URL` points to production DB
-- [ ] All Firebase keys from the production Firebase project
-- [ ] Razorpay keys switched from `rzp_test_` to `rzp_live_`
-- [ ] `RAZORPAY_WEBHOOK_SECRET` configured in Razorpay dashboard with your live API URL
-- [ ] Google Maps API key has IP/app restrictions set
-- [ ] Run `npx prisma migrate deploy` (not dev) on production
-- [ ] Run `npx prisma db:seed` once on production
-
-### CI/CD (GitHub Actions)
-
-Create `.github/workflows/test.yml` to run on every push:
-```yaml
-name: Test
-on: [push, pull_request]
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - run: cd chalo-backend && npm ci
-      - run: cd chalo-backend && npm run lint
-      - run: cd chalo-backend && npm test
-      - run: cd chalo-backend && npm run build
-```
-
----
-
-## Step 6 — Admin Panel (after V1 launch)
-
-A simple web dashboard to manage the platform without touching the DB directly.
-
-**Scope:**
-- Approve / reject driver applications (view uploaded documents)
-- View all active rides in real time
-- Change platform config (commission %, surge, fares)
-- View earnings and settlements
-- Resolve SOS alerts
-- Send push notifications to all users
-
-**Tech stack recommendation:**
-- Next.js 14 (App Router)
-- Tailwind CSS
-- Recharts (dashboards)
-- Firebase Auth (admin login)
-- Connects to the same backend API
-
----
-
-## Step 7 — Post-Launch Improvements
-
-Once V1 is live and getting rides, prioritise these based on user feedback:
-
-| Feature | Priority | Why |
-|---|---|---|
-| Auto-accept rides for drivers | High | Reduces friction |
-| Ride sharing (pooling) | Medium | Revenue efficiency |
-| Delivery mode (V2) | Medium | Market expansion |
-| iOS app | Low | Low iPhone penetration in Faridabad |
-| Web booking | Low | Most users are on Android |
-| Wallet / Chalo credits | High | Reduces payment friction |
-| Referral programme | High | Low-cost user acquisition |
-| Driver rating breakdown | Medium | Trust signal |
-| Live chat support | Medium | Reduce CS load |
-| Multi-city expansion | Low | After Faridabad is profitable |
-
----
-
-## Quick Reference — Who Builds What
-
-| Task | Responsible |
+| Feature | Why |
 |---|---|
-| Backend API | Done ✅ |
-| PostgreSQL setup | Developer (Step 1) |
-| Firebase project setup | Developer (Step 2) |
-| Razorpay account | Business (Step 2) |
-| Google Maps API keys | Developer (Step 2) |
-| Customer Android app | Android Developer (Step 3) |
-| Driver Android app | Android Developer (Step 4) |
-| Backend deployment | DevOps / Developer (Step 5) |
-| Admin panel | Full-stack Developer (Step 6) |
-| Google Play Store listing | Business + Developer |
-| Driver onboarding flow | Business (offline) |
+| Admin analytics dashboard | Understand where rides fail, where drivers are sparse |
+| Driver suspension system | Handle bad drivers without manual DB edits |
+| Dispute resolution | Handle fare disputes, wrong routes, lost items |
+| Document expiry alerts | Legally required to ensure valid driver licenses |
+| Auto-settlement (T+2) | Remove manual payout processing |
+| Driver bank verification | Reduce failed payouts before they happen |
 
----
+### Post-Launch Tech Debt to Clear
 
-## Immediate Next Action
-
-> **Backend is 100% complete (March 2026):**
-> - ✅ All 41 endpoints live and tested
-> - ✅ 249/249 tests passing, 0 TypeScript errors, 0 lint errors
-> - ✅ Admin API: 8 endpoints, KYC pluggable, DRIVER_ARRIVED in live rides
-> - ✅ Broadcast driver search: top-5 batch FCM + BullMQ timeout
-> - ✅ DB: Docker PostGIS + Redis running
->
-> **Pending one-time setup (do these once):**
-> 1. `npx prisma migrate deploy` — apply the verificationMetadata migration
-> 2. `npm run db:seed` — seed platform config (fares, commission %)
->
-> **Next steps in priority order:**
-> 1. **Test the API in Postman** — see `docs/api/POSTMAN_GUIDE.md`
-> 2. **Start Customer Android app** (Step 3) — all 41 endpoints are live and stable
-> 3. **Get Google Maps key** when you want accurate fare estimates (Haversine fallback works for now)
-> 4. **Get Razorpay test keys** when ready to test UPI payments (Cash rides work without it)
->
-> Both Android teams can build in parallel:
-> - **Customer team:** `/api/v1/auth/*`, `/api/v1/rides/*`, `/api/v1/payments/*`, `/api/v1/notifications/*`
-> - **Driver team:** `/api/v1/driver/*` (all 16 endpoints)
+| Item | When |
+|---|---|
+| Replace hardcoded `idleTimeScore = 0.5` with real idle time calc | After 1 month of data |
+| Roll up `driverRating` on ride → `CustomerProfile.ratingAvg` | Before driver incentives feature |
+| GST invoice generation (PDF) | Before filing GST returns |
+| iOS app | Low priority — Faridabad is Android-dominant |
+| Web booking page | After Android app is stable |

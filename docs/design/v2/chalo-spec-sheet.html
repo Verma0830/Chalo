@@ -1,0 +1,1899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>[Updated] Chalo ਚਲੋ — Component Spec Sheet</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Noto+Sans+Gurmukhi:wght@400;500;600;700&family=Fraunces:wght@700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   TOKENS
+============================================================ */
+:root {
+  --saffron: #F95C00; --saffron-h: #CC4A00;
+  --navy: #0F1629;    --navy-mid: #2D3461;
+  --green: #34D399;   --red: #E74C3C;
+  --amber: #F39C12;   --blue: #4A90D9;
+  --purple: #9333EA;
+  --bg: #FFFDF9;      --white: #FFFFFF;
+  --tp: #374151;      --ts: #6B7280;
+  --border: #E5E7EB;
+
+  /* page */
+  --page-bg: #FAFAFA;
+  --section-bg: #FFFFFF;
+  --grid: #E5E7EB;
+  --label: #9CA3AF;
+  --code: #6B7280;
+  --annot: #F95C00;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--page-bg);
+  font-family: 'Poppins', sans-serif;
+  color: var(--tp);
+  padding: 0;
+}
+
+/* ============================================================
+   PAGE LAYOUT
+============================================================ */
+.cover {
+  background: var(--navy);
+  padding: 64px 80px 56px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  border-bottom: 4px solid var(--saffron);
+}
+.cover-left h1 {
+  font-family: 'Fraunces', serif;
+  font-size: 52px;
+  color: white;
+  letter-spacing: -2px;
+  line-height: 1;
+}
+.cover-left .gurmukhi {
+  font-family: 'Noto Sans Gurmukhi';
+  font-size: 28px;
+  color: rgba(255,255,255,0.5);
+  margin-top: 6px;
+}
+.cover-left .doc-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--saffron);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-top: 16px;
+}
+.cover-meta {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+.cover-meta-item {
+  font-size: 12px;
+  color: rgba(255,255,255,0.4);
+  letter-spacing: 1px;
+}
+.cover-meta-item strong { color: rgba(255,255,255,0.85); }
+.cover-tag {
+  background: rgba(255,107,0,0.15);
+  border: 1px solid rgba(255,107,0,0.3);
+  border-radius: 4px;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--saffron);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* TOC */
+.toc {
+  padding: 40px 80px;
+  background: var(--white);
+  border-bottom: 1px solid var(--grid);
+  display: flex;
+  gap: 48px;
+  flex-wrap: wrap;
+}
+.toc-group { display: flex; flex-direction: column; gap: 6px; }
+.toc-heading {
+  font-size: 10px; font-weight: 700;
+  color: var(--label);
+  letter-spacing: 2px; text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.toc-item {
+  font-size: 13px; font-weight: 500;
+  color: var(--ts);
+  display: flex; align-items: center; gap: 8px;
+}
+.toc-num {
+  font-family: 'JetBrains Mono';
+  font-size: 10px;
+  color: var(--saffron);
+  background: rgba(255,107,0,0.08);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+/* Content */
+.content { padding: 0 80px 80px; }
+
+/* Section divider */
+.spec-section {
+  padding: 56px 0 0;
+}
+.spec-section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 1.5px solid var(--grid);
+}
+.spec-section-num {
+  font-family: 'JetBrains Mono';
+  font-size: 13px;
+  color: var(--saffron);
+  font-weight: 500;
+}
+.spec-section-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--navy);
+  letter-spacing: -0.5px;
+}
+.spec-section-count {
+  font-size: 12px;
+  color: var(--label);
+  margin-left: auto;
+  font-weight: 500;
+}
+
+/* Subsection */
+.spec-sub {
+  margin-bottom: 40px;
+}
+.spec-sub-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--label);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  display: flex; align-items: center; gap: 12px;
+}
+.spec-sub-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--grid);
+}
+
+/* Component row */
+.comp-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+}
+
+/* Individual spec card */
+.spec-card {
+  background: var(--white);
+  border: 1px solid var(--grid);
+  display: flex;
+  flex-direction: column;
+}
+.spec-card-canvas {
+  padding: 28px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100px;
+  background: var(--bg);
+  position: relative;
+  flex: 1;
+}
+.spec-card-canvas.dark { background: var(--navy); }
+.spec-card-canvas.mid { background: #F3F4F6; }
+.spec-card-meta {
+  padding: 12px 16px;
+  border-top: 1px solid var(--grid);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--white);
+}
+.spec-name {
+  font-size: 12px; font-weight: 700; color: var(--navy);
+}
+.spec-props {
+  font-family: 'JetBrains Mono';
+  font-size: 10px;
+  color: var(--code);
+  line-height: 1.6;
+}
+.spec-props span { display: block; }
+.prop-key { color: #9CA3AF; }
+.prop-val { color: var(--navy); }
+
+/* Annotation bubble */
+.annot {
+  position: absolute;
+  background: var(--saffron);
+  color: white;
+  font-size: 9px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono';
+  padding: 2px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+  z-index: 10;
+  pointer-events: none;
+}
+.annot::before {
+  content: '';
+  position: absolute;
+}
+.annot-t { top: 6px; left: 50%; transform: translateX(-50%); }
+.annot-b { bottom: 6px; left: 50%; transform: translateX(-50%); }
+.annot-r { right: 6px; top: 50%; transform: translateY(-50%); }
+.annot-l { left: 6px; top: 50%; transform: translateY(-50%); }
+.annot-tl { top: 6px; left: 6px; }
+.annot-tr { top: 6px; right: 6px; }
+.annot-bl { bottom: 6px; left: 6px; }
+.annot-br { bottom: 6px; right: 6px; }
+.annot-green { background: var(--green); }
+.annot-navy  { background: var(--navy); }
+.annot-red   { background: var(--red); }
+.annot-amber { background: var(--amber); }
+
+/* Measurement line */
+.mline {
+  position: absolute;
+  background: rgba(255,107,0,0.25);
+  pointer-events: none;
+}
+.mline-h { height: 1px; left: 0; right: 0; }
+.mline-v { width: 1px; top: 0; bottom: 0; }
+
+/* Color swatches */
+.swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0;
+  border: 1px solid var(--grid);
+}
+.swatch {
+  display: flex;
+  flex-direction: column;
+}
+.swatch-color {
+  height: 80px;
+}
+.swatch-info {
+  padding: 10px 12px;
+  border-top: 1px solid var(--grid);
+  background: var(--white);
+}
+.swatch-name { font-size: 12px; font-weight: 700; color: var(--navy); }
+.swatch-hex  { font-family: 'JetBrains Mono'; font-size: 10px; color: var(--code); margin-top: 2px; }
+.swatch-token{ font-family: 'JetBrains Mono'; font-size: 9px; color: var(--label); margin-top: 1px; }
+
+/* Type specimen */
+.type-specimen {
+  border: 1px solid var(--grid);
+  overflow: hidden;
+}
+.type-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+  border-bottom: 1px solid var(--grid);
+}
+.type-row:last-child { border-bottom: none; }
+.type-label-col {
+  width: 200px;
+  padding: 14px 16px;
+  border-right: 1px solid var(--grid);
+  flex-shrink: 0;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.type-role { font-size: 11px; font-weight: 700; color: var(--navy); }
+.type-spec { font-family: 'JetBrains Mono'; font-size: 10px; color: var(--code); }
+.type-usage { font-size: 10px; color: var(--label); margin-top: 2px; }
+.type-sample-col {
+  flex: 1;
+  padding: 14px 20px;
+  background: var(--white);
+  display: flex;
+  align-items: baseline;
+}
+
+/* Spacing scale */
+.spacing-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border-bottom: 1px solid var(--grid);
+}
+.spacing-row:last-child { border-bottom: none; }
+.spacing-token {
+  width: 120px;
+  padding: 12px 16px;
+  font-family: 'JetBrains Mono';
+  font-size: 11px;
+  color: var(--code);
+  border-right: 1px solid var(--grid);
+  flex-shrink: 0;
+  background: var(--bg);
+}
+.spacing-value {
+  width: 60px;
+  padding: 12px 16px;
+  font-family: 'JetBrains Mono';
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--navy);
+  border-right: 1px solid var(--grid);
+  flex-shrink: 0;
+}
+.spacing-bar-col {
+  flex: 1;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.spacing-bar {
+  background: rgba(255,107,0,0.15);
+  border: 1px solid rgba(255,107,0,0.3);
+  height: 16px;
+  border-radius: 2px;
+}
+.spacing-usage {
+  font-size: 11px;
+  color: var(--label);
+}
+
+/* Shadow samples */
+.shadow-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--grid);
+  border: 1px solid var(--grid);
+}
+.shadow-cell {
+  background: var(--bg);
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.shadow-box {
+  width: 80px; height: 48px;
+  background: var(--white);
+  border-radius: 8px;
+}
+.shadow-label {
+  font-size: 11px; font-weight: 700; color: var(--navy); text-align: center;
+}
+.shadow-val {
+  font-family: 'JetBrains Mono';
+  font-size: 9px; color: var(--code); text-align: center; line-height: 1.4;
+}
+
+/* Radius scale */
+.radius-grid {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--grid);
+}
+.radius-cell {
+  flex: 1;
+  border-right: 1px solid var(--grid);
+  display: flex; flex-direction: column;
+}
+.radius-cell:last-child { border-right: none; }
+.radius-canvas {
+  height: 80px;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+}
+.radius-box {
+  width: 48px; height: 36px;
+  background: rgba(255,107,0,0.15);
+  border: 1.5px solid var(--saffron);
+}
+.radius-meta {
+  padding: 10px 12px;
+  border-top: 1px solid var(--grid);
+  background: var(--white);
+}
+.radius-token { font-family: 'JetBrains Mono'; font-size: 10px; color: var(--saffron); font-weight: 700; }
+.radius-val   { font-size: 11px; color: var(--code); margin-top: 2px; }
+.radius-use   { font-size: 10px; color: var(--label); margin-top: 2px; }
+
+/* Motion table */
+.motion-table {
+  border: 1px solid var(--grid);
+  width: 100%;
+  border-collapse: collapse;
+}
+.motion-table th {
+  background: var(--bg);
+  padding: 10px 16px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--label);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  text-align: left;
+  border-bottom: 1.5px solid var(--grid);
+  border-right: 1px solid var(--grid);
+}
+.motion-table td {
+  padding: 12px 16px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--grid);
+  border-right: 1px solid var(--grid);
+  vertical-align: middle;
+}
+.motion-table td:last-child, .motion-table th:last-child { border-right: none; }
+.motion-table tr:last-child td { border-bottom: none; }
+.curve-code { font-family: 'JetBrains Mono'; font-size: 10px; color: var(--code); }
+.curve-bar {
+  height: 4px; background: var(--saffron); border-radius: 2px; width: 60px;
+  display: inline-block; vertical-align: middle;
+}
+
+/* Component buttons in spec */
+.btn-p {
+  height: 54px; padding: 0 24px;
+  background: var(--saffron); color: white;
+  border-radius: 8px; font-size: 16px; font-weight: 700;
+  font-family: 'Poppins'; border: none; cursor: default;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  box-shadow: 0 0 32px rgba(255,107,0,0.25), 0 4px 16px rgba(0,0,0,0.4);
+}
+.btn-d {
+  height: 54px; padding: 0 24px;
+  background: var(--green); color: #0A0C14;
+  border-radius: 8px; font-size: 16px; font-weight: 700;
+  font-family: 'Poppins'; border: none; cursor: default;
+  display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 24px rgba(52,211,153,0.3);
+}
+.btn-a {
+  height: 60px; padding: 0 32px;
+  background: var(--green); color: #0A0C14;
+  border-radius: 8px; font-size: 18px; font-weight: 800;
+  font-family: 'Poppins'; border: none; cursor: default;
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  box-shadow: 0 0 24px rgba(52,211,153,0.3);
+}
+.btn-s {
+  height: 54px; padding: 0 24px;
+  background: transparent; color: var(--saffron);
+  border-radius: 8px; font-size: 16px; font-weight: 600;
+  font-family: 'Poppins'; border: 1.5px solid var(--saffron); cursor: default;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.btn-g {
+  height: 48px; padding: 0 20px;
+  background: transparent; color: var(--ts);
+  border-radius: 8px; font-size: 14px; font-weight: 600;
+  font-family: 'Poppins'; border: none; cursor: default;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.btn-r {
+  height: 60px; padding: 0 24px;
+  background: transparent; color: var(--red);
+  border-radius: 8px; font-size: 14px; font-weight: 700;
+  font-family: 'Poppins'; border: 1.5px solid var(--red); cursor: default;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.btn-danger-s {
+  height: 54px; padding: 0 24px;
+  background: var(--red); color: white;
+  border-radius: 8px; font-size: 16px; font-weight: 700;
+  font-family: 'Poppins'; border: none; cursor: default;
+  display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 24px rgba(231,76,60,0.25);
+}
+.btn-off {
+  height: 44px; padding: 0 20px;
+  background: rgba(231,76,60,0.10); color: var(--red);
+  border-radius: 8px; font-size: 14px; font-weight: 700;
+  font-family: 'Poppins'; border: 1.5px solid rgba(231,76,60,0.25); cursor: default;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn-dis {
+  height: 54px; padding: 0 24px;
+  background: var(--saffron); color: white; opacity: 0.45;
+  border-radius: 8px; font-size: 16px; font-weight: 700;
+  font-family: 'Poppins'; border: none; cursor: default;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+
+/* Input components */
+.input-s {
+  height: 52px; border: 1.5px solid var(--border);
+  border-radius: 8px; padding: 0 16px;
+  font-size: 14px; font-weight: 500; font-family: 'Poppins';
+  color: var(--ts); background: var(--white); width: 100%;
+  display: flex; align-items: center;
+}
+.input-f {
+  height: 52px; border: 1.5px solid var(--saffron);
+  border-radius: 8px; padding: 0 16px;
+  font-size: 14px; font-weight: 600; font-family: 'Poppins';
+  color: var(--navy); background: var(--white); width: 100%;
+  display: flex; align-items: center;
+  box-shadow: 0 0 0 3px rgba(255,107,0,0.12);
+}
+
+/* Chip samples */
+.chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; border-radius: 9999px; padding: 5px 14px; white-space: nowrap; }
+.chip-sm { font-size: 10px; padding: 3px 10px; letter-spacing: 0.3px; text-transform: uppercase; border-radius: 4px; }
+
+/* OTP boxes */
+.otp-r { display: flex; gap: 10px; }
+.otp-b { width: 52px; height: 60px; border: 1.5px solid var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700; font-family: 'Poppins'; background: var(--white); }
+.otp-b.filled { background: rgba(255,107,0,0.07); border-color: var(--saffron); color: var(--saffron); }
+.otp-b.active { border-color: var(--saffron); box-shadow: 0 0 0 3px rgba(255,107,0,0.12); color: var(--navy); }
+
+/* Countdown ring SVGs */
+.ring-label-s { font-size: 10px; color: var(--label); text-align: center; margin-top: 6px; }
+
+/* Bilingual string table */
+.string-table { border: 1px solid var(--grid); width: 100%; border-collapse: collapse; }
+.string-table th { background: var(--navy); color: white; padding: 10px 16px; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-align: left; }
+.string-table td { padding: 10px 16px; border-bottom: 1px solid var(--grid); font-size: 13px; }
+.string-table tr:nth-child(even) td { background: var(--bg); }
+.string-table td:first-child { font-weight: 600; color: var(--navy); }
+.string-table td:nth-child(2) { font-family: 'Noto Sans Gurmukhi'; font-size: 14px; color: var(--saffron); }
+.string-table td:last-child { font-size: 11px; color: var(--label); }
+
+/* Page number */
+.page-num {
+  font-family: 'JetBrains Mono';
+  font-size: 10px;
+  color: var(--label);
+  text-align: right;
+  margin-top: 6px;
+}
+
+/* Full-width table */
+.full-table { width: 100%; border: 1px solid var(--grid); border-collapse: collapse; }
+.full-table th {
+  background: var(--bg);
+  padding: 10px 16px;
+  font-size: 10px; font-weight: 700; color: var(--label);
+  letter-spacing: 1.5px; text-transform: uppercase;
+  text-align: left;
+  border-bottom: 1.5px solid var(--grid);
+  border-right: 1px solid var(--grid);
+}
+.full-table td {
+  padding: 11px 16px;
+  font-size: 12px;
+  border-bottom: 1px solid var(--grid);
+  border-right: 1px solid var(--grid);
+  vertical-align: middle;
+}
+.full-table tr:last-child td { border-bottom: none; }
+.full-table th:last-child, .full-table td:last-child { border-right: none; }
+.full-table tr:nth-child(even) td { background: #FAFAFA; }
+.td-token { font-family: 'JetBrains Mono'; font-size: 10px; color: var(--saffron); }
+.td-val   { font-family: 'JetBrains Mono'; font-size: 11px; color: var(--navy); font-weight: 700; }
+.td-note  { font-size: 11px; color: var(--label); }
+
+/* Color dot inline */
+.cdot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; border: 1px solid rgba(0,0,0,0.08); }
+
+/* Nav demo inline */
+.nav-demo { width: 320px; height: 56px; background: var(--white); border-top: 1px solid var(--border); display: flex; box-shadow: 0 -4px 20px rgba(0,0,0,0.08); }
+.ntab { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-size:9px; font-weight:500; color:var(--ts); position:relative; }
+.ntab.as { color:var(--saffron); }
+.ntab.ag { color:var(--green); }
+.ntab.as::before { content:''; position:absolute; top:0; left:20%; right:20%; height:2px; background:var(--saffron); border-radius:0 0 2px 2px; }
+.ntab.ag::before { content:''; position:absolute; top:0; left:20%; right:20%; height:2px; background:var(--green); border-radius:0 0 2px 2px; }
+.ntab-icon { font-size:17px; }
+
+/* SOS ring in spec */
+.sos-spec {
+  width: 56px; height: 56px;
+  background: var(--red);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800; color: white;
+  box-shadow: 0 4px 16px rgba(231,76,60,0.45);
+  position: relative;
+}
+.sos-spec-ring {
+  position: absolute; inset: -6px;
+  border-radius: 50%;
+  border: 2px solid rgba(231,76,60,0.4);
+}
+
+/* Step bar spec */
+.step-bar-spec { display:flex; gap:4px; }
+.seg { flex:1; height:4px; border-radius:2px; }
+.seg-done { background:var(--saffron); }
+.seg-curr { background:var(--amber); }
+.seg-rem  { background:var(--border); }
+
+/* Toast spec */
+.toast-spec {
+  display:flex; align-items:center; gap:10px;
+  padding:13px 16px; border-radius:10px;
+  font-size:12px; font-weight:600;
+  width:300px;
+  position: relative; overflow: hidden;
+}
+.toast-spec::after {
+  content: ''; position:absolute; bottom:0; left:0;
+  height:3px; border-radius:2px;
+}
+.t-suc { background:#F0FDF4; color:#166534; }
+.t-suc::after { width:45%; background:var(--green); }
+.t-dan { background:#FEF2F2; color:#991B1B; }
+.t-dan::after { width:80%; background:var(--red); }
+.t-war { background:#FFFBEB; color:#92400E; }
+.t-war::after { width:20%; background:var(--amber); }
+.t-inf { background:#EFF6FF; color:#1E40AF; }
+.t-inf::after { width:60%; background:var(--blue); }
+
+/* Alert spec */
+.alert-spec {
+  padding:11px 14px;
+  border-radius:6px;
+  border-left:4px solid;
+  font-size:12px; font-weight:500;
+  display:flex; align-items:flex-start; gap:8px;
+  width:300px;
+}
+.a-suc { background:#F0FDF4; border-color:var(--green); color:#166534; }
+.a-war { background:#FFFBEB; border-color:var(--amber); color:#92400E; }
+.a-dan { background:#FEF2F2; border-color:var(--red);   color:#991B1B; }
+.a-inf { background:#EFF6FF; border-color:var(--blue);  color:#1E40AF; }
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skel {
+  background: linear-gradient(90deg, #F3F4F6 25%, #E5E7EB 50%, #F3F4F6 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.6s infinite linear;
+  border-radius: 4px;
+}
+
+/* Note callout */
+.note-callout {
+  background: rgba(255,107,0,0.06);
+  border-left: 3px solid var(--saffron);
+  padding: 10px 16px;
+  border-radius: 0 6px 6px 0;
+  font-size: 12px;
+  color: var(--tp);
+  margin-top: 12px;
+  line-height: 1.6;
+}
+.note-callout strong { color: var(--saffron); }
+
+.note-green {
+  background: rgba(52,211,153,0.06);
+  border-left-color: var(--green);
+}
+.note-green strong { color: var(--green); }
+
+/* Footer */
+.spec-footer {
+  background: var(--navy);
+  padding: 32px 80px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 4px solid var(--saffron);
+}
+.sf-left { font-family:'Fraunces',serif; font-size:20px; color:white; }
+.sf-right { font-size:11px; color:rgba(255,255,255,0.4); text-align:right; line-height:1.6; }
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="cover">
+  <div class="cover-left">
+    <h1>Chalo ਚਲੋ</h1>
+    <div class="gurmukhi">ਫਰੀਦਾਬਾਦ ਦਾ ਆਪਣਾ ਸਫ਼ਰ</div>
+    <div class="doc-title">Component Spec Sheet — Figma Handoff</div>
+  </div>
+  <div class="cover-meta">
+    <div class="cover-tag">Static Spec · v1.0</div>
+    <div class="cover-meta-item"><strong>Platform:</strong> Native Android · API 28+</div>
+    <div class="cover-meta-item"><strong>Base grid:</strong> 360 × 800 dp</div>
+    <div class="cover-meta-item"><strong>Primary font:</strong> Poppins</div>
+    <div class="cover-meta-item"><strong>Punjabi font:</strong> Noto Sans Gurmukhi</div>
+    <div class="cover-meta-item"><strong>Components:</strong> 10 groups · 60+ variants</div>
+    <div class="cover-meta-item"><strong>Date:</strong> Feb 2026</div>
+  </div>
+</div>
+
+<!-- TOC -->
+<div class="toc">
+  <div class="toc-group">
+    <div class="toc-heading">Foundation</div>
+    <div class="toc-item"><span class="toc-num">A</span> Color System</div>
+    <div class="toc-item"><span class="toc-num">B</span> Typography Scale</div>
+    <div class="toc-item"><span class="toc-num">C</span> Spacing & Grid</div>
+    <div class="toc-item"><span class="toc-num">D</span> Border Radius</div>
+    <div class="toc-item"><span class="toc-num">E</span> Elevation & Shadow</div>
+    <div class="toc-item"><span class="toc-num">F</span> Motion & Animation</div>
+  </div>
+  <div class="toc-group">
+    <div class="toc-heading">Components</div>
+    <div class="toc-item"><span class="toc-num">01</span> Buttons — 9 variants</div>
+    <div class="toc-item"><span class="toc-num">02</span> Inputs — 6 types</div>
+    <div class="toc-item"><span class="toc-num">03</span> Cards — 5 types</div>
+    <div class="toc-item"><span class="toc-num">04</span> Navigation — 4 elements</div>
+  </div>
+  <div class="toc-group">
+    <div class="toc-heading">Widgets</div>
+    <div class="toc-item"><span class="toc-num">05</span> Countdown Ring</div>
+    <div class="toc-item"><span class="toc-num">06</span> SOS Button</div>
+    <div class="toc-item"><span class="toc-num">07</span> Chips & Badges — 16 variants</div>
+    <div class="toc-item"><span class="toc-num">08</span> Toasts & Alerts</div>
+  </div>
+  <div class="toc-group">
+    <div class="toc-heading">States</div>
+    <div class="toc-item"><span class="toc-num">09</span> Skeletons & Loading</div>
+    <div class="toc-item"><span class="toc-num">10</span> Step Progress Bar</div>
+    <div class="toc-item"><span class="toc-num">11</span> Bilingual Strings</div>
+  </div>
+</div>
+
+<div class="content">
+
+<!-- ================================================
+     A. COLOR SYSTEM
+================================================ -->
+<div class="spec-section">
+  <div class="spec-section-header">
+    <span class="spec-section-num">A</span>
+    <span class="spec-section-title">Color System</span>
+    <span class="spec-section-count">10 tokens</span>
+  </div>
+
+  <div class="swatch-grid">
+    <div class="swatch">
+      <div class="swatch-color" style="background:#F95C00;"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Saffron 500</div>
+        <div class="swatch-hex">#F95C00</div>
+        <div class="swatch-token">--color-primary</div>
+        <div class="swatch-token" style="color:var(--label);font-size:9px;margin-top:3px;">Primary CTAs · Active nav · Booking confirm</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#0F1629;"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Navy 600</div>
+        <div class="swatch-hex">#0F1629</div>
+        <div class="swatch-token">--color-secondary</div>
+        <div class="swatch-token" style="color:var(--label);font-size:9px;margin-top:3px;">Headers · Driver splash · Key text</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#34D399;"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Green 400</div>
+        <div class="swatch-hex">#34D399</div>
+        <div class="swatch-token">--color-success</div>
+        <div class="swatch-token" style="color:var(--label);font-size:9px;margin-top:3px;">Online · Confirmed · Driver CTAs</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#E74C3C;"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Red 400</div>
+        <div class="swatch-hex">#E74C3C</div>
+        <div class="swatch-token">--color-danger</div>
+        <div class="swatch-token" style="color:var(--label);font-size:9px;margin-top:3px;">SOS · Cancel · Reject · Timer &lt;10s</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#F39C12;"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Amber 500</div>
+        <div class="swatch-hex">#F39C12</div>
+        <div class="swatch-token">--color-warning</div>
+        <div class="swatch-token" style="color:var(--label);font-size:9px;margin-top:3px;">Timer &lt;20s · Pending T+2 · Under Review</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#CC4A00;"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Saffron 600</div>
+        <div class="swatch-hex">#CC4A00</div>
+        <div class="swatch-token">--color-primary-hover</div>
+        <div class="swatch-token" style="color:var(--label);font-size:9px;margin-top:3px;">Button hover / pressed state</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#2D3461;"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Navy 500</div>
+        <div class="swatch-hex">#2D3461</div>
+        <div class="swatch-token">--color-secondary-mid</div>
+        <div class="swatch-token" style="color:var(--label);font-size:9px;margin-top:3px;">Navy gradient end · header bg</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#FFFDF9; border:1px solid #E5E7EB;"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Neutral 50</div>
+        <div class="swatch-hex">#FFFDF9</div>
+        <div class="swatch-token">--color-bg-screen</div>
+        <div class="swatch-token" style="color:var(--label);font-size:9px;margin-top:3px;">Screen backgrounds in app</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#374151;"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Neutral 700</div>
+        <div class="swatch-hex">#374151</div>
+        <div class="swatch-token">--color-text-primary</div>
+        <div class="swatch-token" style="color:var(--label);font-size:9px;margin-top:3px;">All primary body text</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#6B7280;"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Neutral 500</div>
+        <div class="swatch-hex">#6B7280</div>
+        <div class="swatch-token">--color-text-secondary</div>
+        <div class="swatch-token" style="color:var(--label);font-size:9px;margin-top:3px;">Labels · subtitles · placeholders</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note-callout" style="margin-top:16px;">
+    <strong>Elevation through shadow, not color.</strong> All elevation is expressed via box-shadow on white/light surfaces. This ensures readability on cheap AMOLED panels where color-based elevation is invisible.
+  </div>
+</div>
+
+<!-- ================================================
+     B. TYPOGRAPHY
+================================================ -->
+<div class="spec-section">
+  <div class="spec-section-header">
+    <span class="spec-section-num">B</span>
+    <span class="spec-section-title">Typography Scale</span>
+    <span class="spec-section-count">Poppins + Noto Sans Gurmukhi</span>
+  </div>
+
+  <div class="type-specimen">
+    <div class="type-row">
+      <div class="type-label-col">
+        <div class="type-role">Display</div>
+        <div class="type-spec">24px · Bold 700 · −0.5px</div>
+        <div class="type-usage">Screen titles</div>
+      </div>
+      <div class="type-sample-col">
+        <span style="font-size:24px;font-weight:700;letter-spacing:-0.5px;color:var(--navy);">ਕਿੱਥੇ ਜਾਣਾ ਹੈ? — Where to go?</span>
+      </div>
+    </div>
+    <div class="type-row">
+      <div class="type-label-col">
+        <div class="type-role">Title 1</div>
+        <div class="type-spec">20px · SemiBold 600</div>
+        <div class="type-usage">Section headings</div>
+      </div>
+      <div class="type-sample-col">
+        <span style="font-size:20px;font-weight:600;color:var(--navy);">Ride History · ਰਾਈਡ ਇਤਿਹਾਸ</span>
+      </div>
+    </div>
+    <div class="type-row">
+      <div class="type-label-col">
+        <div class="type-role">Title 2</div>
+        <div class="type-spec">18px · SemiBold 600</div>
+        <div class="type-usage">Card titles</div>
+      </div>
+      <div class="type-sample-col">
+        <span style="font-size:18px;font-weight:600;color:var(--navy);">Sector 15 → ESIC Hospital</span>
+      </div>
+    </div>
+    <div class="type-row">
+      <div class="type-label-col">
+        <div class="type-role">Body 1</div>
+        <div class="type-spec">15px · Regular 400 · lh 1.6</div>
+        <div class="type-usage">Route names, descriptions</div>
+      </div>
+      <div class="type-sample-col">
+        <span style="font-size:15px;font-weight:400;line-height:1.6;color:var(--tp);">Faridabad da apna safar — your city, your ride</span>
+      </div>
+    </div>
+    <div class="type-row">
+      <div class="type-label-col">
+        <div class="type-role">Body 2</div>
+        <div class="type-spec">13px · Regular 400 · lh 1.5</div>
+        <div class="type-usage">Subtitles, metadata</div>
+      </div>
+      <div class="type-sample-col">
+        <span style="font-size:13px;font-weight:400;line-height:1.5;color:var(--ts);">Today · 9:41 AM · 4.2 km · Cash</span>
+      </div>
+    </div>
+    <div class="type-row">
+      <div class="type-label-col">
+        <div class="type-role">Label</div>
+        <div class="type-spec">12px · Medium 500</div>
+        <div class="type-usage">Labels, captions, helper</div>
+      </div>
+      <div class="type-sample-col">
+        <span style="font-size:12px;font-weight:500;color:var(--ts);">MOBILE NUMBER · PAYMENT METHOD</span>
+      </div>
+    </div>
+    <div class="type-row">
+      <div class="type-label-col">
+        <div class="type-role">Caption</div>
+        <div class="type-spec">11px · Regular 400</div>
+        <div class="type-usage">Timestamps, fine print</div>
+      </div>
+      <div class="type-sample-col">
+        <span style="font-size:11px;font-weight:400;color:var(--ts);">Fare may vary ±₹10 based on actual distance</span>
+      </div>
+    </div>
+    <div class="type-row">
+      <div class="type-label-col">
+        <div class="type-role">CTA / Button</div>
+        <div class="type-spec">16px · Bold 700 · lh 1.2</div>
+        <div class="type-usage">All CTA buttons</div>
+      </div>
+      <div class="type-sample-col">
+        <span style="font-size:16px;font-weight:700;line-height:1.2;color:var(--saffron);">ਰਾਈਡ ਬੁੱਕ ਕਰੋ — Confirm Booking</span>
+      </div>
+    </div>
+    <div class="type-row" style="background:rgba(255,107,0,0.03);">
+      <div class="type-label-col" style="background:rgba(255,107,0,0.06);">
+        <div class="type-role" style="color:var(--saffron);">Fare Display ★</div>
+        <div class="type-spec">28sp · ExtraBold 800 · tabular</div>
+        <div class="type-usage">Ride request — LARGEST element by design spec</div>
+      </div>
+      <div class="type-sample-col">
+        <span style="font-size:28px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-1px;color:var(--navy);">₹ 52</span>
+      </div>
+    </div>
+    <div class="type-row" style="background:rgba(52,211,153,0.03);">
+      <div class="type-label-col" style="background:rgba(52,211,153,0.06);">
+        <div class="type-role" style="color:var(--green);">Earnings Display ★</div>
+        <div class="type-spec">36sp · ExtraBold 800 · tabular</div>
+        <div class="type-usage">Earnings dashboard hero number</div>
+      </div>
+      <div class="type-sample-col">
+        <span style="font-size:36px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-2px;color:var(--green);">₹ 384</span>
+      </div>
+    </div>
+    <div class="type-row" style="background:rgba(26,31,60,0.03);">
+      <div class="type-label-col" style="background:rgba(26,31,60,0.06);">
+        <div class="type-role" style="color:var(--navy);">Gurmukhi Rule</div>
+        <div class="type-spec">14–18sp · Regular/Medium/SemiBold<br>line-height min 1.5 · no Bold 700</div>
+        <div class="type-usage">Always paired with English</div>
+      </div>
+      <div class="type-sample-col" style="flex-direction:column;gap:4px;align-items:flex-start;">
+        <span style="font-family:'Noto Sans Gurmukhi';font-size:18px;font-weight:600;color:var(--navy);">ਤੁਸੀਂ ਪਹੁੰਚ ਗਏ!</span>
+        <span style="font-size:14px;font-weight:400;color:var(--ts);">You've arrived!</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="note-callout" style="margin-top:16px;">
+    <strong>APK note:</strong> Noto Sans Gurmukhi is pre-bundled in the APK — never network-loaded. The design system document uses Epilogue and Manrope as its own typefaces. Do not confuse these with app fonts. Only Poppins and Noto Sans Gurmukhi ship in the APK.
+  </div>
+</div>
+
+<!-- ================================================
+     C. SPACING & GRID
+================================================ -->
+<div class="spec-section">
+  <div class="spec-section-header">
+    <span class="spec-section-num">C</span>
+    <span class="spec-section-title">Spacing & Grid</span>
+    <span class="spec-section-count">Base unit: 4px</span>
+  </div>
+
+  <div style="border:1px solid var(--grid);">
+    <div class="spacing-row">
+      <div class="spacing-token">--sp-2</div>
+      <div class="spacing-value">8px</div>
+      <div class="spacing-bar-col"><div class="spacing-bar" style="width:8px;"></div><span class="spacing-usage">Between chip labels, small gaps</span></div>
+    </div>
+    <div class="spacing-row">
+      <div class="spacing-token">--sp-4</div>
+      <div class="spacing-value">16px</div>
+      <div class="spacing-bar-col"><div class="spacing-bar" style="width:16px;"></div><span class="spacing-usage">Card padding, standard section gap</span></div>
+    </div>
+    <div class="spacing-row">
+      <div class="spacing-token">--sp-6</div>
+      <div class="spacing-value">24px</div>
+      <div class="spacing-bar-col"><div class="spacing-bar" style="width:24px;"></div><span class="spacing-usage">Bottom sheet top padding, nav height</span></div>
+    </div>
+    <div class="spacing-row">
+      <div class="spacing-token">--sp-8</div>
+      <div class="spacing-value">32px</div>
+      <div class="spacing-bar-col"><div class="spacing-bar" style="width:32px;"></div><span class="spacing-usage">Section separators, major layout gaps</span></div>
+    </div>
+    <div class="spacing-row">
+      <div class="spacing-token">--sp-10</div>
+      <div class="spacing-value">40px</div>
+      <div class="spacing-bar-col"><div class="spacing-bar" style="width:40px;"></div><span class="spacing-usage">Screen horizontal margin</span></div>
+    </div>
+    <div class="spacing-row">
+      <div class="spacing-token">--sp-12</div>
+      <div class="spacing-value">48px</div>
+      <div class="spacing-bar-col"><div class="spacing-bar" style="width:48px;"></div><span class="spacing-usage">Hero section padding</span></div>
+    </div>
+    <div class="spacing-row">
+      <div class="spacing-token">--sp-16</div>
+      <div class="spacing-value">64px</div>
+      <div class="spacing-bar-col"><div class="spacing-bar" style="width:64px;"></div><span class="spacing-usage">Page-level top padding, bottom nav height</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================
+     D. BORDER RADIUS
+================================================ -->
+<div class="spec-section">
+  <div class="spec-section-header">
+    <span class="spec-section-num">D</span>
+    <span class="spec-section-title">Border Radius Scale</span>
+  </div>
+  <div class="radius-grid">
+    <div class="radius-cell">
+      <div class="radius-canvas"><div class="radius-box" style="border-radius:4px;"></div></div>
+      <div class="radius-meta"><div class="radius-token">--r-xs</div><div class="radius-val">4px</div><div class="radius-use">Badges, small chips, cancel chip</div></div>
+    </div>
+    <div class="radius-cell">
+      <div class="radius-canvas"><div class="radius-box" style="border-radius:8px;"></div></div>
+      <div class="radius-meta"><div class="radius-token">--r-sm</div><div class="radius-val">8px</div><div class="radius-use">Inputs, buttons, secondary elements</div></div>
+    </div>
+    <div class="radius-cell">
+      <div class="radius-canvas"><div class="radius-box" style="border-radius:12px;"></div></div>
+      <div class="radius-meta"><div class="radius-token">--r-md</div><div class="radius-val">12px</div><div class="radius-use">Cards, upload zone, map callouts</div></div>
+    </div>
+    <div class="radius-cell">
+      <div class="radius-canvas"><div class="radius-box" style="border-radius:16px;"></div></div>
+      <div class="radius-meta"><div class="radius-token">--r-lg</div><div class="radius-val">16px</div><div class="radius-use">Action cards, bottom sheet top corners</div></div>
+    </div>
+    <div class="radius-cell">
+      <div class="radius-canvas"><div class="radius-box" style="border-radius:20px;"></div></div>
+      <div class="radius-meta"><div class="radius-token">--r-xl</div><div class="radius-val">20px</div><div class="radius-use">Ride request card, Rider found card</div></div>
+    </div>
+    <div class="radius-cell">
+      <div class="radius-canvas"><div class="radius-box" style="border-radius:24px;"></div></div>
+      <div class="radius-meta"><div class="radius-token">--r-2xl</div><div class="radius-val">24px</div><div class="radius-use">Large modal cards, dialogs</div></div>
+    </div>
+    <div class="radius-cell">
+      <div class="radius-canvas"><div class="radius-box" style="border-radius:9999px;height:20px;"></div></div>
+      <div class="radius-meta"><div class="radius-token">--r-full</div><div class="radius-val">9999px</div><div class="radius-use">Pills, chips, search bar, online chip</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================
+     E. ELEVATION & SHADOW
+================================================ -->
+<div class="spec-section">
+  <div class="spec-section-header">
+    <span class="spec-section-num">E</span>
+    <span class="spec-section-title">Elevation & Shadow</span>
+    <span class="spec-section-count">Shadow, not color — AMOLED optimised</span>
+  </div>
+  <div class="shadow-grid">
+    <div class="shadow-cell">
+      <div class="shadow-box" style="box-shadow:0 1px 4px rgba(0,0,0,0.30);"></div>
+      <div><div class="shadow-label">Level 1 · sm</div><div class="shadow-val">0 1px 4px rgba(0,0,0,0.30)</div><div class="shadow-val" style="color:var(--label);margin-top:4px;">Inline cards, chips</div></div>
+    </div>
+    <div class="shadow-cell">
+      <div class="shadow-box" style="box-shadow:0 4px 16px rgba(0,0,0,0.40);"></div>
+      <div><div class="shadow-label">Level 2 · md</div><div class="shadow-val">0 4px 16px rgba(0,0,0,0.40)</div><div class="shadow-val" style="color:var(--label);margin-top:4px;">Ride cards, dropdowns</div></div>
+    </div>
+    <div class="shadow-cell">
+      <div class="shadow-box" style="box-shadow:0 8px 32px rgba(0,0,0,0.50);"></div>
+      <div><div class="shadow-label">Level 3 · lg</div><div class="shadow-val">0 8px 32px rgba(0,0,0,0.50)</div><div class="shadow-val" style="color:var(--label);margin-top:4px;">Bottom sheets, toasts</div></div>
+    </div>
+    <div class="shadow-cell">
+      <div class="shadow-box" style="box-shadow:0 16px 56px rgba(0,0,0,0.60);"></div>
+      <div><div class="shadow-label">Level 4 · xl</div><div class="shadow-val">0 16px 56px rgba(0,0,0,0.60)</div><div class="shadow-val" style="color:var(--label);margin-top:4px;">Modals, ride request card</div></div>
+    </div>
+    <div class="shadow-cell" style="background:var(--navy);">
+      <div class="shadow-box" style="box-shadow:0 0 32px rgba(255,107,0,0.25);background:var(--saffron);"></div>
+      <div><div class="shadow-label" style="color:white;">Glow · Saffron</div><div class="shadow-val" style="color:rgba(255,255,255,0.5);">0 0 32px rgba(255,107,0,0.25)</div><div class="shadow-val" style="color:rgba(255,255,255,0.35);margin-top:4px;">Primary CTA buttons</div></div>
+    </div>
+    <div class="shadow-cell" style="background:var(--navy);">
+      <div class="shadow-box" style="box-shadow:0 4px 16px rgba(231,76,60,0.45);background:var(--red);"></div>
+      <div><div class="shadow-label" style="color:white;">Glow · Danger</div><div class="shadow-val" style="color:rgba(255,255,255,0.5);">0 4px 16px rgba(231,76,60,0.45)</div><div class="shadow-val" style="color:rgba(255,255,255,0.35);margin-top:4px;">SOS button</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================
+     F. MOTION
+================================================ -->
+<div class="spec-section">
+  <div class="spec-section-header">
+    <span class="spec-section-num">F</span>
+    <span class="spec-section-title">Motion & Animation</span>
+  </div>
+  <table class="motion-table">
+    <tr><th>Token</th><th>Curve</th><th>Value</th><th>Usage</th></tr>
+    <tr>
+      <td class="td-token">--ease-out</td>
+      <td><div class="curve-bar" style="background:linear-gradient(90deg,var(--saffron),transparent);border-radius:2px 0 0 2px;"></div></td>
+      <td class="curve-code">cubic-bezier(0.16, 1, 0.3, 1)</td>
+      <td>Entries, slide-up sheets — starts fast, lands soft</td>
+    </tr>
+    <tr>
+      <td class="td-token">--ease-spring</td>
+      <td><div class="curve-bar" style="background:linear-gradient(90deg,var(--green),transparent);border-radius:2px 0 0 2px;"></div></td>
+      <td class="curve-code">cubic-bezier(0.34, 1.56, 0.64, 1)</td>
+      <td>Rider found card, success states — slight overshoot bounce</td>
+    </tr>
+    <tr>
+      <td class="td-token">--ease-in</td>
+      <td><div class="curve-bar" style="background:linear-gradient(90deg,transparent,var(--red));border-radius:0 2px 2px 0;"></div></td>
+      <td class="curve-code">cubic-bezier(0.55, 0, 1, 0.45)</td>
+      <td>Exits, dismissals — starts slow, ends fast</td>
+    </tr>
+    <tr>
+      <td class="td-token">linear</td>
+      <td><div class="curve-bar"></div></td>
+      <td class="curve-code">linear</td>
+      <td>Timer countdown, ripple, progress bars</td>
+    </tr>
+    <tr><th colspan="4" style="background:var(--bg);border-top:1.5px solid var(--grid);">Duration Tokens</th></tr>
+    <tr>
+      <td class="td-token">--duration-fast</td>
+      <td colspan="2" class="td-val">150ms</td>
+      <td>Button hover states, chip selection, focus rings</td>
+    </tr>
+    <tr>
+      <td class="td-token">--duration-normal</td>
+      <td colspan="2" class="td-val">250ms</td>
+      <td>Screen transitions, card slides, tab switches</td>
+    </tr>
+    <tr>
+      <td class="td-token">--duration-slow</td>
+      <td colspan="2" class="td-val">400ms</td>
+      <td>Sheet slide-up, modal appear, page-level transitions</td>
+    </tr>
+  </table>
+  <div class="note-callout" style="margin-top:12px;">
+    <strong>Performance rule:</strong> Only animate <code>transform</code> and <code>opacity</code>. Never animate width, height, top, left, margin, or padding — triggers layout reflow and causes jank on Snapdragon 400-series chips common in mid-range Faridabad devices.
+  </div>
+</div>
+
+<!-- ================================================
+     01. BUTTONS
+================================================ -->
+<div class="spec-section">
+  <div class="spec-section-header">
+    <span class="spec-section-num">01</span>
+    <span class="spec-section-title">Buttons</span>
+    <span class="spec-section-count">9 variants · all states</span>
+  </div>
+
+  <div class="spec-sub">
+    <div class="spec-sub-title">Primary Actions</div>
+    <div class="comp-row">
+      <div class="spec-card" style="flex:1;min-width:200px;">
+        <div class="spec-card-canvas" style="background:var(--bg);position:relative;">
+          <div class="annot annot-t">54dp height</div>
+          <div class="annot annot-b">8dp radius</div>
+          <button class="btn-p">ਰਾਈਡ ਬੁੱਕ ਕਰੋ</button>
+        </div>
+        <div class="spec-card-meta">
+          <div class="spec-name">Primary · Customer</div>
+          <div class="spec-props">
+            <span><span class="prop-key">fill: </span><span class="prop-val">#F95C00</span></span>
+            <span><span class="prop-key">text: </span><span class="prop-val">white · 16px Bold</span></span>
+            <span><span class="prop-key">shadow: </span><span class="prop-val">glow-saffron + sh-md</span></span>
+            <span><span class="prop-key">hover: </span><span class="prop-val">#CC4A00 + translateY(-1px)</span></span>
+          </div>
+        </div>
+      </div>
+      <div class="spec-card" style="flex:1;min-width:200px;">
+        <div class="spec-card-canvas dark">
+          <button class="btn-d">▶ Start Ride</button>
+        </div>
+        <div class="spec-card-meta">
+          <div class="spec-name">Primary · Driver</div>
+          <div class="spec-props">
+            <span><span class="prop-key">fill: </span><span class="prop-val">#34D399</span></span>
+            <span><span class="prop-key">text: </span><span class="prop-val">#0A0C14 · 16px Bold</span></span>
+            <span><span class="prop-key">shadow: </span><span class="prop-val">glow-green</span></span>
+            <span><span class="prop-key">note: </span><span class="prop-val">Dark text on green — accessibility</span></span>
+          </div>
+        </div>
+      </div>
+      <div class="spec-card" style="flex:1;min-width:200px;">
+        <div class="spec-card-canvas dark" style="position:relative;">
+          <div class="annot annot-t">60dp height · 18sp ExtraBold</div>
+          <button class="btn-a">✓ ਸਵੀਕਾਰ</button>
+        </div>
+        <div class="spec-card-meta">
+          <div class="spec-name">Accept · Driver (Extra Tall)</div>
+          <div class="spec-props">
+            <span><span class="prop-key">height: </span><span class="prop-val">60dp — designed for thumb pressure</span></span>
+            <span><span class="prop-key">font: </span><span class="prop-val">18px ExtraBold</span></span>
+            <span><span class="prop-key">flex: </span><span class="prop-val">2 (2× width of Reject in pair)</span></span>
+          </div>
+        </div>
+      </div>
+      <div class="spec-card" style="flex:1;min-width:160px;">
+        <div class="spec-card-canvas">
+          <button class="btn-dis">Get OTP</button>
+        </div>
+        <div class="spec-card-meta">
+          <div class="spec-name">Primary · Disabled</div>
+          <div class="spec-props">
+            <span><span class="prop-key">opacity: </span><span class="prop-val">0.45</span></span>
+            <span><span class="prop-key">cursor: </span><span class="prop-val">not-allowed</span></span>
+            <span><span class="prop-key">pointer-events: </span><span class="prop-val">none</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="spec-sub">
+    <div class="spec-sub-title">Secondary, Ghost & Danger</div>
+    <div class="comp-row">
+      <div class="spec-card" style="flex:1;min-width:180px;">
+        <div class="spec-card-canvas"><button class="btn-s">Schedule Later</button></div>
+        <div class="spec-card-meta">
+          <div class="spec-name">Secondary · Outlined</div>
+          <div class="spec-props">
+            <span><span class="prop-key">fill: </span><span class="prop-val">transparent</span></span>
+            <span><span class="prop-key">border: </span><span class="prop-val">1.5dp #F95C00</span></span>
+            <span><span class="prop-key">text: </span><span class="prop-val">saffron · 16px SemiBold</span></span>
+          </div>
+        </div>
+      </div>
+      <div class="spec-card" style="flex:1;min-width:160px;">
+        <div class="spec-card-canvas mid"><button class="btn-g" style="border:1.5px solid var(--border);height:54px;">Skip</button></div>
+        <div class="spec-card-meta">
+          <div class="spec-name">Ghost · Skip (Rating)</div>
+          <div class="spec-props">
+            <span><span class="prop-key">CRITICAL: </span><span class="prop-val">Same size as Submit</span></span>
+            <span><span class="prop-key">rule: </span><span class="prop-val">Never hidden — no dark patterns</span></span>
+          </div>
+        </div>
+      </div>
+      <div class="spec-card" style="flex:1;min-width:160px;">
+        <div class="spec-card-canvas"><button class="btn-danger-s">✕ Cancel Ride</button></div>
+        <div class="spec-card-meta">
+          <div class="spec-name">Danger · Filled</div>
+          <div class="spec-props">
+            <span><span class="prop-key">fill: </span><span class="prop-val">#E74C3C</span></span>
+            <span><span class="prop-key">shadow: </span><span class="prop-val">glow-danger</span></span>
+          </div>
+        </div>
+      </div>
+      <div class="spec-card" style="flex:1;min-width:160px;">
+        <div class="spec-card-canvas dark"><button class="btn-r">✕ Reject</button></div>
+        <div class="spec-card-meta">
+          <div class="spec-name">Reject · Outlined</div>
+          <div class="spec-props">
+            <span><span class="prop-key">height: </span><span class="prop-val">60dp (pairs with Accept)</span></span>
+            <span><span class="prop-key">flex: </span><span class="prop-val">1 (half width of Accept)</span></span>
+          </div>
+        </div>
+      </div>
+      <div class="spec-card" style="flex:1;min-width:160px;">
+        <div class="spec-card-canvas dark"><button class="btn-off">⏻ Go Offline</button></div>
+        <div class="spec-card-meta">
+          <div class="spec-name">Go Offline · Tinted Danger</div>
+          <div class="spec-props">
+            <span><span class="prop-key">fill: </span><span class="prop-val">rgba(231,76,60,0.10)</span></span>
+            <span><span class="prop-key">note: </span><span class="prop-val">Requires confirmation dialog</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <table class="full-table" style="margin-top:12px;">
+    <tr><th>Variant</th><th>Height</th><th>Radius</th><th>Font</th><th>Min tap target</th><th>Notes</th></tr>
+    <tr><td>Primary (Customer)</td><td class="td-val">54dp</td><td>8dp</td><td>16px Bold</td><td>54dp ✓</td><td class="td-note">Saffron glow shadow always present</td></tr>
+    <tr><td>Primary (Driver)</td><td class="td-val">54dp</td><td>8dp</td><td>16px Bold</td><td>54dp ✓</td><td class="td-note">Dark text on green for contrast</td></tr>
+    <tr><td>Accept</td><td class="td-val">60dp</td><td>8dp</td><td>18px ExtraBold</td><td>60dp ✓</td><td class="td-note">Extra tall — thumb tap under urgency</td></tr>
+    <tr><td>Secondary</td><td class="td-val">54dp</td><td>8dp</td><td>16px SemiBold</td><td>54dp ✓</td><td class="td-note">Saffron border 1.5dp</td></tr>
+    <tr><td>Ghost</td><td class="td-val">48dp</td><td>8dp</td><td>14px SemiBold</td><td>48dp ✓</td><td class="td-note">No border. Skip = same size as Submit</td></tr>
+    <tr><td>Reject (outlined)</td><td class="td-val">60dp</td><td>8dp</td><td>14px Bold</td><td>60dp ✓</td><td class="td-note">Red border 1.5dp. Pairs with Accept.</td></tr>
+    <tr><td>Danger</td><td class="td-val">54dp</td><td>8dp</td><td>16px Bold</td><td>54dp ✓</td><td class="td-note">Danger glow shadow</td></tr>
+    <tr><td>Go Offline</td><td class="td-val">44dp</td><td>8dp</td><td>14px Bold</td><td>44dp ✓</td><td class="td-note">Red tinted fill + border</td></tr>
+    <tr><td>Icon button</td><td class="td-val">44dp</td><td>8dp</td><td>—</td><td>44dp ✓</td><td class="td-note">Minimum. Never below 32dp.</td></tr>
+    <tr><td>Disabled</td><td>Same as parent</td><td>Same</td><td>Same</td><td>—</td><td class="td-note">opacity: 0.45 · pointer-events: none</td></tr>
+  </table>
+</div>
+
+<!-- ================================================
+     02. INPUTS
+================================================ -->
+<div class="spec-section">
+  <div class="spec-section-header">
+    <span class="spec-section-num">02</span>
+    <span class="spec-section-title">Inputs</span>
+    <span class="spec-section-count">6 types · all states</span>
+  </div>
+
+  <div class="comp-row">
+    <div class="spec-card" style="flex:1;min-width:220px;">
+      <div class="spec-card-canvas mid" style="flex-direction:column;gap:12px;align-items:stretch;padding:16px 20px;">
+        <div class="input-s" style="color:var(--ts);">ਮੰਜ਼ਿਲ ਟਾਈਪ ਕਰੋ...</div>
+        <div class="input-f">ESIC Hospital, NIT Faridabad</div>
+      </div>
+      <div class="spec-card-meta">
+        <div class="spec-name">Text Field · Default & Focus</div>
+        <div class="spec-props">
+          <span><span class="prop-key">height: </span><span class="prop-val">52dp</span></span>
+          <span><span class="prop-key">radius: </span><span class="prop-val">8dp</span></span>
+          <span><span class="prop-key">border rest: </span><span class="prop-val">1.5dp #E5E7EB</span></span>
+          <span><span class="prop-key">border focus: </span><span class="prop-val">1.5dp #F95C00 + 3dp ring @12%</span></span>
+        </div>
+      </div>
+    </div>
+    <div class="spec-card" style="flex:1;min-width:220px;">
+      <div class="spec-card-canvas mid" style="flex-direction:column;gap:12px;align-items:stretch;padding:16px 20px;">
+        <div style="display:flex;height:52px;border:1.5px solid var(--border);border-radius:8px;overflow:hidden;background:white;">
+          <div style="padding:0 12px;background:#F3F4F6;display:flex;align-items:center;font-size:13px;font-weight:600;color:var(--tp);border-right:1.5px solid var(--border);white-space:nowrap;flex-shrink:0;">🇮🇳 +91</div>
+          <div style="flex:1;display:flex;align-items:center;padding:0 14px;font-size:14px;font-weight:600;color:var(--ts);">Enter number</div>
+        </div>
+        <div style="display:flex;height:52px;border:1.5px solid var(--saffron);border-radius:8px;overflow:hidden;box-shadow:0 0 0 3px rgba(255,107,0,0.12);background:white;">
+          <div style="padding:0 12px;background:#F3F4F6;display:flex;align-items:center;font-size:13px;font-weight:600;color:var(--tp);border-right:1.5px solid var(--border);white-space:nowrap;flex-shrink:0;">🇮🇳 +91</div>
+          <div style="flex:1;display:flex;align-items:center;padding:0 14px;font-size:14px;font-weight:600;color:var(--navy);letter-spacing:1px;">98765 43210</div>
+        </div>
+      </div>
+      <div class="spec-card-meta">
+        <div class="spec-name">Phone Input</div>
+        <div class="spec-props">
+          <span><span class="prop-key">prefix: </span><span class="prop-val">+91 · non-editable · grey bg</span></span>
+          <span><span class="prop-key">CTA: </span><span class="prop-val">disabled until 10 digits entered</span></span>
+          <span><span class="prop-key">keyboard: </span><span class="prop-val">inputType="number" · numeric</span></span>
+        </div>
+      </div>
+    </div>
+    <div class="spec-card" style="flex:1;min-width:220px;">
+      <div class="spec-card-canvas mid" style="flex-direction:column;gap:12px;align-items:stretch;padding:16px 20px;">
+        <div style="display:flex;gap:8px;">
+          <div class="otp-b">·</div>
+          <div class="otp-b">·</div>
+          <div class="otp-b active"></div>
+          <div class="otp-b">·</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <div class="otp-b filled">3</div>
+          <div class="otp-b filled">7</div>
+          <div class="otp-b filled">8</div>
+          <div class="otp-b filled">1</div>
+        </div>
+      </div>
+      <div class="spec-card-meta">
+        <div class="spec-name">OTP Input · 4 Boxes</div>
+        <div class="spec-props">
+          <span><span class="prop-key">box size: </span><span class="prop-val">56 × 64dp</span></span>
+          <span><span class="prop-key">font: </span><span class="prop-val">Poppins 24px Bold</span></span>
+          <span><span class="prop-key">filled: </span><span class="prop-val">saffron bg @7% + saffron border</span></span>
+          <span><span class="prop-key">auto-read: </span><span class="prop-val">SMS OTP auto-read if permission</span></span>
+          <span><span class="prop-key">attempts: </span><span class="prop-val">max 3 · resend timer 30s</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="comp-row" style="margin-top:1px;">
+    <div class="spec-card" style="flex:1;min-width:220px;">
+      <div class="spec-card-canvas mid" style="flex-direction:column;gap:12px;align-items:stretch;padding:16px 20px;">
+        <div style="height:52px;border:1.5px solid var(--border);border-radius:9999px;display:flex;align-items:center;padding:0 16px;gap:10px;background:var(--bg);">
+          <span style="font-size:15px;">🔍</span>
+          <span style="font-family:'Noto Sans Gurmukhi';font-size:14px;color:var(--ts);">ਕਿੱਥੇ ਜਾਣਾ ਹੈ?</span>
+        </div>
+        <div style="height:52px;border:1.5px solid var(--saffron);border-radius:9999px;display:flex;align-items:center;padding:0 16px;gap:10px;background:white;box-shadow:0 0 0 3px rgba(255,107,0,0.12);">
+          <span style="font-size:15px;">🔍</span>
+          <span style="font-size:14px;color:var(--navy);font-weight:600;">ESIC Hospi...</span>
+        </div>
+      </div>
+      <div class="spec-card-meta">
+        <div class="spec-name">Search Bar · Pill</div>
+        <div class="spec-props">
+          <span><span class="prop-key">radius: </span><span class="prop-val">9999dp (pill)</span></span>
+          <span><span class="prop-key">height: </span><span class="prop-val">52dp</span></span>
+          <span><span class="prop-key">bg rest: </span><span class="prop-val">--color-bg-screen</span></span>
+          <span><span class="prop-key">bg focus: </span><span class="prop-val">#FFFFFF</span></span>
+        </div>
+      </div>
+    </div>
+    <div class="spec-card" style="flex:1;min-width:220px;">
+      <div class="spec-card-canvas mid" style="align-items:stretch;padding:16px 20px;">
+        <div style="border:1.5px solid var(--border);border-radius:12px;overflow:hidden;width:100%;background:white;">
+          <div style="display:flex;align-items:center;height:52px;padding:0 14px;gap:12px;background:#F9FAFB;border-bottom:1px solid var(--border);">
+            <div style="width:10px;height:10px;border-radius:50%;background:var(--navy);flex-shrink:0;"></div>
+            <div style="font-size:13px;color:var(--ts);font-weight:500;">📍 Sector 15, Faridabad (GPS)</div>
+          </div>
+          <div style="display:flex;align-items:center;height:52px;padding:0 14px;gap:12px;">
+            <div style="width:10px;height:10px;border-radius:50%;background:var(--saffron);flex-shrink:0;"></div>
+            <div style="font-size:13px;color:var(--navy);font-weight:600;">ESIC Hospital, NIT</div>
+          </div>
+        </div>
+      </div>
+      <div class="spec-card-meta">
+        <div class="spec-name">From-To Route Card</div>
+        <div class="spec-props">
+          <span><span class="prop-key">origin dot: </span><span class="prop-val">10dp · navy</span></span>
+          <span><span class="prop-key">dest dot: </span><span class="prop-val">10dp · saffron</span></span>
+          <span><span class="prop-key">FROM: </span><span class="prop-val">GPS auto-filled · grey bg · locked</span></span>
+          <span><span class="prop-key">TO: </span><span class="prop-val">white bg · editable</span></span>
+        </div>
+      </div>
+    </div>
+    <div class="spec-card" style="flex:1;min-width:220px;">
+      <div class="spec-card-canvas mid" style="flex-direction:column;gap:12px;align-items:stretch;padding:16px 20px;">
+        <div style="border:2px dashed rgba(255,107,0,0.35);border-radius:12px;height:90px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;background:rgba(255,107,0,0.03);">
+          <span style="font-size:24px;">📷</span>
+          <span style="font-size:12px;font-weight:600;color:var(--ts);">Tap to upload · JPG/PNG</span>
+        </div>
+        <div style="border:2px solid var(--green);border-radius:12px;height:60px;display:flex;align-items:center;justify-content:center;gap:12px;background:rgba(52,211,153,0.05);">
+          <span style="font-size:22px;">✅</span>
+          <div><div style="font-size:13px;font-weight:700;color:var(--green);">Uploaded ✓</div><div style="font-size:11px;color:var(--ts);">rc_card.jpg · 2.1 MB</div></div>
+        </div>
+      </div>
+      <div class="spec-card-meta">
+        <div class="spec-name">Document Upload Zone</div>
+        <div class="spec-props">
+          <span><span class="prop-key">height: </span><span class="prop-val">120dp</span></span>
+          <span><span class="prop-key">border: </span><span class="prop-val">2dp dashed rgba(saffron, 0.35)</span></span>
+          <span><span class="prop-key">uploaded: </span><span class="prop-val">solid 2dp green border</span></span>
+          <span><span class="prop-key">camera: </span><span class="prop-val">primary CTA · gallery secondary</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================
+     05. COUNTDOWN RING
+================================================ -->
+<div class="spec-section">
+  <div class="spec-section-header">
+    <span class="spec-section-num">05</span>
+    <span class="spec-section-title">Countdown Ring</span>
+    <span class="spec-section-count">SVG stroke-dashoffset · 4 states</span>
+  </div>
+
+  <div class="comp-row">
+    <div class="spec-card" style="flex:1;min-width:150px;">
+      <div class="spec-card-canvas" style="background:white;position:relative;">
+        <div class="annot annot-t">64dp diameter</div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+          <div style="position:relative;width:64px;height:64px;display:flex;align-items:center;justify-content:center;">
+            <svg width="64" height="64" viewBox="0 0 64 64" style="transform:rotate(-90deg);position:absolute;">
+              <circle cx="32" cy="32" r="27" fill="none" stroke="#E5E7EB" stroke-width="5"/>
+              <circle cx="32" cy="32" r="27" fill="none" stroke="#F95C00" stroke-width="5" stroke-dasharray="169.6" stroke-dashoffset="42.4" stroke-linecap="round"/>
+            </svg>
+            <span style="font-size:17px;font-weight:800;color:var(--saffron);z-index:1;">42</span>
+          </div>
+          <div style="font-size:10px;color:var(--ts);">0–20s · Saffron</div>
+        </div>
+      </div>
+      <div class="spec-card-meta">
+        <div class="spec-name">Saffron State (0–20s left)</div>
+        <div class="spec-props">
+          <span><span class="prop-key">stroke: </span><span class="prop-val">#F95C00 · 5dp width</span></span>
+          <span><span class="prop-key">track: </span><span class="prop-val">#E5E7EB</span></span>
+          <span><span class="prop-key">linecap: </span><span class="prop-val">round</span></span>
+        </div>
+      </div>
+    </div>
+    <div class="spec-card" style="flex:1;min-width:150px;">
+      <div class="spec-card-canvas" style="background:white;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+          <div style="position:relative;width:64px;height:64px;display:flex;align-items:center;justify-content:center;">
+            <svg width="64" height="64" viewBox="0 0 64 64" style="transform:rotate(-90deg);position:absolute;">
+              <circle cx="32" cy="32" r="27" fill="none" stroke="#E5E7EB" stroke-width="5"/>
+              <circle cx="32" cy="32" r="27" fill="none" stroke="#F39C12" stroke-width="5" stroke-dasharray="169.6" stroke-dashoffset="127.2" stroke-linecap="round"/>
+            </svg>
+            <span style="font-size:17px;font-weight:800;color:var(--amber);z-index:1;">15</span>
+          </div>
+          <div style="font-size:10px;color:var(--ts);">&lt;20s · Amber</div>
+        </div>
+      </div>
+      <div class="spec-card-meta">
+        <div class="spec-name">Amber State (&lt;20s left)</div>
+        <div class="spec-props">
+          <span><span class="prop-key">stroke: </span><span class="prop-val">#F39C12 amber</span></span>
+          <span><span class="prop-key">trigger: </span><span class="prop-val">when seconds &lt; 20</span></span>
+          <span><span class="prop-key">haptic: </span><span class="prop-val">vibration every 10s</span></span>
+        </div>
+      </div>
+    </div>
+    <div class="spec-card" style="flex:1;min-width:150px;">
+      <div class="spec-card-canvas" style="background:white;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+          <div style="position:relative;width:64px;height:64px;display:flex;align-items:center;justify-content:center;">
+            <svg width="64" height="64" viewBox="0 0 64 64" style="transform:rotate(-90deg);position:absolute;">
+              <circle cx="32" cy="32" r="27" fill="none" stroke="#E5E7EB" stroke-width="5"/>
+              <circle cx="32" cy="32" r="27" fill="none" stroke="#E74C3C" stroke-width="5" stroke-dasharray="169.6" stroke-dashoffset="151" stroke-linecap="round"/>
+            </svg>
+            <span style="font-size:17px;font-weight:800;color:var(--red);z-index:1;animation:ring-urg 0.5s ease-in-out infinite alternate;" id="ring-urg-text">7</span>
+          </div>
+          <div style="font-size:10px;color:var(--ts);">&lt;10s · Red · Pulse</div>
+        </div>
+      </div>
+      <div class="spec-card-meta">
+        <div class="spec-name">Red + Pulse (&lt;10s left)</div>
+        <div class="spec-props">
+          <span><span class="prop-key">stroke: </span><span class="prop-val">#E74C3C red</span></span>
+          <span><span class="prop-key">pulse: </span><span class="prop-val">stroke-opacity 0.5s alternate</span></span>
+          <span><span class="prop-key">haptic: </span><span class="prop-val">vibration every 10s</span></span>
+        </div>
+      </div>
+    </div>
+    <div class="spec-card" style="flex:1;min-width:150px;">
+      <div class="spec-card-canvas" style="background:white;">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+          <div style="position:relative;width:64px;height:64px;display:flex;align-items:center;justify-content:center;">
+            <svg width="64" height="64" viewBox="0 0 64 64" style="transform:rotate(-90deg);position:absolute;">
+              <circle cx="32" cy="32" r="27" fill="none" stroke="#E5E7EB" stroke-width="5"/>
+              <circle cx="32" cy="32" r="27" fill="none" stroke="#E5E7EB" stroke-width="5" stroke-dasharray="169.6" stroke-dashoffset="169.6"/>
+            </svg>
+            <span style="font-size:17px;font-weight:800;color:var(--ts);z-index:1;">—</span>
+          </div>
+          <div style="font-size:10px;color:var(--ts);">Expired · Silent</div>
+        </div>
+      </div>
+      <div class="spec-card-meta">
+        <div class="spec-name">Expired · Silent Pass</div>
+        <div class="spec-props">
+          <span><span class="prop-key">logged as: </span><span class="prop-val">expired, NOT rejected</span></span>
+          <span><span class="prop-key">penalty: </span><span class="prop-val">none shown</span></span>
+          <span><span class="prop-key">toast: </span><span class="prop-val">"Request passed" · neutral tone</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <table class="full-table" style="margin-top:12px;">
+    <tr><th>Property</th><th>Value</th><th>Notes</th></tr>
+    <tr><td>Diameter (large)</td><td class="td-val">64dp</td><td class="td-note">Ride request card — standalone</td></tr>
+    <tr><td>Diameter (small)</td><td class="td-val">52dp</td><td class="td-note">Inline in ride request card header</td></tr>
+    <tr><td>Stroke width</td><td class="td-val">5dp</td><td class="td-note">Both sizes</td></tr>
+    <tr><td>Track color</td><td class="td-val">#E5E7EB</td><td class="td-note">Always grey</td></tr>
+    <tr><td>stroke-linecap</td><td class="td-val">round</td><td class="td-note">Rounded ends on progress arc</td></tr>
+    <tr><td>Implementation</td><td class="td-val">SVG circle + stroke-dashoffset</td><td class="td-note">requestAnimationFrame in native · CSS animation in web</td></tr>
+    <tr><td>Circumference (64dp, r=27)</td><td class="td-val">169.6px</td><td class="td-note">stroke-dasharray = 169.6</td></tr>
+    <tr><td>Circumference (52dp, r=22)</td><td class="td-val">138.2px</td><td class="td-note">stroke-dasharray = 138.2</td></tr>
+  </table>
+</div>
+
+<!-- ================================================
+     06. SOS BUTTON
+================================================ -->
+<div class="spec-section">
+  <div class="spec-section-header">
+    <span class="spec-section-num">06</span>
+    <span class="spec-section-title">SOS Button</span>
+    <span class="spec-section-count">56dp · 2s hold · 5s auto-confirm</span>
+  </div>
+
+  <div class="comp-row">
+    <div class="spec-card" style="flex:1;min-width:180px;">
+      <div class="spec-card-canvas dark" style="min-height:140px;position:relative;">
+        <div class="annot annot-t">56 × 56dp circle</div>
+        <div style="position:relative;width:56px;height:56px;display:flex;align-items:center;justify-content:center;">
+          <div style="position:absolute;inset:-6px;border-radius:50%;border:2px solid rgba(231,76,60,0.4);"></div>
+          <div style="position:absolute;inset:-14px;border-radius:50%;border:1.5px solid rgba(231,76,60,0.2);"></div>
+          <div class="sos-spec"><div class="sos-spec-ring"></div>SOS</div>
+        </div>
+      </div>
+      <div class="spec-card-meta">
+        <div class="spec-name">Resting State</div>
+        <div class="spec-props">
+          <span><span class="prop-key">fill: </span><span class="prop-val">#E74C3C</span></span>
+          <span><span class="prop-key">shadow: </span><span class="prop-val">0 4px 16px rgba(231,76,60,0.45)</span></span>
+          <span><span class="prop-key">ring-1: </span><span class="prop-val">inset −6px · scale+fade · 2s</span></span>
+          <span><span class="prop-key">ring-2: </span><span class="prop-val">inset −14px · 0.5s delay</span></span>
+          <span><span class="prop-key">trigger: </span><span class="prop-val">2s press-and-hold only</span></span>
+        </div>
+      </div>
+    </div>
+    <div class="spec-card" style="flex:2;min-width:280px;">
+      <div class="spec-card-canvas" style="background:#FEF2F2;flex-direction:column;gap:12px;align-items:stretch;padding:16px;">
+        <div style="background:var(--red);border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:18px;">🚨</span>
+          <div>
+            <div style="font-size:13px;font-weight:800;color:white;">SOS ACTIVE — ਐਮਰਜੈਂਸੀ</div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.85);margin-top:2px;">Alert sent to 2 emergency contacts · Live GPS shared</div>
+          </div>
+        </div>
+        <button style="height:44px;background:var(--green);color:#0A0C14;border:none;border-radius:8px;font-size:13px;font-weight:700;font-family:Poppins;cursor:default;">✓ I'm Safe — Cancel Alert</button>
+      </div>
+      <div class="spec-card-meta">
+        <div class="spec-name">Active State</div>
+        <div class="spec-props">
+          <span><span class="prop-key">banner: </span><span class="prop-val">full-width red · translateY(−8px) → 0 · 0.3s ease-out</span></span>
+          <span><span class="prop-key">SMS + WA sent: </span><span class="prop-val">rider name · vehicle · live GPS link · timestamp</span></span>
+          <span><span class="prop-key">dismiss: </span><span class="prop-val">manual "I'm Safe" OR auto on ride end</span></span>
+        </div>
+      </div>
+    </div>
+    <div class="spec-card" style="flex:2;min-width:280px;">
+      <div class="spec-card-canvas" style="background:var(--bg);flex-direction:column;gap:10px;align-items:stretch;padding:16px;">
+        <div style="background:white;border-radius:16px;padding:20px;box-shadow:0 8px 32px rgba(0,0,0,0.12);text-align:center;">
+          <div style="font-size:32px;margin-bottom:8px;">🚨</div>
+          <div style="font-size:16px;font-weight:800;color:var(--navy);">Send SOS Alert?</div>
+          <div style="font-size:11px;color:var(--ts);margin:8px 0 12px;line-height:1.5;">Sends live GPS, rider name, and vehicle number to all emergency contacts.</div>
+          <div style="background:var(--red);border-radius:4px;height:4px;margin-bottom:12px;overflow:hidden;"><div style="height:100%;width:55%;background:rgba(255,255,255,0.4);border-radius:2px;"></div></div>
+          <div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:12px;">Auto-confirming in 3s if you cannot tap</div>
+          <div style="display:flex;gap:8px;">
+            <button style="flex:2;height:42px;background:var(--red);color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;font-family:Poppins;cursor:default;">🚨 Send Alert</button>
+            <button style="flex:1;height:42px;background:transparent;color:var(--ts);border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-weight:600;font-family:Poppins;cursor:default;">Cancel</button>
+          </div>
+        </div>
+      </div>
+      <div class="spec-card-meta">
+        <div class="spec-name">Confirmation Dialog</div>
+        <div class="spec-props">
+          <span><span class="prop-key">2s hold → </span><span class="prop-val">this dialog appears</span></span>
+          <span><span class="prop-key">5s auto-confirm: </span><span class="prop-val">bar animates · alert fires if user cannot tap</span></span>
+          <span><span class="prop-key">critical: </span><span class="prop-val">auto-confirm handles genuine emergencies</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================
+     07. CHIPS & BADGES
+================================================ -->
+<div class="spec-section">
+  <div class="spec-section-header">
+    <span class="spec-section-num">07</span>
+    <span class="spec-section-title">Chips & Badges</span>
+    <span class="spec-section-count">16 variants</span>
+  </div>
+
+  <div class="spec-sub">
+    <div class="spec-sub-title">Status Chips (Online / Driver State)</div>
+    <div class="comp-row">
+      <div class="spec-card" style="flex:1;">
+        <div class="spec-card-canvas dark" style="gap:10px;flex-wrap:wrap;">
+          <div class="chip" style="background:rgba(52,211,153,0.15);border:1.5px solid rgba(52,211,153,0.4);color:var(--green);"><span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;box-shadow:0 0 6px rgba(52,211,153,0.6);"></span>ONLINE</div>
+          <div class="chip" style="background:rgba(107,114,128,0.15);border:1.5px solid rgba(107,114,128,0.3);color:#9CA3AF;"><span style="width:8px;height:8px;border-radius:50%;background:#9CA3AF;display:inline-block;"></span>OFFLINE</div>
+          <div class="chip" style="background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.3);color:var(--green);">✓ Verified Driver</div>
+          <div class="chip" style="background:rgba(243,156,18,0.15);border:1px solid rgba(243,156,18,0.3);color:var(--amber);">⏳ Under Review</div>
+          <div class="chip" style="background:rgba(231,76,60,0.12);border:1px solid rgba(231,76,60,0.3);color:var(--red);">⚠ Action Required</div>
+          <div style="background:rgba(26,31,60,0.88);border-radius:9999px;padding:6px 14px;font-size:13px;font-weight:700;color:white;display:inline-flex;align-items:center;gap:6px;box-shadow:0 4px 16px rgba(0,0,0,0.4);">💰 ₹384 today</div>
+        </div>
+        <div class="spec-card-meta">
+          <div class="spec-name">Status Chips</div>
+          <div class="spec-props">
+            <span><span class="prop-key">radius: </span><span class="prop-val">9999dp (pill)</span></span>
+            <span><span class="prop-key">border: </span><span class="prop-val">1–1.5dp · colored</span></span>
+            <span><span class="prop-key">fill: </span><span class="prop-val">color @10–20% opacity</span></span>
+            <span><span class="prop-key">Earnings chip: </span><span class="prop-val">dark navy fill · no border</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="spec-sub">
+    <div class="spec-sub-title">Trip Type Chips (History & Request Card)</div>
+    <div class="comp-row">
+      <div class="spec-card" style="flex:1;">
+        <div class="spec-card-canvas" style="flex-wrap:wrap;gap:10px;">
+          <div class="chip chip-sm" style="background:rgba(74,144,217,0.10);color:#4A90D9;">💵 Cash</div>
+          <div class="chip chip-sm" style="background:rgba(52,211,153,0.10);color:var(--green);">📱 UPI</div>
+          <div class="chip chip-sm" style="background:rgba(59,130,246,0.10);color:#3B82F6;">✋ Manual</div>
+          <div class="chip chip-sm" style="background:rgba(147,51,234,0.10);color:var(--purple);">📅 Scheduled</div>
+          <div class="chip chip-sm" style="background:rgba(231,76,60,0.10);color:var(--red);">Cancelled</div>
+          <div class="chip chip-sm" style="background:rgba(243,156,18,0.10);color:var(--amber);">⏳ Pending T+2</div>
+          <div style="background:rgba(231,76,60,0.10);color:var(--red);border:1px solid rgba(231,76,60,0.2);border-radius:4px;padding:3px 10px;font-size:10px;font-weight:700;display:inline-flex;align-items:center;gap:4px;">2 cancels</div>
+          <div style="background:rgba(52,211,153,0.10);border:1px solid rgba(52,211,153,0.3);border-radius:9999px;padding:6px 14px;font-size:13px;font-weight:700;color:var(--green);">4 min</div>
+        </div>
+        <div class="spec-card-meta">
+          <div class="spec-name">Trip Type Chips · ETA · Cancel Count</div>
+          <div class="spec-props">
+            <span><span class="prop-key">type chips: </span><span class="prop-val">border-radius: 4dp (square) · uppercase · 10px</span></span>
+            <span><span class="prop-key">ETA chip: </span><span class="prop-val">pill · green · 13px Bold</span></span>
+            <span><span class="prop-key">cancel count: </span><span class="prop-val">ONLY shown if count &gt; 0</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <table class="full-table">
+    <tr><th>Chip</th><th>Radius</th><th>Fill</th><th>Border</th><th>Text color</th><th>When shown</th></tr>
+    <tr><td>Online</td><td>pill</td><td class="td-note">green @15%</td><td class="td-note">1.5dp green @40%</td><td style="color:var(--green);font-weight:700;">#34D399</td><td class="td-note">Dashboard · always</td></tr>
+    <tr><td>Offline</td><td>pill</td><td class="td-note">grey @12%</td><td class="td-note">1.5dp grey @25%</td><td style="color:#9CA3AF;">#9CA3AF</td><td class="td-note">Dashboard · always</td></tr>
+    <tr><td>Verified</td><td>pill</td><td class="td-note">green @15%</td><td class="td-note">1dp green @30%</td><td style="color:var(--green);">green</td><td class="td-note">Profile header</td></tr>
+    <tr><td>Under Review</td><td>pill</td><td class="td-note">amber @15%</td><td class="td-note">1dp amber @30%</td><td style="color:var(--amber);">amber</td><td class="td-note">Profile header</td></tr>
+    <tr><td>Action Required</td><td>pill</td><td class="td-note">red @10%</td><td class="td-note">1dp red @25%</td><td style="color:var(--red);">red</td><td class="td-note">Profile header · urgent</td></tr>
+    <tr><td>Cancellation count</td><td class="td-val">4dp</td><td class="td-note">red @10%</td><td class="td-note">1dp red @20%</td><td style="color:var(--red);">red</td><td class="td-note">Ride request card — ONLY if count &gt; 0</td></tr>
+    <tr><td>Cash / UPI</td><td class="td-val">4dp</td><td class="td-note">blue/green @10%</td><td class="td-note">1dp @20%</td><td class="td-note">matching</td><td class="td-note">History cards, trip list</td></tr>
+    <tr><td>Manual ✋</td><td class="td-val">4dp</td><td class="td-note">blue @10%</td><td class="td-note">1dp blue @20%</td><td style="color:#3B82F6;">#3B82F6</td><td class="td-note">History — walk-up rides</td></tr>
+    <tr><td>Scheduled 📅</td><td class="td-val">4dp</td><td class="td-note">purple @10%</td><td class="td-note">1dp purple @20%</td><td style="color:var(--purple);">purple</td><td class="td-note">History — pre-booked rides</td></tr>
+  </table>
+</div>
+
+<!-- ================================================
+     08. TOASTS & ALERTS
+================================================ -->
+<div class="spec-section">
+  <div class="spec-section-header">
+    <span class="spec-section-num">08</span>
+    <span class="spec-section-title">Toasts & Alerts</span>
+    <span class="spec-section-count">4 toast variants · 4 alert variants · FCM push</span>
+  </div>
+
+  <div class="comp-row">
+    <div class="spec-card" style="flex:1;min-width:320px;">
+      <div class="spec-card-canvas mid" style="flex-direction:column;gap:10px;align-items:flex-start;padding:20px;">
+        <div class="toast-spec t-suc"><span style="font-size:16px;">✅</span><span>ਤੁਹਾਡਾ ਖਾਤਾ ਮਨਜ਼ੂਰ ਹੋ ਗਿਆ! — Account Approved</span></div>
+        <div class="toast-spec t-dan"><span style="font-size:16px;">🚫</span><span>No riders nearby. Retry or schedule?</span></div>
+        <div class="toast-spec t-war"><span style="font-size:16px;">⚡</span><span>Weak signal — cached location active</span></div>
+        <div class="toast-spec t-inf"><span style="font-size:16px;">ℹ️</span><span>Your ride is in 30 minutes</span></div>
+      </div>
+      <div class="spec-card-meta">
+        <div class="spec-name">Toast Notifications</div>
+        <div class="spec-props">
+          <span><span class="prop-key">duration: </span><span class="prop-val">3s auto-dismiss</span></span>
+          <span><span class="prop-key">position: </span><span class="prop-val">bottom · 16dp from nav</span></span>
+          <span><span class="prop-key">animation: </span><span class="prop-val">slide-up + fade-out</span></span>
+          <span><span class="prop-key">progress: </span><span class="prop-val">3px bar at bottom · linear</span></span>
+        </div>
+      </div>
+    </div>
+    <div class="spec-card" style="flex:1;min-width:320px;">
+      <div class="spec-card-canvas mid" style="flex-direction:column;gap:10px;align-items:flex-start;padding:20px;">
+        <div class="alert-spec a-suc"><span style="font-size:14px;">✅</span><span>Documents verified. Ready to accept rides.</span></div>
+        <div class="alert-spec a-war"><span style="font-size:14px;">⚠️</span><span>Weak GPS signal. Position is estimated.</span></div>
+        <div class="alert-spec a-dan"><span style="font-size:14px;">❌</span><span>License rejected — re-upload a clearer photo.</span></div>
+        <div class="alert-spec a-inf"><span style="font-size:14px;">ℹ️</span><span>UPI failed. Retry or switch to Cash — ride not blocked.</span></div>
+      </div>
+      <div class="spec-card-meta">
+        <div class="spec-name">Inline Alerts</div>
+        <div class="spec-props">
+          <span><span class="prop-key">border-left: </span><span class="prop-val">4dp colored stripe</span></span>
+          <span><span class="prop-key">radius: </span><span class="prop-val">0 6dp 6dp 0 (right side only)</span></span>
+          <span><span class="prop-key">persistent: </span><span class="prop-val">yes — no auto-dismiss</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================
+     10. STEP PROGRESS BAR
+================================================ -->
+<div class="spec-section">
+  <div class="spec-section-header">
+    <span class="spec-section-num">10</span>
+    <span class="spec-section-title">Step Progress Bar · Wizard</span>
+    <span class="spec-section-count">4-step doc upload</span>
+  </div>
+
+  <div class="comp-row">
+    <div class="spec-card" style="flex:1;">
+      <div class="spec-card-canvas mid" style="flex-direction:column;gap:16px;align-items:stretch;padding:20px 40px;">
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--label);letter-spacing:1px;margin-bottom:8px;">STEP 1 · Driving License</div>
+          <div class="step-bar-spec"><div class="seg seg-curr"></div><div class="seg seg-rem"></div><div class="seg seg-rem"></div><div class="seg seg-rem"></div></div>
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--label);letter-spacing:1px;margin-bottom:8px;">STEP 2 · Vehicle RC</div>
+          <div class="step-bar-spec"><div class="seg seg-done"></div><div class="seg seg-curr"></div><div class="seg seg-rem"></div><div class="seg seg-rem"></div></div>
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--label);letter-spacing:1px;margin-bottom:8px;">STEP 3 · Aadhar</div>
+          <div class="step-bar-spec"><div class="seg seg-done"></div><div class="seg seg-done"></div><div class="seg seg-curr"></div><div class="seg seg-rem"></div></div>
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--label);letter-spacing:1px;margin-bottom:8px;">STEP 4 · Bike Photo (Final)</div>
+          <div class="step-bar-spec"><div class="seg seg-done"></div><div class="seg seg-done"></div><div class="seg seg-done"></div><div class="seg seg-curr"></div></div>
+        </div>
+        <div style="display:flex;gap:20px;margin-top:4px;">
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--label);"><div style="width:24px;height:4px;background:var(--saffron);border-radius:2px;"></div>Done</div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--label);"><div style="width:24px;height:4px;background:var(--amber);border-radius:2px;"></div>Current</div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--label);"><div style="width:24px;height:4px;background:var(--border);border-radius:2px;"></div>Remaining</div>
+        </div>
+      </div>
+      <div class="spec-card-meta">
+        <div class="spec-name">Document Upload Wizard Progress</div>
+        <div class="spec-props">
+          <span><span class="prop-key">height: </span><span class="prop-val">4dp</span></span>
+          <span><span class="prop-key">gap: </span><span class="prop-val">4dp between segments</span></span>
+          <span><span class="prop-key">radius: </span><span class="prop-val">2dp on each segment</span></span>
+          <span><span class="prop-key">done: </span><span class="prop-val">#F95C00 saffron</span></span>
+          <span><span class="prop-key">current: </span><span class="prop-val">#F39C12 amber</span></span>
+          <span><span class="prop-key">remaining: </span><span class="prop-val">#E5E7EB grey</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================================================
+     11. BILINGUAL STRINGS
+================================================ -->
+<div class="spec-section">
+  <div class="spec-section-header">
+    <span class="spec-section-num">11</span>
+    <span class="spec-section-title">Bilingual String Reference</span>
+    <span class="spec-section-count">Punjabi (Gurmukhi) + English · SharedPrefs key: "pa" | "en"</span>
+  </div>
+
+  <table class="string-table">
+    <tr><th>English</th><th>ਪੰਜਾਬੀ (Gurmukhi)</th><th>Usage</th></tr>
+    <tr><td>Chalo — Let's Go</td><td>ਚਲੋ</td><td>App name</td></tr>
+    <tr><td>Faridabad's own journey</td><td>ਫਰੀਦਾਬਾਦ ਦਾ ਆਪਣਾ ਸਫ਼ਰ</td><td>Tagline</td></tr>
+    <tr><td>Where to go?</td><td>ਕਿੱਥੇ ਜਾਣਾ ਹੈ?</td><td>Search bar placeholder · Home screen</td></tr>
+    <tr><td>Finding your rider...</td><td>ਰਾਈਡਰ ਲੱਭ ਰਹੇ ਹਾਂ...</td><td>Searching screen</td></tr>
+    <tr><td>Confirm Booking</td><td>ਰਾਈਡ ਬੁੱਕ ਕਰੋ</td><td>Primary CTA · Fare screen</td></tr>
+    <tr><td>Rider Found ✓</td><td>✓ ਰਾਈਡਰ ਮਿਲ ਗਿਆ</td><td>Rider Found card label</td></tr>
+    <tr><td>You've arrived!</td><td>ਤੁਸੀਂ ਪਹੁੰਚ ਗਏ!</td><td>Ride complete screen</td></tr>
+    <tr><td>Get OTP</td><td>ਓਟੀਪੀ ਭੇਜੋ</td><td>Login CTA</td></tr>
+    <tr><td>Accept</td><td>ਸਵੀਕਾਰ</td><td>Driver Accept button</td></tr>
+    <tr><td>SOS Emergency</td><td>ਐਮਰਜੈਂਸੀ</td><td>SOS active banner</td></tr>
+    <tr><td>Account Approved!</td><td>ਤੁਹਾਡਾ ਖਾਤਾ ਮਨਜ਼ੂਰ ਹੋ ਗਿਆ!</td><td>Push notification · driver onboarding</td></tr>
+    <tr><td>Documents Under Review</td><td>ਦਸਤਾਵੇਜ਼ ਜਾਂਚ ਹੋ ਰਹੇ ਹਨ</td><td>Verification pending screen</td></tr>
+    <tr><td>Ride Complete!</td><td>ਰਾਈਡ ਪੂਰੀ ਹੋਈ!</td><td>Driver fare confirmation screen</td></tr>
+    <tr><td>All Trips / Ride History</td><td>ਸਾਰੀਆਂ ਰਾਈਡਾਂ / ਰਾਈਡ ਇਤਿਹਾਸ</td><td>History tab headers</td></tr>
+    <tr><td>Your ride is in 30 minutes</td><td>ਤੁਹਾਡੀ ਰਾਈਡ 30 ਮਿੰਟ ਵਿੱਚ ਹੈ</td><td>Scheduled ride push reminder</td></tr>
+    <tr><td>Driver Partner</td><td>ਡਰਾਈਵਰ ਪਾਰਟਨਰ</td><td>Driver splash · login</td></tr>
+    <tr><td>Waiting for rides...</td><td>ਨਵੀਂ ਰਾਈਡ ਉਡੀਕ ਕਰੋ</td><td>Dashboard online state</td></tr>
+    <tr><td>Enter Destination</td><td>ਮੰਜ਼ਿਲ ਟਾਈਪ ਕਰੋ...</td><td>Destination input placeholder</td></tr>
+  </table>
+
+  <div class="note-callout note-green" style="margin-top:16px;">
+    <strong>Gurmukhi rendering rule:</strong> Android XML must include <code>android:fontFamily="@font/punjabi_medium"</code> + <code>android:lineSpacingMultiplier="1.5"</code> on all Gurmukhi text views. Bold (700 weight) should not be used for body Gurmukhi text — Regular/Medium/SemiBold only.
+  </div>
+</div>
+
+</div><!-- /content -->
+
+<!-- FOOTER -->
+<div class="spec-footer">
+  <div class="sf-left">Chalo ਚਲੋ</div>
+  <div class="sf-right">
+    Component Spec Sheet v1.0 · Static Figma Handoff<br>
+    10 Groups · 60+ Variants · Foundation A–F · Components 01–11<br>
+    Native Android · API 28+ · 360 × 800dp base grid · Faridabad, Haryana
+  </div>
+</div>
+
+<style>
+@keyframes ring-urg { from { opacity:1; } to { opacity:0.45; } }
+#ring-urg-text { animation: ring-urg 0.5s ease-in-out infinite alternate; }
+</style>
+
+</body>
+</html>

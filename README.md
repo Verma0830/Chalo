@@ -377,6 +377,7 @@ See [SECURITY_PERFORMANCE_REVIEW.md](docs/reviews/SECURITY_PERFORMANCE_REVIEW.md
 | BullMQ job queue | ✅ Running | OTP cleanup queue active |
 | All 11 DB tables | ✅ Migrated | `prisma migrate deploy` applied |
 | PostGIS GIST index | ✅ Applied | Driver proximity search optimised |
+| Postman API Testing | ✅ Done | All 41 endpoints verified — all flows working correctly |
 
 ## What's Next
 

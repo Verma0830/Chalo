@@ -4,7 +4,12 @@
       "Bash(npm test -- --forceExit)",
       "Bash(docker exec chalo-db psql -U postgres -d chalo -c \"SELECT migration_name, finished_at, applied_steps_count, rolled_back_at FROM _prisma_migrations ORDER BY started_at;\")",
       "Bash(docker exec chalo-db psql -U postgres -d chalo -c \"SELECT extname FROM pg_extension;\")",
-      "Bash(docker exec chalo-db psql -U postgres -d chalo -c \"\\\\dt public.*\")"
+      "Bash(docker exec chalo-db psql -U postgres -d chalo -c \"\\\\dt public.*\")",
+      "Bash(npx prisma migrate deploy)",
+      "Bash(docker start chalo-db chalo-redis)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:luffy@localhost:5433/chalo?schema=public\" npx prisma migrate deploy)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:luffy@localhost:5433/chalo?schema=public\" npx prisma generate)",
+      "Bash(npx tsc --noEmit)"
     ]
   }
 }

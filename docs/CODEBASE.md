@@ -48,7 +48,8 @@ chalo-backend/
 │   └── migrations/
 │       ├── 20260301011006_init/            # Full schema init
 │       ├── 20260301011007_add_postgis_indexes/ # GIST indexes for lat/lng
-│       └── 20260301020000_add_verification_metadata/ # verificationNote + verificationMetadata
+│       ├── 20260301020000_add_verification_metadata/ # verificationNote + verificationMetadata
+│       └── 20260301030000_add_ride_otp_and_driver_rating/ # rideStartOtp, driverRating, driverComment
 │
 └── src/
     ├── app.ts                 # Express app setup (middleware stack, routes mount)
@@ -177,14 +178,16 @@ HTTP Request
 
 **Role check:** `authorize('ADMIN')` reads `req.user.role` — role is stored in Postgres, NOT in the Firebase token. So if you change a user's role in the DB, they must **re-login** to get a new token (Redis cache expires in 5 min).
 
-**IMPORTANT:** Admin users must have `role = 'ADMIN'` in the `users` table (set via SQL). There is no signup endpoint for admins.
+**IMPORTANT:** Admin users must have `role = 'ADMIN'` in the `users` table.
+Use the bootstrap endpoint (no Firebase auth required, protected by `INTERNAL_API_KEY` header):
 
-```sql
--- To promote a user to ADMIN:
-UPDATE users SET role = 'ADMIN' WHERE phone = '+91XXXXXXXXXX';
+```
+POST /api/v1/admin/promote
+Header: x-internal-api-key: chalo-internal-dev-key-change-in-prod
+Body: { "phone": "+91XXXXXXXXXX" }
 ```
 
-After this SQL update, the user must re-send OTP and re-verify to get a fresh token.
+After promotion, the user must re-send OTP and re-verify to get a fresh token with ADMIN role.
 
 ---
 
@@ -414,7 +417,7 @@ if (result.confidence && result.confidence >= 0.85) {
 | `GOOGLE_MAPS_API_KEY` | No | Haversine fallback used if absent |
 | `MSG91_AUTH_KEY` | No | SMS/SOS alert — skipped if absent |
 | `SUREPASS_API_KEY` | No | KYC API — ManualKYCProvider used if absent |
-| `INTERNAL_API_KEY` | No | Protects `/metrics` endpoint in prod |
+| `INTERNAL_API_KEY` | Yes (prod) | Protects `POST /admin/promote` + `/metrics` endpoint |
 
 ---
 
@@ -432,6 +435,8 @@ All configurable via `PUT /api/v1/admin/config/:key` (ADMIN role required):
 | `base_fare_per_km` | 12 | ₹12/km |
 | `base_fare_per_min` | 2 | ₹2/min |
 | `settlement_days` | 2 | T+2 settlement |
+| `free_cancel_window_secs` | 120 | Seconds after driver assignment before cancel fee applies |
+| `cancel_fee_amount` | 20 | ₹20 cancellation fee (charged after free window) |
 
 SUBSCRIPTION plan drivers pay zero commission (fixed weekly fee instead). COMMISSION plan drivers pay 15% per ride.
 
@@ -488,18 +493,22 @@ jest.mock('../../config/logger', () => ({
 ## 18. Current Status (March 2026)
 
 **Done:**
-- All 41 API endpoints implemented and tested
+- All 48 API endpoints implemented (41 original + 7 new P0 features)
 - Broadcast driver search (top-5 batch, BullMQ timeout)
-- Admin panel (8 endpoints, ADMIN role gate)
+- Admin panel (9 endpoints, ADMIN role gate + INTERNAL_API_KEY bootstrap)
 - KYC provider (pluggable — Surepass activates automatically via env var)
 - Firebase auth, FCM, RTDB sync
-- Prisma schema with PostGIS
-- 249/249 tests passing
+- Prisma schema with PostGIS (4 migrations applied)
 - Docker Compose for full-stack local dev
 
-**Pending (one-time setup):**
-- `npx prisma migrate deploy` — apply `20260301020000_add_verification_metadata` migration
-- `npm run db:seed` — seed `platform_config` table with initial values
+**New features added (March 2026):**
+- `POST /auth/register-driver` — atomic driver registration (OTP + User + DriverProfile)
+- OTP ride start — 4-digit OTP generated on driver assignment, validated on ride start
+- `POST /driver/rides/:rideId/rate-customer` — driver-to-customer rating
+- Cancellation fee logic — ₹20 after 2-minute free window (configurable via platform_config)
+- `GET /rides/:rideId/receipt` — full fare breakdown for completed rides
+- `GET /driver/earnings/summary?period=week|month` — lightweight earnings dashboard card
+- `POST /admin/promote` — promote user to ADMIN via INTERNAL_API_KEY (no Firebase auth required)
 
 **Next steps:**
 - Customer Android app (Kotlin + Jetpack Compose)
