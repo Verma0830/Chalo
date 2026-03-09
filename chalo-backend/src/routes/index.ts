@@ -10,6 +10,7 @@ import driverRoutes from './driver.routes';
 import paymentRoutes from './payment.routes';
 import notificationRoutes from './notification.routes';
 import adminRoutes from './admin.routes';
+import trackRoutes from './track.routes';
 
 const router = Router();
 
@@ -18,6 +19,7 @@ const router = Router();
 // -------------------------------------------------------
 
 router.use('/auth', authRoutes);
+router.use('/track', trackRoutes);
 router.use('/rides', rideRoutes);
 router.use('/driver', driverRoutes);
 router.use('/payments', paymentRoutes);

@@ -8,6 +8,7 @@ import {
   scheduleRideSchema,
   rateRideSchema,
   cancelRideSchema,
+  trackTokenParamSchema,
 } from '../../validators/ride.validator';
 import CONSTANTS from '../../utils/constants';
 
@@ -162,5 +163,15 @@ describe('cancelRideSchema', () => {
 
   it('rejects reason > 500 chars', () => {
     expect(cancelRideSchema.safeParse({ reason: 'X'.repeat(501) }).success).toBe(false);
+  });
+});
+
+describe('trackTokenParamSchema', () => {
+  it('accepts a valid public tracking token', () => {
+    expect(trackTokenParamSchema.safeParse({ token: 'abcDEF123_token-456' }).success).toBe(true);
+  });
+
+  it('rejects invalid characters', () => {
+    expect(trackTokenParamSchema.safeParse({ token: 'abc/def' }).success).toBe(false);
   });
 });

@@ -4,6 +4,7 @@
 // ============================================================
 
 import prisma from '../config/database';
+import { createHash, randomBytes } from 'crypto';
 import { ApiError, ErrorCode } from '../utils/apiError';
 import { fareService } from './fare.service';
 import { notificationService } from './notification.service';
@@ -43,6 +44,12 @@ const RIDE_HISTORY_SELECT = {
 } satisfies Prisma.RideSelect;
 
 type RideHistoryItem = Prisma.RideGetPayload<{ select: typeof RIDE_HISTORY_SELECT }>;
+
+const ACTIVE_TRACKING_STATUSES: RideStatus[] = [
+  RideStatus.DRIVER_ASSIGNED,
+  RideStatus.DRIVER_ARRIVED,
+  RideStatus.IN_PROGRESS,
+];
 
 export class RideService {
   /**
@@ -108,6 +115,7 @@ export class RideService {
           baseFare: fareEstimate.baseFare,
           surgeMultiplier: fareEstimate.surgeMultiplier,
           finalFare: fareEstimate.totalFare,
+          gstAmount: fareEstimate.gstAmount,
           paymentMethod,
           status: RideStatus.REQUESTED,
           rideEvents: {
@@ -206,6 +214,7 @@ export class RideService {
         baseFare: fareEstimate.baseFare,
         surgeMultiplier: 1.0, // No surge for scheduled — recalculated at ride time
         finalFare: fareEstimate.baseFare,
+        gstAmount: fareEstimate.gstAmount,
         paymentMethod,
         status: RideStatus.SCHEDULED,
         isScheduled: true,
@@ -407,13 +416,7 @@ export class RideService {
     }
 
     // Only return location for active rides
-    const trackableStatuses: RideStatus[] = [
-      RideStatus.DRIVER_ASSIGNED,
-      RideStatus.DRIVER_ARRIVED,
-      RideStatus.IN_PROGRESS,
-    ];
-
-    if (!trackableStatuses.includes(ride.status)) {
+    if (!ACTIVE_TRACKING_STATUSES.includes(ride.status)) {
       throw ApiError.badRequest(
         `Cannot track ride in ${ride.status} status`,
         'RIDE_NOT_TRACKABLE'
@@ -447,6 +450,165 @@ export class RideService {
       drop: {
         lat: ride.dropLat,
         lng: ride.dropLng,
+      },
+    };
+  }
+
+  /**
+   * Create a public tracking token for an active ride the customer owns.
+   */
+  async shareRide(rideId: string, customerId: string) {
+    const ride = await prisma.ride.findUnique({
+      where: { id: rideId },
+      select: {
+        id: true,
+        customerId: true,
+        status: true,
+      },
+    });
+
+    if (!ride) {
+      throw ApiError.notFound('Ride not found', ErrorCode.RIDE_NOT_FOUND);
+    }
+
+    if (ride.customerId !== customerId) {
+      throw ApiError.forbidden('You can only share your own rides', ErrorCode.FORBIDDEN);
+    }
+
+    if (!ACTIVE_TRACKING_STATUSES.includes(ride.status)) {
+      throw ApiError.badRequest(
+        'Tracking link can only be created for an active ride',
+        'RIDE_NOT_SHAREABLE'
+      );
+    }
+
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + CONSTANTS.RIDE_SHARE_TTL_HOURS * 60 * 60 * 1000);
+    const token = randomBytes(CONSTANTS.RIDE_SHARE_TOKEN_BYTES).toString('base64url');
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+
+    await prisma.$transaction(async (tx) => {
+      await tx.rideShareLink.updateMany({
+        where: {
+          rideId,
+          revokedAt: null,
+          expiresAt: { gt: now },
+        },
+        data: { revokedAt: now },
+      });
+
+      await tx.rideShareLink.create({
+        data: {
+          rideId,
+          tokenHash,
+          expiresAt,
+          createdById: customerId,
+        },
+      });
+    });
+
+    logger.info('Ride tracking link created', { rideId, customerId, expiresAt });
+
+    return { rideId, token, expiresAt };
+  }
+
+  /**
+   * Resolve a public tracking token into the current ride status and live location.
+   */
+  async getSharedTracking(token: string) {
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+    const now = new Date();
+
+    const link = await prisma.rideShareLink.findFirst({
+      where: {
+        tokenHash,
+        revokedAt: null,
+        expiresAt: { gt: now },
+      },
+      select: {
+        expiresAt: true,
+        ride: {
+          select: {
+            id: true,
+            status: true,
+            pickupLat: true,
+            pickupLng: true,
+            pickupAddress: true,
+            dropLat: true,
+            dropLng: true,
+            dropAddress: true,
+            requestedAt: true,
+            driverAssignedAt: true,
+            startedAt: true,
+            completedAt: true,
+            cancelledAt: true,
+            driver: {
+              select: {
+                name: true,
+                driverProfile: {
+                  select: {
+                    vehicleNumber: true,
+                    vehicleModel: true,
+                    currentLat: true,
+                    currentLng: true,
+                    lastLocationUpdate: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!link) {
+      throw ApiError.notFound('Tracking link expired or invalid', 'TRACK_LINK_INVALID');
+    }
+
+    const driverProfile = link.ride.driver?.driverProfile;
+    const isTrackingActive = ACTIVE_TRACKING_STATUSES.includes(link.ride.status);
+    const hasLiveLocation =
+      driverProfile?.currentLat !== null &&
+      driverProfile?.currentLat !== undefined &&
+      driverProfile?.currentLng !== null &&
+      driverProfile?.currentLng !== undefined;
+
+    return {
+      rideId: link.ride.id,
+      status: link.ride.status,
+      isTrackingActive,
+      expiresAt: link.expiresAt,
+      pickup: {
+        lat: link.ride.pickupLat,
+        lng: link.ride.pickupLng,
+        address: link.ride.pickupAddress,
+      },
+      drop: {
+        lat: link.ride.dropLat,
+        lng: link.ride.dropLng,
+        address: link.ride.dropAddress,
+      },
+      driver: link.ride.driver
+        ? {
+            name: link.ride.driver.name,
+            vehicleNumber: driverProfile?.vehicleNumber ?? null,
+            vehicleModel: driverProfile?.vehicleModel ?? null,
+          }
+        : null,
+      location:
+        isTrackingActive && hasLiveLocation
+          ? {
+              lat: driverProfile.currentLat,
+              lng: driverProfile.currentLng,
+              updatedAt: driverProfile.lastLocationUpdate,
+            }
+          : null,
+      timestamps: {
+        requested: link.ride.requestedAt,
+        driverAssigned: link.ride.driverAssignedAt,
+        started: link.ride.startedAt,
+        completed: link.ride.completedAt,
+        cancelled: link.ride.cancelledAt,
       },
     };
   }
@@ -640,6 +802,42 @@ export class RideService {
     logger.info('Ride rated', { rideId, rating });
 
     return { rideId, rating, comment };
+  }
+
+  /**
+   * Skip rating for a completed ride — customer pressed "Skip", never ask again.
+   * Sets ratingSkippedAt on the ride. Android app uses this to clear SharedPreferences.
+   * @param rideId - The ride ID
+   * @param customerId - The customer's user ID
+   */
+  async skipRating(rideId: string, customerId: string) {
+    const ride = await prisma.ride.findUnique({ where: { id: rideId } });
+
+    if (!ride) {
+      throw ApiError.notFound('Ride not found', ErrorCode.RIDE_NOT_FOUND);
+    }
+
+    if (ride.customerId !== customerId) {
+      throw ApiError.forbidden('You can only skip rating for your own rides', ErrorCode.FORBIDDEN);
+    }
+
+    if (ride.status !== RideStatus.COMPLETED) {
+      throw ApiError.badRequest('Can only skip rating for completed rides', ErrorCode.RIDE_NOT_COMPLETED);
+    }
+
+    if (ride.customerRating) {
+      // Already rated — no-op, return success so client can clean up
+      return { rideId, skipped: false, reason: 'already_rated' };
+    }
+
+    await prisma.ride.update({
+      where: { id: rideId },
+      data: { ratingSkippedAt: new Date() },
+    });
+
+    logger.info('Rating skipped', { rideId, customerId });
+
+    return { rideId, skipped: true };
   }
 
   /**

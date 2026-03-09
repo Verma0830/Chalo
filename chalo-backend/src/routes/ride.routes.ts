@@ -122,6 +122,21 @@ router.post(
   rideController.cancelRide.bind(rideController)
 );
 
+router.post(
+  '/:rideId/share',
+  authorize('CUSTOMER'),
+  validateParams(rideIdParamSchema),
+  rideController.shareRide.bind(rideController)
+);
+
+// Skip rating (customer pressed Skip — never ask again)
+router.post(
+  '/:rideId/skip-rating',
+  authorize('CUSTOMER'),
+  validateParams(rideIdParamSchema),
+  rideController.skipRating.bind(rideController)
+);
+
 // Rate ride
 router.post(
   '/:rideId/rate',

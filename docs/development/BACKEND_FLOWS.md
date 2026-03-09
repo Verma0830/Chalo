@@ -1,6 +1,6 @@
 # Chalo Backend — Complete Flow Reference
 > How every piece of the backend works, from registration to ride completion to payout.
-> Last updated: March 2026 | Score: 8.5/10 | Endpoints: 48
+> Last updated: March 2026 | Score: 8.5/10 | Endpoints: 58
 
 ---
 
@@ -290,6 +290,10 @@ POST /driver/location   { lat, lng }
 → Updates currentLat, currentLng, lastLocationUpdate in driver_profiles
 → If driver has active ride → syncs to RTDB: rides/{rideId}/driverLat, driverLng
   (customer app reads from here for live tracking)
+
+GET /driver/status
+→ Returns online state + active ride info
+→ Also returns cancellationStats: total, today, lastCancelledAt, alertThreshold
 ```
 
 ### Step 4 — Receive and Accept/Decline a Ride Offer
@@ -531,7 +535,14 @@ Step 4: Apply surge
   surgeMultiplier = 1.0 (no surge) to 2.0 (max)
   finalFare = round(baseFare × surgeMultiplier)
 
-Step 5: Surge conditions (time-based, manual toggle)
+Step 5: Compute GST (internal accounting only — not added on top)
+  gst_percentage = 5  (from platform_config, default 5%)
+  gstAmount = round(finalFare × 5 / 100)
+  → Stored in rides.gstAmount for tax accounting
+  → NOT shown to customer or driver — the fare they see already includes it
+  → NOT added on top of finalFare (baked in, not extra)
+
+Step 6: Surge conditions (time-based, manual toggle)
   Morning peak (7–10am): 1.3x
   Evening peak (5–8pm): 1.5x
   Late night (10pm–5am): 1.3x
@@ -620,18 +631,18 @@ No backend processing needed.
 
 ```
 Flow:
-  1. POST /payment/create-order
+  1. POST /payments/order
      → Creates Razorpay order for the ride fare
      → Returns: { razorpayOrderId, amount, currency }
 
   2. Client completes payment on Razorpay SDK (outside our backend)
 
-  3. POST /payment/verify
+  3. POST /payments/verify
      → Verifies Razorpay signature (HMAC-SHA256)
      → Updates ride.paymentStatus = COMPLETED
      → Updates ride.razorpayPaymentId
 
-  4. Razorpay sends webhook: POST /payment/webhook
+  4. Razorpay sends webhook: POST /payments/webhook
      → Verifies webhook signature
      → Handles: payment.captured → mark ride paid
      → Handles: payment.failed → mark as failed
@@ -911,21 +922,22 @@ All original P0 critical features are implemented and tested:
 | Admin promote endpoint (INTERNAL_API_KEY, no SQL needed) | ✅ Done |
 | Ride receipt endpoint (`GET /rides/:rideId/receipt`) | ✅ Done |
 | Driver earnings summary (`GET /driver/earnings/summary?period=week\|month`) | ✅ Done |
+| GST (5%) on ride fare — stored in `rides.gstAmount`, internal accounting only | ✅ Done |
+| Rating window skip endpoint (`POST /rides/:rideId/skip-rating`) + `rides.ratingSkippedAt` field | ✅ Done |
+| Trip share endpoint (`POST /rides/:rideId/share`) + public tracking endpoint (`GET /track/:token`) | ✅ Done |
+| Driver cancellation tracking (`driverCancellationCount*`) + admin threshold alert at 3/day | ✅ Done |
 
 ---
 
 ### 🟠 P1 — Build These Before or During Android Development
 
-Small to medium items. None require a new DB migration except GST (adds one config key).
+Small to medium items. All decision context documented below.
 
 | # | Feature | What to build | Effort |
 |---|---|---|---|
-| 1 | **GST on fare** | Add 5% GST line to fare calc and receipt response. New `platform_config` key: `gst_percentage = 5`. Indian GST law requires this for ride-hailing. | 2 hrs |
-| 2 | **Rating window enforcement** | Block `POST /rides/:rideId/rate` and `POST /driver/rides/:rideId/rate-customer` if `completedAt` was > 24 hrs ago. One check per service method. | 1 hr |
-| 3 | **Unread notification count** | `GET /notifications/unread-count` → `{ count: 4 }`. Android needs this for badge dot on the bell icon. | 1 hr |
-| 4 | **Trip share / live tracking link** | `POST /rides/:rideId/share` → short-lived token (24h). Public `GET /track/:token` returns ride status + driver lat/lng without auth. For sharing with family. | 4 hrs |
-| 5 | **SMS receipt on completion** | When `completeRide()` runs, call `smsService.send()` to customer phone with fare breakdown. Requires `MSG91_API_KEY`. | 2 hrs |
-| 6 | **Razorpay cancellation fee charge** | `cancelRide` returns `cancellationFee` in response but doesn't charge UPI rides. Trigger a Razorpay order for the fee when `cancellationFee > 0` and `paymentMethod = UPI`. Cash rides: driver collects manually. | 3 hrs |
+| 1 | **Notification badge dot** | No dedicated count endpoint needed for V1. App calls `GET /notifications?limit=1` and checks if top item is unread. When promo notifications launch (P2), add `GET /notifications/unread-count`. | — |
+| 2 | **SMS receipt** | Decision: no SMS receipts. All receipts available in-app via `GET /rides/:rideId/receipt`. MSG91 costs ₹0.18–0.22/SMS — not worth it for info already in the app. | — |
+| 3 | **Cancellation fee charging** | Decision: information-only for V1. Fee shown to customer before confirming cancel. Driver notified to collect cash. V2: deduct from wallet when wallet is built. Auto-charging without saved payment method (UPI mandate) is not supported by RBI regulations. | — |
 
 ---
 
@@ -982,7 +994,7 @@ npx prisma migrate deploy
 
 ---
 
-## Appendix — All 48 Endpoints
+## Appendix — All 58 Endpoints
 
 ### Auth (8 endpoints)
 ```
@@ -996,7 +1008,7 @@ PUT  /auth/saved-location
 PUT  /auth/device-token
 ```
 
-### Rides (13 endpoints)
+### Rides (14 endpoints)
 ```
 POST /rides/fare-estimate
 POST /rides
@@ -1007,12 +1019,14 @@ GET  /rides/:rideId/receipt    ← NEW
 GET  /rides/:rideId
 GET  /rides/:rideId/location
 POST /rides/:rideId/cancel
+POST /rides/:rideId/share      ← NEW
+POST /rides/:rideId/skip-rating
 POST /rides/:rideId/rate
 POST /rides/:rideId/sos
-POST /rides/sos/:alertId/resolve
+POST /rides/sos/:sosAlertId/resolve
 ```
 
-### Driver (20 endpoints)
+### Driver (19 endpoints)
 ```
 POST /driver/documents
 POST /driver/go-online
@@ -1035,17 +1049,19 @@ POST /driver/withdrawals
 GET  /driver/withdrawals/:withdrawalId
 ```
 
-### Payment (3 endpoints)
+### Payments (3 endpoints)
 ```
-POST /payment/create-order
-POST /payment/verify
-POST /payment/webhook
+POST /payments/order
+POST /payments/verify
+POST /payments/webhook
 ```
 
-### Notifications (2 endpoints)
+### Notifications (4 endpoints)
 ```
 GET  /notifications
-PUT  /notifications/:id/read
+GET  /notifications/unread-count
+PATCH /notifications/:notificationId/read
+PATCH /notifications/read-all
 ```
 
 ### Admin (9 endpoints)
@@ -1059,4 +1075,9 @@ POST /admin/drivers/:driverId/auto-verify
 GET  /admin/rides/live
 GET  /admin/config
 PUT  /admin/config/:key
+```
+
+### Public Tracking (1 endpoint)
+```
+GET  /track/:token                        ← NEW
 ```

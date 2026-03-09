@@ -9,6 +9,7 @@ import { fareService } from '../services/fare.service';
 import { sosService } from '../services/sos.service';
 import { ApiResponse } from '../utils/apiResponse';
 import { AuthenticatedRequest } from '../types';
+import config from '../config';
 import {
   FareEstimateInput,
   CreateRideInput,
@@ -26,8 +27,9 @@ export class RideController {
   async getFareEstimate(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const input = req.body as FareEstimateInput;
-      const estimate = await fareService.estimateFare(input.pickup, input.drop);
-      ApiResponse.success(res, estimate, 'Fare estimated');
+      // Strip gstAmount — internal accounting field, not shown to customer
+      const { gstAmount: _gst, ...publicEstimate } = await fareService.estimateFare(input.pickup, input.drop);
+      ApiResponse.success(res, publicEstimate, 'Fare estimated');
     } catch (error) {
       next(error);
     }
@@ -164,6 +166,32 @@ export class RideController {
   }
 
   /**
+   * POST /rides/:rideId/share
+   * Create a short-lived public tracking link for an active ride.
+   */
+  async shareRide(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as AuthenticatedRequest).user.id;
+      const { rideId } = req.params;
+
+      const result = await rideService.shareRide(rideId, userId);
+      const shareUrl = `${req.protocol}://${req.get('host')}/api/${config.apiVersion}/track/${result.token}`;
+
+      ApiResponse.created(
+        res,
+        {
+          rideId: result.rideId,
+          shareUrl,
+          expiresAt: result.expiresAt,
+        },
+        'Tracking link created'
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * POST /rides/:rideId/rate
    * Rate a completed ride
    */
@@ -175,6 +203,36 @@ export class RideController {
 
       const result = await rideService.rateRide(rideId, userId, input.rating, input.comment);
       ApiResponse.success(res, result, 'Thank you for rating!');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /rides/:rideId/skip-rating
+   * Customer explicitly skipped rating — never ask again
+   */
+  async skipRating(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = (req as AuthenticatedRequest).user.id;
+      const { rideId } = req.params;
+
+      const result = await rideService.skipRating(rideId, userId);
+      ApiResponse.success(res, result, 'Rating skipped');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * GET /track/:token
+   * Public ride tracking endpoint for shared family links.
+   */
+  async getSharedTracking(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { token } = req.params;
+      const result = await rideService.getSharedTracking(token);
+      ApiResponse.success(res, result, 'Tracking link valid');
     } catch (error) {
       next(error);
     }

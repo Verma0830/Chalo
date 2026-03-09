@@ -191,15 +191,16 @@ After promotion, the user must re-send OTP and re-verify to get a fresh token wi
 
 ---
 
-## 6. Database Schema (11 Models)
+## 6. Database Schema (12 Models)
 
 | Model | Table | Purpose |
 |---|---|---|
 | `User` | `users` | Core account — shared by customers and drivers. Has `role: CUSTOMER \| DRIVER \| ADMIN` |
 | `CustomerProfile` | `customer_profiles` | Customer extras: emergency contact, saved home/work locations, ride stats |
-| `DriverProfile` | `driver_profiles` | Driver docs (license, RC, Aadhaar), verification status, location, earnings, KYC metadata |
+| `DriverProfile` | `driver_profiles` | Driver docs (license, RC, Aadhaar), verification status, location, earnings, KYC metadata, and cancellation quality counters |
 | `Ride` | `rides` | Full ride lifecycle — pickup/drop coords, fare breakdown, status, payment, timestamps |
 | `RideEvent` | `ride_events` | Immutable audit log — every status transition is logged here with GPS + metadata |
+| `RideShareLink` | `ride_share_links` | 24-hour public tracking tokens for active rides. Stores hashed token, expiry, revocation, and creator. |
 | `Earning` | `earnings` | Per-ride earning record for driver (gross, commission, net, settlement status) |
 | `Withdrawal` | `withdrawals` | Driver payout requests (bank transfer or UPI) |
 | `SOSAlert` | `sos_alerts` | SOS triggers during active rides — tracks who was notified |
@@ -233,6 +234,9 @@ File: `src/utils/constants.ts` — `CONSTANTS` object (as const).
 - `RIDE_OFFER_BATCH_TTL_SECS = 65` — TTL for batch offer window (60s + 5s grace)
 - `RIDE_CANDIDATES_TTL_SECS = 600` — Redis TTL for full candidate list (10 min)
 - `DRIVER_ARRIVED_RADIUS_METERS = 200` — radius for "I've Arrived" button to activate
+- `RIDE_SHARE_TTL_HOURS = 24` — lifetime of the public family tracking link
+- `RIDE_SHARE_TOKEN_BYTES = 24` — cryptographic token size before base64url encoding
+- `DRIVER_CANCELLATION_ALERT_THRESHOLD = 3` — admin alert threshold per IST day
 
 **Fare:**
 - `MIN_FARE = 30` — ₹30 minimum fare

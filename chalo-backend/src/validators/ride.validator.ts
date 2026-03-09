@@ -88,6 +88,17 @@ export const rideIdParamSchema = z.object({
 });
 
 /**
+ * Public tracking token param validation
+ */
+export const trackTokenParamSchema = z.object({
+  token: z
+    .string()
+    .min(16, 'Invalid tracking token')
+    .max(128, 'Invalid tracking token')
+    .regex(/^[A-Za-z0-9_-]+$/, 'Invalid tracking token'),
+});
+
+/**
  * SOS alert ID param validation
  */
 export const sosAlertIdParamSchema = z.object({

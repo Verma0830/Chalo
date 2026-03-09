@@ -1,7 +1,7 @@
 # Chalo — What's Left To Do
 
 > Last updated: March 2026
-> Backend: ✅ Complete — 48 endpoints, 8.5/10 score
+> Backend: ✅ Complete — 58 endpoints, 8.5/10 score
 > Android apps: ⬜ Not started — start here next
 > Deployment: ⬜ Not started
 
@@ -12,34 +12,94 @@ This document covers everything that is still pending, in priority order.
 ## Table of Contents
 
 1. [Backend — P1 Features (small, build during Android dev)](#1-backend--p1-features)
-2. [Third-Party Integrations to Set Up](#2-third-party-integrations-to-set-up)
-3. [Razorpay Payment Testing Guide](#3-razorpay-payment-testing-guide)
-4. [One-Time DB Setup (not done yet)](#4-one-time-db-setup)
-5. [Customer Android App](#5-customer-android-app)
-6. [Driver Android App](#6-driver-android-app)
-7. [Deployment](#7-deployment)
-8. [Post-Launch (P2 / P3)](#8-post-launch-p2--p3)
+2. [Competitive Gap Analysis — What Other Apps Have That We Don't](#2-competitive-gap-analysis)
+3. [Third-Party Integrations to Set Up](#3-third-party-integrations-to-set-up)
+4. [Razorpay Payment Testing Guide](#4-razorpay-payment-testing-guide)
+5. [One-Time DB Setup (not done yet)](#5-one-time-db-setup)
+6. [Customer Android App](#6-customer-android-app)
+7. [Driver Android App](#7-driver-android-app)
+8. [Deployment](#8-deployment)
+9. [Post-Launch (P2 / P3)](#9-post-launch-p2--p3)
 
 ---
 
 ## 1. Backend — P1 Features
 
-These are all small. Build them as the Android team hits each flow, rather than all upfront.
+### Already done (March 2026)
 
-| # | Endpoint / Change | What | Effort | Needed for |
-|---|---|---|---|---|
-| 1 | Fare calculation update | Add 5% GST line. New `platform_config` key: `gst_percentage`. | 2 hrs | Receipt screen |
-| 2 | Rating window check | Block rating if `completedAt > 24 hrs ago`. One condition in `rateRide()` and `rateCustomer()`. | 1 hr | Rating screens |
-| 3 | `GET /notifications/unread-count` | Returns `{ count: N }`. Android needs this for the notification badge. | 1 hr | All screens |
-| 4 | `POST /rides/:rideId/share` + `GET /track/:token` | Trip share link with 24h token. Public, no auth needed. | 4 hrs | Active ride screen |
-| 5 | SMS receipt on ride completion | Call `smsService.send()` inside `completeRide()`. Needs `MSG91_API_KEY`. | 2 hrs | Ride completion |
-| 6 | Razorpay cancellation fee charge | Trigger Razorpay order when `cancellationFee > 0` on UPI rides. Cash: driver collects. | 3 hrs | Cancel flow (UPI) |
+| Feature | Status | Notes |
+|---|---|---|
+| GST (5%) on ride fare | ✅ Done | Stored in `rides.gstAmount`. Not shown to customer/driver — internal accounting only. Config: `gst_percentage = 5` in platform_config. |
+| Rating window (48h + skip) | ✅ Done | `rides.ratingSkippedAt` field + `POST /rides/:rideId/skip-rating` endpoint. 48h/2-prompt logic is Android-only (SharedPreferences). |
+| Trip share / tracking link | ✅ Done | `POST /rides/:rideId/share` returns a 24h share URL. Public `GET /track/:token` returns ride status + live driver coordinates without auth. |
+| Driver cancellation tracking | ✅ Done | `driver_profiles.driverCancellationCount*` fields track totals and daily counts. `POST /driver/rides/:rideId/cancel` now returns `cancellationStats` and alerts admins at 3 cancellations/day. |
 
-**Total for all P1 backend work: ~13 hours.**
+### Remaining launch-critical backend work
+
+None for this gap set. The only meaningful customer-facing backend launch blocker here was trip sharing, and it is now implemented.
+
+### Decided against (and why)
+
+| Feature | Decision | Reason |
+|---|---|---|
+| Notification badge count endpoint | ❌ Not needed for V1 | All critical ride notifications show live on ride screen via RTDB. App shows a red dot using existing `GET /notifications?limit=1`. Add count endpoint in P2 when promo notifications launch. |
+| SMS receipt on completion | ❌ Not sending SMS | MSG91 costs ₹0.18–0.22/SMS (transactional tier). ₹600/month at 100 rides/day, ₹6,000/month at 1,000 rides/day. Full receipt already available in-app via `GET /rides/:rideId/receipt`. No SMS needed. |
+| Razorpay auto-charge cancellation fee | ❌ Not for V1 | 90% of Faridabad rides are cash — cannot auto-charge. For UPI: RBI regulations require explicit user approval per debit. Fee shown clearly before cancel. Driver collects cash. V2: deduct from wallet. |
+
+### Rating UX design (implemented)
+
+**Flow (48-hour window):**
+1. Ride completes → bottom sheet: [★★★★★ Rate] + [Rate Later]
+2. "Rate Later" → Android stores `pendingRatingRideId` in SharedPreferences. No backend call.
+3. Next app open (within **48h**) → shows once more: [Rate] + [Skip]
+4. "Skip" → Android calls `POST /rides/:rideId/skip-rating` + clears SharedPreferences
+5. After 48h → Android auto-clears — no backend call needed
+
+**Total remaining backend work for these launch-critical gaps: ~0 hours.**
 
 ---
 
-## 2. Third-Party Integrations to Set Up
+## 2. Competitive Gap Analysis
+
+What Rapido, Ola, and Uber have that Chalo V1 does not. Sorted by how much it would hurt the app in production.
+
+### 🔴 Missing — would directly hurt user trust or safety
+
+| Feature | Rapido | Ola | Uber | Chalo | Impact |
+|---|---|---|---|---|---|
+| **Live trip share link** | ✅ | ✅ | ✅ | ✅ | Implemented in backend. Customer creates a 24h share link and family tracks via a public endpoint. |
+| **In-app call / masked number** | ✅ | ✅ | ✅ | ❌ | Driver and customer can't contact each other without exposing real numbers. At pickup, driver needs to locate customer. Without masked calling, driver either calls with real number (privacy issue) or can't reach customer at all. **Plan: backend stores no phone numbers in responses. App-layer solution needed (Exotel masked calling or just show driver's name + vehicle prominently and expect them to call). Short-term: acceptable. Medium-term: add Exotel masked calling.** |
+
+### 🟡 Missing — noticeable gap, not a blocker for launch
+
+| Feature | Rapido | Ola | Uber | Chalo | Notes |
+|---|---|---|---|---|---|
+| **Driver ETA updates** | ✅ | ✅ | ✅ | Partial | Backend stores `durationMins` at booking, but once driver accepts, no live ETA update. Driver location updates come via RTDB. Android can compute ETA from current driver location + Google Maps Directions API directly — no backend needed. |
+| **Driver cancellation penalty** | ✅ | ✅ | ✅ | ✅ Tracking only | Backend now tracks `driverCancellationCount`, `driverCancellationCountDaily`, and `driverCancellationLastAt`, and auto-alerts admins when a driver hits 3 cancellations in a day. Actual suspensions and penalties remain a P2 ops policy feature. |
+| **Tips for driver** | ❌ | ✅ | ✅ | ❌ | Post-ride, customer can add ₹10/₹20/₹50 tip. Good driver income boost. Skip for V1. |
+| **Feedback categories** | ✅ | ✅ | ✅ | ❌ | After rating: "Safe driving", "Clean vehicle", "Punctual" etc. Star + comment is fine for V1. |
+| **Favourite places** | ✅ | ✅ | ✅ | ✅ | Already in schema: `savedHomeLat`, `savedWorkLat` etc. Backend has it — just needs Android UI. |
+| **Ride again (repeat route)** | ✅ | ✅ | ✅ | ❌ | One tap to re-book a previous ride. All data is in ride history. Android-only feature, no backend needed. |
+
+### 🟢 Not needed for V1 (out of scope)
+
+| Feature | Why not for V1 |
+|---|---|
+| Ride pooling / shared rides | Complex matching, not relevant for bike rides |
+| Corporate accounts | Need billing module — P3 |
+| iOS app | Faridabad is Android-dominant — iOS post-V1 |
+| Automatic refunds | Razorpay refund webhook not handled — P3 |
+| Driver incentive bonuses (auto) | Manual admin ops fine for V1 — P2 |
+
+### What this means for the app launch
+
+The launch-critical backend safety gap is now closed: trip sharing is implemented and testable.
+
+Masked calling is still the main noticeable gap that remains. ETA does not need backend work because Android can derive it from live driver coordinates. Driver cancellation quality is now measurable on the backend, even though automated suspension policy stays post-launch.
+
+---
+
+## 3. Third-Party Integrations to Set Up
 
 These require accounts and API keys. None block local development — fallbacks exist for all.
 
@@ -88,27 +148,26 @@ Switch to live:
   RAZORPAY_KEY_ID=rzp_live_xxxxxxxxxxxx  (starts with rzp_live_, not rzp_test_)
 ```
 
-**When to set up:** Before testing UPI payment flows. See Section 3 for the full test guide.
+**When to set up:** Before testing UPI payment flows. See Section 4 for the full test guide.
 
 ---
 
-### MSG91 (SMS — OTP + Receipt + SOS)
+### MSG91 (SMS — SOS only)
 
-**Used for:** SOS emergency SMS to emergency contact, ride receipt SMS.
-**Without it:** SOS alert is saved in DB but not sent. OTP works via Firebase (already set up).
+**Used for:** SOS emergency SMS to emergency contact.
+**Without it:** SOS alert is saved in DB but SMS not sent. OTP works via Firebase (already set up).
+**Note:** Receipt SMS is not needed — full receipt is in-app. MSG91 is ₹0.18–0.22/SMS transactional.
 
 ```
 1. Go to https://msg91.com
 2. Sign up → get API key + sender ID
 3. Create a template for:
    - SOS alert: "SAFETY ALERT: [Name] is in a ride. Driver: [Name], Vehicle: [Number]. Location: [link]"
-   - Ride receipt: "Your Chalo ride is complete. Distance: [X]km. Fare: ₹[X]. Driver: [Name]"
 
 Add to chalo-backend/.env:
   MSG91_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxx
   MSG91_SENDER_ID=CHALOM
   MSG91_TEMPLATE_ID_SOS=xxxxxxxxxx
-  MSG91_TEMPLATE_ID_RECEIPT=xxxxxxxxxx
 ```
 
 **When to set up:** Before SOS feature is tested end-to-end.
@@ -133,7 +192,7 @@ CORS rules (set in Firebase console → Storage → Rules):
 
 ---
 
-## 3. Razorpay Payment Testing Guide
+## 4. Razorpay Payment Testing Guide
 
 ### Test mode vs Live mode
 
@@ -167,9 +226,9 @@ failure@razorpay  → always fails
 1. POST /rides/fare-estimate              → get fare amount
 2. POST /rides   { paymentMethod: "UPI" }  → create ride
 3. [simulate driver accepting + completing ride via driver endpoints]
-4. POST /payment/create-order            → get razorpayOrderId
+4. POST /payments/order                  → get razorpayOrderId
 5. [Razorpay SDK completes payment using test UPI ID: success@razorpay]
-6. POST /payment/verify  { razorpayOrderId, razorpayPaymentId, razorpaySignature }
+6. POST /payments/verify  { razorpayOrderId, razorpayPaymentId, razorpaySignature }
    → ride.paymentStatus should be COMPLETED
 7. GET  /rides/:rideId/receipt           → check fare breakdown
 ```
@@ -178,7 +237,7 @@ failure@razorpay  → always fails
 ```
 1–4. Same as above
 5. Use UPI ID: failure@razorpay
-6. POST /payment/verify → should return 400 PAYMENT_VERIFICATION_FAILED
+6. POST /payments/verify → should return 400 PAYMENT_VERIFICATION_FAILED
    → ride.paymentStatus should stay PENDING
 ```
 
@@ -191,14 +250,13 @@ failure@razorpay  → always fails
 5. Check ride in DB — paymentStatus should update to COMPLETED
 ```
 
-**Flow 4 — Cancellation fee charge (after P1 is built)**
+**Flow 4 — Cancellation fee (informational)**
 ```
 1. POST /rides  { paymentMethod: "UPI" }   → create ride
 2. [driver accepts → wait 3 minutes]
 3. POST /rides/:rideId/cancel
-   → response should include cancellationFee: 20
-   → should auto-trigger a ₹20 Razorpay order
-4. POST /payment/verify for the cancellation fee order
+   → response includes cancellationFee: 20
+   → fee shown on screen — driver collects cash (or deducted from wallet in V2)
 ```
 
 **Flow 5 — Refund testing**
@@ -232,7 +290,7 @@ Via Razorpay dashboard (test mode):
 
 ---
 
-## 4. One-Time DB Setup
+## 5. One-Time DB Setup
 
 These need to be run once against the production (and dev) database:
 
@@ -256,7 +314,7 @@ curl -X POST http://localhost:3001/api/v1/admin/promote \
 
 ---
 
-## 5. Customer Android App
+## 6. Customer Android App
 
 **Tech stack:** Kotlin · Jetpack Compose · MVVM + Hilt · Retrofit · Firebase Auth + RTDB + FCM · Google Maps SDK
 
@@ -268,8 +326,8 @@ curl -X POST http://localhost:3001/api/v1/admin/promote \
 |---|---|---|---|
 | 1 — Auth | Splash, phone entry, OTP, complete profile | `POST /auth/otp/send`, `POST /auth/otp/verify`, `PUT /auth/profile` | 1 week |
 | 2 — Home + booking | Map, destination search, fare estimate, book ride | `POST /rides/fare-estimate`, `POST /rides` | 1–2 weeks |
-| 3 — Active ride | Driver location on map, status updates, cancel, SOS | RTDB listener, `POST /rides/:rideId/cancel`, `POST /rides/:rideId/sos` | 1 week |
-| 4 — Post-ride | Payment screen, rating, receipt | `POST /rides/:rideId/rate`, `GET /rides/:rideId/receipt` | 3–4 days |
+| 3 — Active ride | Driver location on map, status updates, cancel, SOS, share ride | RTDB listener, `POST /rides/:rideId/cancel`, `POST /rides/:rideId/sos`, `POST /rides/:rideId/share` | 1 week |
+| 4 — Post-ride | Payment screen, rating, receipt | `POST /rides/:rideId/rate`, `POST /rides/:rideId/skip-rating`, `GET /rides/:rideId/receipt` | 3–4 days |
 | 5 — History + profile | Past rides, profile, emergency contact | `GET /rides/history`, `PUT /auth/emergency-contact` | 3–4 days |
 | 6 — Scheduled rides | Date/time picker, scheduled list | `POST /rides/schedule`, `GET /rides/scheduled` | 2–3 days |
 | 7 — Notifications | FCM foreground/background, notification list | `GET /notifications`, `PUT /notifications/:id/read` | 2 days |
@@ -294,11 +352,23 @@ OTP display (after driver accepts):
 SOS button:
   Press-and-hold 2 seconds → confirm dialog → POST /rides/:rideId/sos
   SOS_HOLD_DURATION_MS = 2000 (from constants)
+
+Share ride flow:
+  Tap "Share Ride" → POST /rides/:rideId/share
+  Backend returns full public URL: /api/v1/track/:token
+  Share via WhatsApp or SMS — recipient opens the public link, no auth needed
+
+Rating skip flow:
+  After ride: show rate bottom sheet + "Rate Later" button
+  "Rate Later" → store rideId in SharedPreferences
+  Next app open (within 48h): show once more with "Skip" button
+  "Skip" → POST /rides/:rideId/skip-rating → clear SharedPreferences
+  After 48h: auto-clear SharedPreferences, no API call needed
 ```
 
 ---
 
-## 6. Driver Android App
+## 7. Driver Android App
 
 **Package name:** `com.chalo.driver` · Min SDK: API 28
 
@@ -339,7 +409,7 @@ Incoming ride timeout:
 
 ---
 
-## 7. Deployment
+## 8. Deployment
 
 ### Recommended: Railway (simplest for V1)
 
@@ -406,7 +476,7 @@ Security:
 
 ---
 
-## 8. Post-Launch (P2 / P3)
+## 9. Post-Launch (P2 / P3)
 
 Build these after V1 is live and generating real rides. Priority based on user feedback.
 
@@ -414,6 +484,7 @@ Build these after V1 is live and generating real rides. Priority based on user f
 
 | Feature | Why | Effort |
 |---|---|---|
+| Exotel masked calling | Privacy — driver and customer can call each other without real numbers | Medium |
 | Promo codes | New user acquisition — first ride discount | Large |
 | Referral system | Low-cost growth — "share with friend, both get ₹50" | Medium |
 | Surge automation | Revenue optimization — auto-price during peak demand | Medium |

@@ -23,6 +23,9 @@ async function main() {
     { key: 'base_fare_per_km', value: '12', description: 'Fare per km in INR' },
     { key: 'base_fare_per_min', value: '2', description: 'Fare per minute in INR' },
     { key: 'settlement_days', value: '2', description: 'T+N days for earnings settlement' },
+    { key: 'free_cancel_window_secs', value: '120', description: 'Free cancellation window in seconds after driver assignment (default 2 min)' },
+    { key: 'cancel_fee_amount', value: '20', description: 'Cancellation fee in INR charged after free window expires' },
+    { key: 'gst_percentage', value: '5', description: 'GST % on ride fare — tracked internally for accounting, not shown to customer/driver' },
   ];
 
   for (const cfg of configs) {
@@ -36,13 +39,16 @@ async function main() {
 
   console.log('\n✅ Database seeded successfully!\n');
   console.log('Platform Config:');
-  console.log('  Commission:    15%');
-  console.log('  Subscription:  ₹199/week');
-  console.log('  Surge:         Enabled');
-  console.log('  Min Fare:      ₹30');
-  console.log('  Per Km:        ₹12');
-  console.log('  Per Min:       ₹2');
-  console.log('  Settlement:    T+2 days');
+  console.log('  Commission:        15%');
+  console.log('  Subscription:      ₹199/week');
+  console.log('  Surge:             Enabled');
+  console.log('  Min Fare:          ₹30');
+  console.log('  Per Km:            ₹12');
+  console.log('  Per Min:           ₹2');
+  console.log('  Settlement:        T+2 days');
+  console.log('  Cancel Window:     120s (2 min free)');
+  console.log('  Cancel Fee:        ₹20');
+  console.log('  GST:               5% (internal accounting)');
 }
 
 main()

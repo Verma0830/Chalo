@@ -69,6 +69,8 @@ export interface FareEstimate {
   distanceKm: number;
   durationMins: number;
   currency: string;
+  /** GST amount (5% of totalFare) — internal accounting only, not exposed to customer/driver */
+  gstAmount: number;
 }
 
 export interface RideRequest {

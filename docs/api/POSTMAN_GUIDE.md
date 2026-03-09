@@ -1,7 +1,7 @@
 # Chalo Backend — Postman Testing Guide
 ### Complete beginner guide — start here if you've never used Postman
 
-**Status: Updated March 2026. 48 endpoints (41 original + 7 new P0 features). All original flows verified.**
+**Status: Updated March 2026. 58 endpoints. Trip sharing and driver cancellation tracking verified.**
 
 ---
 
@@ -75,6 +75,7 @@ An "Environment" in Postman is like a set of saved variables (like `token`, `rid
 | `driver_token`  | *(leave empty)*                        | *(leave empty)*                        |
 | `admin_token`   | *(leave empty)*                        | *(leave empty)*                        |
 | `ride_id`       | *(leave empty)*                        | *(leave empty)*                        |
+| `share_url`     | *(leave empty)*                        | *(leave empty)*                        |
 
 6. Click **Save**
 7. In the top-right dropdown, select **"Chalo Dev"** to activate it
@@ -303,7 +304,7 @@ This is only required for new users (`isNewUser: true` in the previous response)
 
 ```
 Method: POST
-URL: {{base_url}}/auth/profile/complete
+URL: {{base_url}}/auth/profile
 Headers:
   Content-Type: application/json
   Authorization: Bearer {{customer_token}}
@@ -468,7 +469,7 @@ Copy the token → save it in the `driver_token` environment variable.
 
 ```
 Method: POST
-URL: {{base_url}}/auth/profile/complete
+URL: {{base_url}}/auth/profile
 Headers:
   Content-Type: application/json
   Authorization: Bearer {{driver_token}}
@@ -720,7 +721,7 @@ Replace `XXXX` with the 4-digit code from the terminal.
 
 ```
 Method: POST
-URL: {{base_url}}/auth/profile/complete
+URL: {{base_url}}/auth/profile
 Headers:
   Content-Type: application/json
   Authorization: Bearer (paste the token from Step 2 directly here)
@@ -1179,6 +1180,122 @@ The fee amount is configurable via `PUT /admin/config/cancel_fee_amount`. The wi
 
 ---
 
+## Flow 13 — Trip Share / Public Tracking Link
+
+Create a shareable link for an active ride, then open the public tracking endpoint without any token.
+
+### Request 1 of 2 — Create the tracking link
+
+```
+Method: POST
+URL: {{base_url}}/rides/{{ride_id}}/share
+Headers:
+  Authorization: Bearer {{customer_token}}
+```
+
+**Expected Response (201 Created):**
+```json
+{
+  "success": true,
+  "message": "Tracking link created",
+  "data": {
+    "rideId": "...",
+    "shareUrl": "http://localhost:3001/api/v1/track/abcDEF123...",
+    "expiresAt": "2026-03-10T17:35:00.000Z"
+  }
+}
+```
+
+Copy the full `shareUrl` into the Postman environment as `share_url`.
+
+### Request 2 of 2 — Open the public tracking link
+
+```
+Method: GET
+URL: {{share_url}}
+Headers: none
+```
+
+**Expected Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "rideId": "...",
+    "status": "IN_PROGRESS",
+    "isTrackingActive": true,
+    "pickup": {
+      "lat": 28.4089,
+      "lng": 77.3178,
+      "address": "Sector 15, Faridabad"
+    },
+    "drop": {
+      "lat": 28.4595,
+      "lng": 77.3023,
+      "address": "NIT Faridabad"
+    },
+    "driver": {
+      "name": "Ravi Kumar",
+      "vehicleNumber": "HR26AB1234",
+      "vehicleModel": "Honda Activa"
+    },
+    "location": {
+      "lat": 28.421,
+      "lng": 77.331,
+      "updatedAt": "2026-03-09T17:36:00.000Z"
+    }
+  }
+}
+```
+
+Notes:
+- This endpoint is public by design. Do **not** send `Authorization`.
+- The link only works while it is unexpired and not revoked.
+- Once the ride is completed or cancelled, the same link still returns final status, but `location` becomes `null`.
+
+---
+
+## Flow 14 — Driver Cancellation Tracking Threshold
+
+Verify that driver-side cancellation returns tracking stats and triggers the threshold flag when the driver cancels too many rides in a day.
+
+```
+Method: POST
+URL: {{base_url}}/driver/rides/{{ride_id}}/cancel
+Headers:
+  Content-Type: application/json
+  Authorization: Bearer {{driver_token}}
+Body:
+{
+  "reason": "Bike issue"
+}
+```
+
+**Expected Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Ride cancelled",
+  "data": {
+    "rideId": "...",
+    "status": "CANCELLED",
+    "cancellationStats": {
+      "total": 3,
+      "today": 3,
+      "alertThreshold": 3,
+      "alertTriggered": true
+    }
+  }
+}
+```
+
+What to verify:
+- `today` increments on every driver-side cancel in the same IST day.
+- `alertTriggered` flips to `true` when `today === 3`.
+- Admin users get an in-app SYSTEM notification when the threshold is hit.
+
+---
+
 ## Common Errors and What They Mean
 
 | Status Code | Error Code            | What went wrong | How to fix |
@@ -1214,6 +1331,8 @@ Go through these in order. Put a tick next to each when it passes.
 - [ ] Flow 5 passed — full ride completed end-to-end (online → accept → arrive → start with OTP → complete → rate)
 - [ ] Flow 9 passed — driver rated customer after completion
 - [ ] Flow 10 passed — ride receipt returns fare breakdown
+- [ ] Flow 13 passed — trip share link opens public tracking data
+- [ ] Flow 14 passed — driver cancellation stats increment and threshold triggers
 
 **Verify new features:**
 - [ ] Flow 7 passed — driver registered via API (no SQL needed)
@@ -1221,4 +1340,4 @@ Go through these in order. Put a tick next to each when it passes.
 - [ ] Flow 11 passed — driver earnings summary returns totals
 - [ ] Flow 12 tested — cancellation fee returned correctly
 
-**All 15 checked = backend is ready. Start the customer app.**
+**All 17 checked = backend is ready. Start the customer app.**

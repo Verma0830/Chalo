@@ -15,6 +15,9 @@ export const CONSTANTS = {
   DRIVER_BROADCAST_SIZE: 5,             // How many drivers get notified per batch
   RIDE_OFFER_BATCH_TTL_SECS: 65,        // Redis TTL per batch window (60s window + 5s grace)
   RIDE_CANDIDATES_TTL_SECS: 600,        // Redis TTL for full candidate list (10 min)
+  RIDE_SHARE_TTL_HOURS: 24,
+  RIDE_SHARE_TOKEN_BYTES: 24,
+  DRIVER_CANCELLATION_ALERT_THRESHOLD: 3,
 
   // --- Fare ---
   MIN_FARE: 30,                           // ₹30 minimum fare
@@ -76,6 +79,9 @@ export const CONSTANTS = {
   FREE_CANCEL_WINDOW_SECS: 120,   // 2 min free window after driver assignment
   DEFAULT_CANCEL_FEE: 20,         // ₹20 if customer cancels after free window
 
+  // --- GST (internal accounting only — not shown to customer/driver) ---
+  DEFAULT_GST_PERCENTAGE: 5,      // 5% GST on ride fare (Indian ride-hailing tax)
+
   // --- Platform Config Keys (in DB) ---
   CONFIG_KEYS: {
     COMMISSION_PERCENTAGE: 'commission_percentage',
@@ -88,6 +94,7 @@ export const CONSTANTS = {
     SETTLEMENT_DAYS: 'settlement_days',
     FREE_CANCEL_WINDOW_SECS: 'free_cancel_window_secs',
     CANCEL_FEE_AMOUNT: 'cancel_fee_amount',
+    GST_PERCENTAGE: 'gst_percentage',
   },
 } as const;
 

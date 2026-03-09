@@ -17,6 +17,11 @@ jest.mock('../../config/database', () => {
       update: jest.fn(),
       count: jest.fn(),
     },
+    rideShareLink: {
+      findFirst: jest.fn(),
+      create: jest.fn(),
+      updateMany: jest.fn(),
+    },
     driverProfile: {
       findMany: jest.fn(),
       findFirst: jest.fn(),
@@ -49,6 +54,7 @@ jest.mock('../../services/fare.service', () => ({
       totalFare: 55,
       distanceKm: 3.5,
       durationMins: 10,
+      gstAmount: 3,
     }),
   },
 }));
@@ -228,6 +234,84 @@ describe('RideService', () => {
 
       expect(result.location).toBeNull();
       expect(result.message).toBe('Driver location not available');
+    });
+  });
+
+  describe('shareRide', () => {
+    it('creates a tracking token for an active ride', async () => {
+      (prisma.ride.findUnique as jest.Mock).mockResolvedValue({
+        id: 'ride_001',
+        customerId: 'customer_001',
+        status: RideStatus.IN_PROGRESS,
+      });
+      (prisma.rideShareLink.updateMany as jest.Mock).mockResolvedValue({ count: 0 });
+      (prisma.rideShareLink.create as jest.Mock).mockResolvedValue({ id: 'share_001' });
+
+      const result = await rideService.shareRide('ride_001', 'customer_001');
+
+      expect(result.rideId).toBe('ride_001');
+      expect(result.token).toMatch(/^[A-Za-z0-9_-]+$/);
+      expect(result.expiresAt).toBeInstanceOf(Date);
+      expect(prisma.rideShareLink.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            rideId: 'ride_001',
+            createdById: 'customer_001',
+          }),
+        })
+      );
+    });
+
+    it('rejects non-active rides', async () => {
+      (prisma.ride.findUnique as jest.Mock).mockResolvedValue({
+        id: 'ride_001',
+        customerId: 'customer_001',
+        status: RideStatus.COMPLETED,
+      });
+
+      await expect(rideService.shareRide('ride_001', 'customer_001')).rejects.toMatchObject({
+        code: 'RIDE_NOT_SHAREABLE',
+      });
+    });
+  });
+
+  describe('getSharedTracking', () => {
+    it('returns public ride status and location for a valid token', async () => {
+      (prisma.rideShareLink.findFirst as jest.Mock).mockResolvedValue({
+        expiresAt: new Date(Date.now() + 60_000),
+        ride: {
+          id: 'ride_001',
+          status: RideStatus.IN_PROGRESS,
+          pickupLat: 28.4,
+          pickupLng: 77.3,
+          pickupAddress: 'Pickup',
+          dropLat: 28.5,
+          dropLng: 77.4,
+          dropAddress: 'Drop',
+          requestedAt: new Date('2026-03-09T10:00:00Z'),
+          driverAssignedAt: new Date('2026-03-09T10:05:00Z'),
+          startedAt: new Date('2026-03-09T10:08:00Z'),
+          completedAt: null,
+          cancelledAt: null,
+          driver: {
+            name: 'Ravi',
+            driverProfile: {
+              vehicleNumber: 'HR26AB1234',
+              vehicleModel: 'Activa',
+              currentLat: 28.45,
+              currentLng: 77.35,
+              lastLocationUpdate: new Date('2026-03-09T10:10:00Z'),
+            },
+          },
+        },
+      });
+
+      const result = await rideService.getSharedTracking('validtoken123456');
+
+      expect(result.rideId).toBe('ride_001');
+      expect(result.isTrackingActive).toBe(true);
+      expect(result.location).toMatchObject({ lat: 28.45, lng: 77.35 });
+      expect(result.driver).toMatchObject({ name: 'Ravi', vehicleNumber: 'HR26AB1234' });
     });
   });
 

@@ -41,6 +41,9 @@ const DRIVER_PROFILE_STATUS_SELECT = {
   currentLat: true,
   currentLng: true,
   lastLocationUpdate: true,
+  driverCancellationCount: true,
+  driverCancellationCountDaily: true,
+  driverCancellationLastAt: true,
 } satisfies Prisma.DriverProfileSelect;
 
 const ACTIVE_RIDE_FOR_DRIVER_SELECT = {
@@ -268,6 +271,12 @@ export class DriverService {
       verificationStatus: profile.verificationStatus,
       planType: profile.planType,
       subscriptionExpiresAt: profile.subscriptionExpiresAt,
+      cancellationStats: {
+        total: profile.driverCancellationCount,
+        today: profile.driverCancellationCountDaily,
+        lastCancelledAt: profile.driverCancellationLastAt,
+        alertThreshold: CONSTANTS.DRIVER_CANCELLATION_ALERT_THRESHOLD,
+      },
       // Only expose location if it exists — never use non-null assertion on nullable fields
       currentLocation:
         profile.currentLat !== null && profile.currentLng !== null
@@ -988,7 +997,7 @@ export class DriverService {
       RideStatus.DRIVER_ARRIVED,
     ];
 
-    await prisma.$transaction(async (tx) => {
+    const cancellationStats = await prisma.$transaction(async (tx) => {
       const result = await tx.ride.updateMany({
         where: {
           id: rideId,
@@ -1017,15 +1026,57 @@ export class DriverService {
         );
       }
 
+      const driverProfile = await tx.driverProfile.findUnique({
+        where: { userId },
+        select: {
+          id: true,
+          driverCancellationCount: true,
+          driverCancellationCountDaily: true,
+          driverCancellationLastAt: true,
+        },
+      });
+
+      if (!driverProfile) {
+        throw ApiError.notFound('Driver profile not found', ErrorCode.DRIVER_NOT_FOUND);
+      }
+
+      const sameDayAsLastCancellation =
+        driverProfile.driverCancellationLastAt !== null &&
+        this.isSameISTCalendarDay(driverProfile.driverCancellationLastAt, now);
+
+      const dailyCount = sameDayAsLastCancellation
+        ? driverProfile.driverCancellationCountDaily + 1
+        : 1;
+      const totalCount = driverProfile.driverCancellationCount + 1;
+
+      await tx.driverProfile.update({
+        where: { id: driverProfile.id },
+        data: {
+          driverCancellationCount: { increment: 1 },
+          driverCancellationCountDaily: dailyCount,
+          driverCancellationLastAt: now,
+        },
+      });
+
       await tx.rideEvent.create({
         data: {
           rideId,
           eventType: 'CANCELLED',
-          metadata: { cancelledBy: 'DRIVER', reason: reason ?? null },
+          metadata: {
+            cancelledBy: 'DRIVER',
+            reason: reason ?? null,
+            driverCancellationCountDaily: dailyCount,
+            driverCancellationCount: totalCount,
+          },
         },
       });
 
-      return result;
+      return {
+        count: result.count,
+        totalCount,
+        dailyCount,
+        alertTriggered: dailyCount === CONSTANTS.DRIVER_CANCELLATION_ALERT_THRESHOLD,
+      };
     });
 
     const ride = await prisma.ride.findUnique({
@@ -1050,9 +1101,74 @@ export class DriverService {
 
     ridesCancelledTotal.inc({ cancelled_by: 'driver' });
 
-    logger.info('Ride cancelled by driver', { rideId, driverId: userId, reason });
+    if (cancellationStats.alertTriggered) {
+      void this.notifyAdminsOfDriverCancellationThreshold(userId, rideId, cancellationStats.dailyCount);
+    }
 
-    return { rideId, status: RideStatus.CANCELLED };
+    logger.info('Ride cancelled by driver', {
+      rideId,
+      driverId: userId,
+      reason,
+      driverCancellationCount: cancellationStats.totalCount,
+      driverCancellationCountDaily: cancellationStats.dailyCount,
+    });
+
+    return {
+      rideId,
+      status: RideStatus.CANCELLED,
+      cancellationStats: {
+        total: cancellationStats.totalCount,
+        today: cancellationStats.dailyCount,
+        alertThreshold: CONSTANTS.DRIVER_CANCELLATION_ALERT_THRESHOLD,
+        alertTriggered: cancellationStats.alertTriggered,
+      },
+    };
+  }
+
+  private isSameISTCalendarDay(left: Date, right: Date): boolean {
+    const istOffsetMs = 5.5 * 60 * 60 * 1000;
+    const leftIst = new Date(left.getTime() + istOffsetMs);
+    const rightIst = new Date(right.getTime() + istOffsetMs);
+
+    return leftIst.getUTCFullYear() === rightIst.getUTCFullYear()
+      && leftIst.getUTCMonth() === rightIst.getUTCMonth()
+      && leftIst.getUTCDate() === rightIst.getUTCDate();
+  }
+
+  private async notifyAdminsOfDriverCancellationThreshold(
+    driverId: string,
+    rideId: string,
+    dailyCount: number
+  ): Promise<void> {
+    const admins = await prisma.user.findMany({
+      where: { role: 'ADMIN', isActive: true },
+      select: { id: true },
+    });
+
+    if (admins.length === 0) {
+      logger.warn('Driver cancellation threshold reached but no active admins found', {
+        driverId,
+        rideId,
+        dailyCount,
+      });
+      return;
+    }
+
+    await Promise.allSettled(
+      admins.map((admin) =>
+        notificationService.sendPushNotification({
+          userId: admin.id,
+          title: 'Driver cancellation threshold reached',
+          body: `Driver ${driverId} cancelled ${dailyCount} rides today. Review ride ${rideId}.`,
+          data: {
+            rideId,
+            driverId,
+            dailyCount: String(dailyCount),
+            type: 'DRIVER_CANCELLATION_THRESHOLD',
+          },
+        })
+      )
+    );
   }
 
   // -----------------------------------------------------------------------

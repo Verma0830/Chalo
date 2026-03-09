@@ -23,6 +23,9 @@ jest.mock('../../config/database', () => {
       findMany: jest.fn(),
       update: jest.fn(),
     },
+    user: {
+      findMany: jest.fn(),
+    },
     earning: {
       aggregate: jest.fn(),
     },
@@ -352,6 +355,40 @@ describe('DriverService', () => {
       expect(result.grossEarnings).toBe(0);
       expect(result.netEarnings).toBe(0);
       expect(result.avgPerRide).toBe(0);
+    });
+  });
+
+  describe('cancelRide tracking', () => {
+    it('increments driver cancellation counters and triggers admin alert at threshold', async () => {
+      (prisma.ride.updateMany as jest.Mock).mockResolvedValue({ count: 1 });
+      (prisma.driverProfile.findUnique as jest.Mock).mockResolvedValue({
+        id: 'dp_001',
+        driverCancellationCount: 2,
+        driverCancellationCountDaily: 2,
+        driverCancellationLastAt: new Date(),
+      });
+      (prisma.driverProfile.update as jest.Mock).mockResolvedValue({});
+      (prisma.rideEvent.create as jest.Mock).mockResolvedValue({});
+      (prisma.ride.findUnique as jest.Mock).mockResolvedValue({ customerId: 'customer_001' });
+      (prisma.user.findMany as jest.Mock).mockResolvedValue([{ id: 'admin_001' }]);
+
+      const result = await driverService.cancelRide('driver_001', 'ride_001', 'Flat tyre');
+
+      expect(result.status).toBe(RideStatus.CANCELLED);
+      expect(result.cancellationStats).toMatchObject({
+        total: 3,
+        today: 3,
+        alertThreshold: 3,
+        alertTriggered: true,
+      });
+      expect(prisma.driverProfile.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            driverCancellationCount: { increment: 1 },
+            driverCancellationCountDaily: 3,
+          }),
+        })
+      );
     });
   });
 });

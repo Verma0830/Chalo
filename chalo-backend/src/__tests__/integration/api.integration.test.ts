@@ -12,6 +12,7 @@ jest.mock('../../config/firebase', () => ({
   __esModule: true,
   getAuth: () => ({
     createCustomToken: mockCreateCustomToken,
+    verifyIdToken: jest.fn().mockResolvedValue({ uid: 'user_1', phone_number: '+919876543210' }),
   }),
 }));
 
@@ -44,6 +45,9 @@ jest.mock('../../config/database', () => {
     },
     driverProfile: {
       upsert: jest.fn().mockResolvedValue({ userId: 'user_1' }),
+    },
+    rideShareLink: {
+      findFirst: jest.fn().mockResolvedValue(null),
     },
     $transaction: jest.fn(),
   };
@@ -97,6 +101,7 @@ describe('API Integration Tests', () => {
     });
 
     (prisma.driverProfile.upsert as jest.Mock).mockResolvedValue({ userId: 'user_1' });
+    (prisma.rideShareLink.findFirst as jest.Mock).mockResolvedValue(null);
     (prisma.$transaction as jest.Mock).mockImplementation(
       async (fn: (tx: typeof prisma) => Promise<unknown>) => fn(prisma)
     );
@@ -273,6 +278,47 @@ describe('API Integration Tests', () => {
         .expect(401);
 
       expect(response.body.success).toBe(false);
+    });
+  });
+
+  describe('Public Tracking Endpoint', () => {
+    it('returns shared tracking data without authentication', async () => {
+      (prisma.rideShareLink.findFirst as jest.Mock).mockResolvedValue({
+        expiresAt: new Date(Date.now() + 60_000),
+        ride: {
+          id: 'ride_123',
+          status: 'IN_PROGRESS',
+          pickupLat: 28.4,
+          pickupLng: 77.3,
+          pickupAddress: 'Pickup',
+          dropLat: 28.5,
+          dropLng: 77.4,
+          dropAddress: 'Drop',
+          requestedAt: new Date(),
+          driverAssignedAt: new Date(),
+          startedAt: new Date(),
+          completedAt: null,
+          cancelledAt: null,
+          driver: {
+            name: 'Ravi',
+            driverProfile: {
+              vehicleNumber: 'HR26AB1234',
+              vehicleModel: 'Activa',
+              currentLat: 28.41,
+              currentLng: 77.31,
+              lastLocationUpdate: new Date(),
+            },
+          },
+        },
+      });
+
+      const response = await request(app)
+        .get('/api/v1/track/validtoken123456')
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.rideId).toBe('ride_123');
+      expect(response.body.data.location).toMatchObject({ lat: 28.41, lng: 77.31 });
     });
   });
 });

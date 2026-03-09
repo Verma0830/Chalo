@@ -125,6 +125,7 @@ model User {
   sosAlerts         SOSAlert[]
   notifications     Notification[]
   otpVerifications  OTPVerification[]
+  shareLinksCreated RideShareLink[]
 
   @@index([phone])
   @@index([role])
@@ -185,6 +186,9 @@ model DriverProfile {
   ratingCount           Int                 @default(0)
   totalRides            Int                 @default(0)
   totalEarnings         Float               @default(0)
+  driverCancellationCount Int               @default(0)
+  driverCancellationCountDaily Int          @default(0)
+  driverCancellationLastAt DateTime?
   
   // Real-time state (also mirrored in Firebase RTDB for speed)
   isOnline              Boolean             @default(false)
@@ -244,6 +248,7 @@ model Ride {
   finalFare         Float
   commissionAmount  Float         @default(0)
   driverEarning     Float         @default(0)
+  gstAmount         Float         @default(0)  // 5% GST on finalFare — internal accounting, not shown to customer/driver
   
   // Status
   status            RideStatus    @default(REQUESTED)
@@ -266,6 +271,9 @@ model Ride {
 
   // OTP ride start — generated when driver is assigned, required to start ride
   rideStartOtp      String?       // 4-digit OTP sent to customer
+
+  // Rating skip tracking — set when customer explicitly skips rating (never ask again)
+  ratingSkippedAt   DateTime?
 
   // Manual ride flag
   isManualRide      Boolean       @default(false)
@@ -291,6 +299,7 @@ model Ride {
   rideEvents        RideEvent[]
   sosAlerts         SOSAlert[]
   earning           Earning?
+  shareLinks        RideShareLink[]
 
   @@index([customerId])
   @@index([driverId])
@@ -441,6 +450,26 @@ model Notification {
   @@index([userId, isRead])
   @@index([sentAt])
   @@map("notifications")
+}
+
+/// Shareable public tracking token for an active ride.
+/// Family-facing links are time-limited and can be rotated by the customer.
+model RideShareLink {
+  id          String   @id @default(cuid())
+  rideId       String
+  tokenHash    String   @unique
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  createdById  String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  ride      Ride @relation(fields: [rideId], references: [id], onDelete: Cascade)
+  createdBy User @relation(fields: [createdById], references: [id])
+
+  @@index([rideId, revokedAt])
+  @@index([expiresAt])
+  @@map("ride_share_links")
 }
 
 // ============================================================

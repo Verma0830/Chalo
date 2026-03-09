@@ -207,7 +207,7 @@ The following were confirmed through founder input, replacing original assumptio
 | C-16 | Scheduled rides manager | Must Have |
 | C-17 | Cancellation history (silent in V1) | Must Have |
 | C-18 | Punjabi + English language toggle | Must Have |
-| C-19 | Share live ride link (WhatsApp) | Should Have |
+| C-19 | Share live ride link (WhatsApp) | Should Have — backend support implemented in March 2026 |
 | C-20 | Saved locations (Home, Work) | Should Have |
 
 ---
@@ -604,6 +604,7 @@ Standard ride flow continues from "Searching for Rider"
 | Driver rating shown to customer | Peer accountability |
 | Document verification before driver goes live | Platform credibility |
 | Share live ride link | Passive safety for all riders |
+| Driver cancellation threshold tracking | Lets ops identify unreliable drivers before customers complain repeatedly |
 
 ---
 

@@ -44,6 +44,8 @@ export class FareService {
     const baseFare = Math.max(rawBase, CONSTANTS.MIN_FARE);
     const surgeAmount = surgeMultiplier > 1 ? Math.round(baseFare * (surgeMultiplier - 1)) : 0;
     const totalFare = applySurge(baseFare, surgeMultiplier);
+    // GST is included in the fare (not added on top) — tracked for accounting only
+    const gstAmount = Math.round(totalFare * runtimeConfig.gstPercentage) / 100;
 
     return {
       baseFare,
@@ -55,6 +57,7 @@ export class FareService {
       distanceKm,
       durationMins,
       currency: CONSTANTS.CURRENCY,
+      gstAmount,
     };
   }
 
@@ -221,7 +224,7 @@ export class FareService {
    * TTL: 60 seconds.
    */
   private configCache: {
-    data: { baseFarePerKm: number; baseFarePerMin: number; commissionPercentage: number; surgeEnabled: boolean };
+    data: { baseFarePerKm: number; baseFarePerMin: number; commissionPercentage: number; surgeEnabled: boolean; gstPercentage: number };
     expiresAt: number;
   } | null = null;
   private static CONFIG_CACHE_TTL_SECS = 60; // 1 minute
@@ -236,6 +239,7 @@ export class FareService {
     baseFarePerMin: number;
     commissionPercentage: number;
     surgeEnabled: boolean;
+    gstPercentage: number;
   }> {
     // L1: In-memory cache (hot path — zero latency)
     if (this.configCache && Date.now() < this.configCache.expiresAt) {
@@ -281,6 +285,7 @@ export class FareService {
     baseFarePerMin: number;
     commissionPercentage: number;
     surgeEnabled: boolean;
+    gstPercentage: number;
   }> {
     try {
       const configs = await prisma.platformConfig.findMany({
@@ -291,6 +296,7 @@ export class FareService {
               CONSTANTS.CONFIG_KEYS.BASE_FARE_PER_MIN,
               CONSTANTS.CONFIG_KEYS.COMMISSION_PERCENTAGE,
               CONSTANTS.CONFIG_KEYS.SURGE_ENABLED,
+              CONSTANTS.CONFIG_KEYS.GST_PERCENTAGE,
             ],
           },
         },
@@ -312,6 +318,9 @@ export class FareService {
           configMap.has(CONSTANTS.CONFIG_KEYS.SURGE_ENABLED)
             ? configMap.get(CONSTANTS.CONFIG_KEYS.SURGE_ENABLED) === 'true'
             : config.business.surgeEnabled,
+        gstPercentage:
+          Number(configMap.get(CONSTANTS.CONFIG_KEYS.GST_PERCENTAGE)) ||
+          CONSTANTS.DEFAULT_GST_PERCENTAGE,
       };
     } catch (error) {
       logger.warn('Failed to fetch runtime config — using defaults', { error });
@@ -320,6 +329,7 @@ export class FareService {
         baseFarePerMin: config.business.baseFarePerMin,
         commissionPercentage: config.business.commissionPercentage,
         surgeEnabled: config.business.surgeEnabled,
+        gstPercentage: CONSTANTS.DEFAULT_GST_PERCENTAGE,
       };
     }
   }
