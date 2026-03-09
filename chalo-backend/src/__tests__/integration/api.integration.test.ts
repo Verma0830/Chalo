@@ -6,9 +6,17 @@
 import request from 'supertest';
 import { createTestApp } from '../../app';
 
-jest.mock('../../config/database', () => ({
+const mockCreateCustomToken = jest.fn().mockResolvedValue('firebase-custom-token');
+
+jest.mock('../../config/firebase', () => ({
   __esModule: true,
-  default: {
+  getAuth: () => ({
+    createCustomToken: mockCreateCustomToken,
+  }),
+}));
+
+jest.mock('../../config/database', () => {
+  const mockPrisma = {
     oTPVerification: {
       count: jest.fn().mockResolvedValue(0),
       create: jest.fn().mockResolvedValue({ id: 'otp_1' }),
@@ -23,18 +31,36 @@ jest.mock('../../config/database', () => ({
         name: null,
         role: 'CUSTOMER',
       }),
-      update: jest.fn().mockResolvedValue({}),
+      update: jest.fn().mockResolvedValue({
+        id: 'user_1',
+        phone: '+919876543210',
+        name: 'Ravi Kumar',
+        role: 'DRIVER',
+      }),
     },
     customerProfile: {
       findUnique: jest.fn().mockResolvedValue(null),
       update: jest.fn().mockResolvedValue({}),
     },
-  },
-  prisma: {
-    $queryRaw: jest.fn().mockResolvedValue([{ '1': 1 }]),
-  },
-  disconnectDatabase: jest.fn().mockResolvedValue(undefined),
-}));
+    driverProfile: {
+      upsert: jest.fn().mockResolvedValue({ userId: 'user_1' }),
+    },
+    $transaction: jest.fn(),
+  };
+
+  (mockPrisma.$transaction as jest.Mock).mockImplementation(
+    async (fn: (tx: typeof mockPrisma) => Promise<unknown>) => fn(mockPrisma)
+  );
+
+  return {
+    __esModule: true,
+    default: mockPrisma,
+    prisma: {
+      $queryRaw: jest.fn().mockResolvedValue([{ '1': 1 }]),
+    },
+    disconnectDatabase: jest.fn().mockResolvedValue(undefined),
+  };
+});
 
 jest.mock('../../config/redis', () => ({
   pingRedis: jest.fn().mockResolvedValue(true),
@@ -42,8 +68,39 @@ jest.mock('../../config/redis', () => ({
   isRedisReady: jest.fn().mockReturnValue(false),
 }));
 
+import prisma from '../../config/database';
+
 describe('API Integration Tests', () => {
   const app = createTestApp();
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockCreateCustomToken.mockResolvedValue('firebase-custom-token');
+
+    (prisma.oTPVerification.count as jest.Mock).mockResolvedValue(0);
+    (prisma.oTPVerification.create as jest.Mock).mockResolvedValue({ id: 'otp_1' });
+    (prisma.oTPVerification.findFirst as jest.Mock).mockResolvedValue(null);
+    (prisma.oTPVerification.update as jest.Mock).mockResolvedValue({});
+
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
+    (prisma.user.create as jest.Mock).mockResolvedValue({
+      id: 'user_1',
+      phone: '+919876543210',
+      name: null,
+      role: 'CUSTOMER',
+    });
+    (prisma.user.update as jest.Mock).mockResolvedValue({
+      id: 'user_1',
+      phone: '+919876543210',
+      name: 'Ravi Kumar',
+      role: 'DRIVER',
+    });
+
+    (prisma.driverProfile.upsert as jest.Mock).mockResolvedValue({ userId: 'user_1' });
+    (prisma.$transaction as jest.Mock).mockImplementation(
+      async (fn: (tx: typeof prisma) => Promise<unknown>) => fn(prisma)
+    );
+  });
 
   describe('Health Check', () => {
     it('GET /health returns 200 and status ok', async () => {
@@ -93,6 +150,46 @@ describe('API Integration Tests', () => {
 
       expect(response.body.success).toBe(true);
       expect(response.body.message).toBe('OTP sent successfully');
+    });
+
+    it('POST /api/v1/auth/register-driver returns token and driver payload', async () => {
+      (prisma.oTPVerification.findFirst as jest.Mock).mockResolvedValue({
+        id: 'otp_1',
+        phone: '+919876543210',
+        otpCode: 'hashed-otp',
+        verified: false,
+        attempts: 0,
+        expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+        createdAt: new Date(),
+      });
+
+      const response = await request(app)
+        .post('/api/v1/auth/register-driver')
+        .send({
+          phone: '+919876543210',
+          otp: '4242',
+          name: 'Ravi Kumar',
+        })
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('Driver registered successfully');
+      expect(response.body.data).toMatchObject({
+        isNewUser: true,
+        token: 'firebase-custom-token',
+        user: {
+          id: 'user_1',
+          phone: '+919876543210',
+          name: 'Ravi Kumar',
+          role: 'DRIVER',
+        },
+      });
+      expect(prisma.driverProfile.upsert).toHaveBeenCalledWith({
+        where: { userId: 'user_1' },
+        update: {},
+        create: { userId: 'user_1' },
+      });
+      expect(mockCreateCustomToken).toHaveBeenCalledWith('user_1');
     });
   });
 

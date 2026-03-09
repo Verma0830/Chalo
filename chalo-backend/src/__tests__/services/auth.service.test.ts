@@ -5,6 +5,8 @@
 
 import { UserRole } from '@prisma/client';
 
+const mockCreateCustomToken = jest.fn();
+
 // Mock dependencies
 jest.mock('../../config/database', () => {
   const mockPrisma: Record<string, unknown> = {
@@ -19,6 +21,9 @@ jest.mock('../../config/database', () => {
       findUnique: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+    },
+    driverProfile: {
+      upsert: jest.fn(),
     },
     $transaction: jest.fn(),
   };
@@ -44,6 +49,13 @@ jest.mock('../../config/logger', () => ({
     error: jest.fn(),
     debug: jest.fn(),
   },
+}));
+
+jest.mock('../../config/firebase', () => ({
+  __esModule: true,
+  getAuth: () => ({
+    createCustomToken: mockCreateCustomToken,
+  }),
 }));
 
 import prisma from '../../config/database';
@@ -72,13 +84,27 @@ const mockOTPRecord = {
 describe('AuthService.registerDriver', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockCreateCustomToken.mockResolvedValue('firebase-custom-token');
   });
 
+  function mockVerifyOTPTransactionResult(result: unknown) {
+    (prisma.$transaction as jest.Mock).mockImplementationOnce(async (fn) => fn(prisma));
+    (prisma.oTPVerification.findFirst as jest.Mock).mockResolvedValue(result);
+    if (result && result !== 'MAX_ATTEMPTS') {
+      (prisma.oTPVerification.update as jest.Mock).mockResolvedValue({});
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+        id: 'user_001',
+        phone: '+919876543210',
+        role: UserRole.CUSTOMER,
+        name: null,
+      });
+      (prisma.user.update as jest.Mock).mockResolvedValue({});
+    }
+  }
+
   it('throws INVALID_OTP when no matching OTP record exists', async () => {
-    // Transaction returns null — no OTP found
-    (prisma.$transaction as jest.Mock).mockResolvedValue(null);
-    // Expired OTP check also returns null
-    (prisma.oTPVerification.findFirst as jest.Mock).mockResolvedValue(null);
+    mockVerifyOTPTransactionResult(null);
+    (prisma.oTPVerification.findFirst as jest.Mock).mockResolvedValueOnce(null).mockResolvedValueOnce(null);
 
     await expect(
       authService.registerDriver({ phone: '+919876543210', otp: '0000', name: 'Test Driver' })
@@ -86,13 +112,13 @@ describe('AuthService.registerDriver', () => {
   });
 
   it('throws when OTP has expired', async () => {
-    // Transaction returns null (no valid OTP in window)
-    (prisma.$transaction as jest.Mock).mockResolvedValue(null);
-    // Expired record exists
-    (prisma.oTPVerification.findFirst as jest.Mock).mockResolvedValue({
+    mockVerifyOTPTransactionResult(null);
+    (prisma.oTPVerification.findFirst as jest.Mock)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
       ...mockOTPRecord,
       expiresAt: new Date(Date.now() - 1000), // already expired
-    });
+      });
 
     await expect(
       authService.registerDriver({ phone: '+919876543210', otp: VALID_OTP, name: 'Test Driver' })
@@ -100,36 +126,23 @@ describe('AuthService.registerDriver', () => {
   });
 
   it('throws TOO_MANY_REQUESTS when max attempts exceeded', async () => {
-    (prisma.$transaction as jest.Mock).mockResolvedValue('MAX_ATTEMPTS');
+    mockVerifyOTPTransactionResult('MAX_ATTEMPTS');
 
     await expect(
       authService.registerDriver({ phone: '+919876543210', otp: VALID_OTP, name: 'Test Driver' })
     ).rejects.toMatchObject({ message: expect.stringContaining('attempts') });
   });
 
-  it('throws CONFLICT when phone is already registered as CUSTOMER', async () => {
-    (prisma.$transaction as jest.Mock).mockResolvedValue(mockOTPRecord);
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+  it('upgrades an existing customer to DRIVER and returns a token', async () => {
+    mockVerifyOTPTransactionResult(mockOTPRecord);
+    (prisma.$transaction as jest.Mock).mockImplementationOnce(async (fn) => fn(prisma));
+    (prisma.user.update as jest.Mock).mockResolvedValue({
       id: 'user_001',
       phone: '+919876543210',
-      role: UserRole.CUSTOMER,
-      name: 'Existing Customer',
-    });
-
-    await expect(
-      authService.registerDriver({ phone: '+919876543210', otp: VALID_OTP, name: 'Test Driver' })
-    ).rejects.toMatchObject({ message: expect.stringContaining('customer') });
-  });
-
-  it('returns isNewUser=false when driver is already registered (idempotent)', async () => {
-    (prisma.$transaction as jest.Mock).mockResolvedValue(mockOTPRecord);
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
-      id: 'user_002',
-      phone: '+919876543210',
       role: UserRole.DRIVER,
-      name: 'Existing Driver',
+      name: 'Test Driver',
     });
-    (prisma.user.update as jest.Mock).mockResolvedValue({});
+    (prisma.driverProfile.upsert as jest.Mock).mockResolvedValue({ userId: 'user_001' });
 
     const result = await authService.registerDriver({
       phone: '+919876543210',
@@ -138,24 +151,57 @@ describe('AuthService.registerDriver', () => {
     });
 
     expect(result.isNewUser).toBe(false);
+    expect(result.token).toBe('firebase-custom-token');
+    expect(result.user.role).toBe(UserRole.DRIVER);
+    expect(prisma.driverProfile.upsert).toHaveBeenCalledWith({
+      where: { userId: 'user_001' },
+      update: {},
+      create: { userId: 'user_001' },
+    });
+  });
+
+  it('returns isNewUser=false when driver is already registered and refreshes token data', async () => {
+    mockVerifyOTPTransactionResult(mockOTPRecord);
+    (prisma.$transaction as jest.Mock).mockImplementationOnce(async (fn) => fn(prisma));
+    (prisma.user.update as jest.Mock).mockResolvedValue({
+      id: 'user_002',
+      phone: '+919876543210',
+      role: UserRole.DRIVER,
+      name: 'Updated Driver',
+    });
+    (prisma.driverProfile.upsert as jest.Mock).mockResolvedValue({ userId: 'user_002' });
+
+    const result = await authService.registerDriver({
+      phone: '+919876543210',
+      otp: VALID_OTP,
+      name: 'Updated Driver',
+    });
+
+    expect(result.isNewUser).toBe(false);
+    expect(result.token).toBe('firebase-custom-token');
     expect(result.user.role).toBe(UserRole.DRIVER);
     expect(result.user.id).toBe('user_002');
   });
 
-  it('creates new DRIVER user + DriverProfile on first registration', async () => {
-    (prisma.$transaction as jest.Mock)
-      // First call: OTP verification transaction
-      .mockResolvedValueOnce(mockOTPRecord)
-      // Second call: user creation transaction
-      .mockResolvedValueOnce({
-        id: 'user_new_001',
-        phone: '+919876543210',
-        name: 'New Driver',
-        role: UserRole.DRIVER,
-      });
-
-    // No existing user
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
+  it('upgrades a newly created customer from verifyOTP into a DRIVER account', async () => {
+    (prisma.$transaction as jest.Mock).mockImplementationOnce(async (fn) => fn(prisma));
+    (prisma.oTPVerification.findFirst as jest.Mock).mockResolvedValue(mockOTPRecord);
+    (prisma.oTPVerification.update as jest.Mock).mockResolvedValue({});
+    (prisma.user.findUnique as jest.Mock).mockResolvedValueOnce(null);
+    (prisma.user.create as jest.Mock).mockResolvedValue({
+      id: 'user_new_001',
+      phone: '+919876543210',
+      role: UserRole.CUSTOMER,
+      name: null,
+    });
+    (prisma.user.update as jest.Mock).mockResolvedValue({
+      id: 'user_new_001',
+      phone: '+919876543210',
+      name: 'New Driver',
+      role: UserRole.DRIVER,
+    });
+    (prisma.$transaction as jest.Mock).mockImplementationOnce(async (fn) => fn(prisma));
+    (prisma.driverProfile.upsert as jest.Mock).mockResolvedValue({ userId: 'user_new_001' });
 
     const result = await authService.registerDriver({
       phone: '+919876543210',
@@ -164,6 +210,7 @@ describe('AuthService.registerDriver', () => {
     });
 
     expect(result.isNewUser).toBe(true);
+    expect(result.token).toBe('firebase-custom-token');
     expect(result.user.role).toBe(UserRole.DRIVER);
     expect(result.user.phone).toBe('+919876543210');
     expect(result.user.name).toBe('New Driver');

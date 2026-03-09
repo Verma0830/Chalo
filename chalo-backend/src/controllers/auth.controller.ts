@@ -123,7 +123,7 @@ export class AuthController {
     try {
       const input = req.body as RegisterDriverInput;
       const result = await authService.registerDriver(input);
-      ApiResponse.success(res, result, result.isNewUser ? 'Driver registered successfully' : 'Welcome back!');
+      ApiResponse.success(res, result, 'Driver registered successfully');
     } catch (error) {
       next(error);
     }

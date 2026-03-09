@@ -965,6 +965,7 @@ Body:
   "message": "Driver registered successfully",
   "data": {
     "isNewUser": true,
+    "token": "<firebase-custom-token>",
     "user": {
       "id": "...",
       "phone": "+918800000002",
@@ -975,7 +976,7 @@ Body:
 }
 ```
 
-Save the token as `driver_token` in your environment. The user is created with `DRIVER` role and a `DriverProfile` is automatically created — no manual SQL needed.
+Copy the `token` value from the response, exchange it for a Firebase ID token using the steps in [docs/api/token-exchange-guide.md](docs/api/token-exchange-guide.md), then save that ID token as `driver_token` in your Postman environment. The user is created with `DRIVER` role and a `DriverProfile` is automatically created — no manual SQL needed.
 
 ---
 

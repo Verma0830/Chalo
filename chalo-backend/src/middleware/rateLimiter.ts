@@ -21,6 +21,8 @@ function createRedisStore(options: RedisStoreOptions) {
   const { prefix, windowMs } = options;
 
   return {
+    // Each limiter instance namespaces keys with its own prefix, so counts are isolated.
+    localKeys: true,
     async increment(key: string): Promise<{ totalHits: number; resetTime: Date }> {
       const client = getRedisClient();
       if (!client || !isRedisReady()) {

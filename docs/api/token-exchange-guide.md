@@ -2,7 +2,7 @@
 
 ## Why This Step Is Needed
 
-Every time you send and verify an OTP (for either a customer or a driver), the `/auth/otp/verify` endpoint returns a **custom token**. This custom token **cannot** be used directly in API requests.
+Every time you complete OTP authentication, the backend returns a **custom token**. This happens for both `/auth/otp/verify` and `/auth/register-driver`. This custom token **cannot** be used directly in API requests.
 
 You must exchange it for a **Firebase ID token** using the step below. The ID token is what you save in Postman as `customer_token` or `driver_token`.
 
@@ -13,7 +13,7 @@ You must exchange it for a **Firebase ID token** using the step below. The ID to
 ## Steps to Exchange Token
 
 ### 1. Copy the custom token
-After calling `/auth/otp/verify`, copy the value of `"token"` from the response.
+After calling `/auth/otp/verify` or `/auth/register-driver`, copy the value of `"token"` from the response.
 
 ### 2. Create a new request in Postman
 
@@ -48,7 +48,7 @@ You will get a `200 OK` response with an `idToken` field — this is your real F
 ## Summary Flow
 
 ```
-Send OTP → Verify OTP → Get custom token
+Send OTP → Verify OTP or Register Driver → Get custom token
 → Exchange at identitytoolkit.googleapis.com
 → Get idToken
 → Save as customer_token or driver_token in Postman
