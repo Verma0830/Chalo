@@ -1,6 +1,6 @@
 # Chalo Backend — Complete Flow Reference
 > How every piece of the backend works, from registration to ride completion to payout.
-> Last updated: March 2026 | Score: 8.5/10 | Endpoints: 58
+> Last updated: March 2026 | Score: 8.5/10 | Endpoints: 60
 
 ---
 
@@ -155,7 +155,9 @@ Body: { pickup: { lat, lng, address }, drop: { lat, lng, address } }
 → Applies surge if enabled: total × surgeMultiplier
 → Applies min_fare floor: max(calculated, 30)
 
-Returns: { distanceKm, durationMins, baseFare, surgeMultiplier, totalFare }
+Returns: { distanceKm, durationMins, baseFare, surgeMultiplier, totalFare, minimumFareApplied, minimumFare }
+  → minimumFareApplied = true when the ₹30 floor was applied (short trip)
+  → Android shows "Minimum fare applies" label when minimumFareApplied is true
 ```
 
 ### Step 3 — Create a Ride
@@ -180,11 +182,16 @@ Customer app polls GET /rides/:rideId to check status
 OR listens on Firebase RTDB: rides/{rideId}/status
 
 Behind the scenes (see section 5 for full detail):
-  → PostGIS finds nearby online VERIFIED drivers (5km radius)
-  → Top 5 notified simultaneously via FCM
-  → 60-second window for any of them to accept
-  → If all decline/timeout → next batch of 5
-  → If no drivers at all → status = NO_DRIVER after 2 minutes
+  → Two-pass driver search (Punjab-tuned):
+    Pass 1: PostGIS finds nearby online VERIFIED drivers (5km radius)
+    → Top 5 notified simultaneously via FCM
+    → 60-second window for any of them to accept
+    → If all decline/timeout → next batch of 5
+    Pass 2 (if all 5km candidates exhausted OR 0 results at 5km):
+    → Expands to 12km radius, excluding already-tried drivers
+    → New candidates dispatched in same batch pattern
+    → If still none → status = NO_DRIVER
+  → Expanded radius config-driven: `driver_search_radius_km_expanded = 12`
 ```
 
 ### Step 5 — Ride in Progress
@@ -222,18 +229,28 @@ Customer can:
 ### Step 7 — Cancel (if needed)
 
 ```
-POST /rides/:rideId/cancel  { reason: "..." }
+POST /rides/:rideId/cancel  { reasonCode: "CHANGED_MIND" | "DRIVER_ASKED_TO_CANCEL" | ... }
 
-Cancellation fee rules:
-  → If status = REQUESTED → no fee (no driver yet)
-  → If status = DRIVER_ASSIGNED or DRIVER_ARRIVED:
-      → Check time since driverAssignedAt
-      → If < 120 seconds (free window) → no fee
-      → If > 120 seconds → cancellationFee = ₹20
-  → Response includes: { status: "CANCELLED", cancellationFee: 0 | 20 }
-  → Driver gets FCM notification
-  → Both free_cancel_window_secs and cancel_fee_amount are configurable
-    via PUT /admin/config/:key
+Cancellation reason codes:
+  Driver-fault (fee waived):
+    DRIVER_ASKED_TO_CANCEL  → ₹0 fee + driver's cancellation count incremented
+    DRIVER_NOT_MOVING       → ₹0 fee
+    DRIVER_WRONG_VEHICLE    → ₹0 fee
+    DRIVER_BEHAVIOUR        → ₹0 fee
+  Customer-fault (fee applies by tier):
+    CHANGED_MIND            → fee per 3-tier logic below
+    BOOKED_BY_MISTAKE       → fee per 3-tier logic below
+    OTHER                   → fee per 3-tier logic below (note field optional)
+
+3-tier fee logic (customer-fault only):
+  Tier 0: status = REQUESTED (no driver) → ₹0
+  Tier 1: status = DRIVER_ARRIVED        → ₹40 (driver burned fuel reaching pickup)
+  Tier 2: status = DRIVER_ASSIGNED, elapsed > 120s → ₹20 (deterrent)
+  Tier 3: status = DRIVER_ASSIGNED, elapsed ≤ 120s → ₹0 (free window)
+
+  Response: { status: "CANCELLED", cancellationFee: 0 | 20 | 40, feeWaivedReason?: "..." }
+  Driver gets FCM notification.
+  All fee amounts configurable: cancel_fee_arrived_amount, cancel_fee_amount, free_cancel_window_secs
 ```
 
 ---
@@ -411,20 +428,21 @@ POST /rides  (customer submits)
   5. rideService.searchAndNotifyDrivers(rideId, pickup, fare)
          │
          ▼
-  6. PostGIS spatial query:
-     SELECT drivers within 5km radius of pickup WHERE isOnline=true AND verified
-     ORDER BY distance ASC (PostGIS ST_DWithin on GIST index)
+  6. PASS 1 — PostGIS spatial query (5km):
+     SELECT drivers within 5km radius WHERE isOnline=true AND verified
+     ORDER BY distance ASC (ST_DWithin on GIST index)
      LIMIT 10 candidates
          │
+         │ If 0 results at 5km → jump to PASS 2 immediately
          ▼
   7. Score each driver (0.0–1.0):
-     → distanceScore = 1 - (distanceKm / 5)        weight: 50%
+     → distanceScore = 1 - (distanceKm / radius)   weight: 50%
      → ratingScore   = driver.ratingAvg / 5         weight: 30%
      → idleTimeScore = 0.5 (placeholder)            weight: 20%
      totalScore = (dist × 0.5) + (rating × 0.3) + (idle × 0.2)
          │
          ▼
-  8. Store top-10 in Redis: ride:candidates:{rideId} (10 min TTL)
+  8. Store sorted candidates in Redis: ride:candidates:{rideId} (10 min TTL)
          │
          ▼
   9. Take first batch of 5 (top-scored)
@@ -457,12 +475,19 @@ POST /rides  (customer submits)
          │
          ▼
  15. Read ride:candidates:{rideId} from Redis
-     Slice next batch (indices 5–9)
+     Slice next batch (indices N to N+5)
          │
          ▼
- 16. If candidates remain → dispatchBatch (steps 9–12 for next 5)
-     If no candidates → UPDATE ride SET status = NO_DRIVER
-                     → Notify customer: "No drivers available"
+ 16. If more 5km candidates remain → dispatchBatch (steps 9–12 for next 5)
+         │
+         │ If all 5km candidates exhausted AND no ride:expanded:{rideId} flag:
+         ▼
+ 17. PASS 2 — Expanded search (12km, Punjab-tuned):
+     → queryNearbyDrivers(12km, excludeIds = all_already_tried)
+     → If new drivers found → set ride:expanded:{rideId} flag, dispatch batch
+     → If still none → UPDATE ride SET status = NO_DRIVER
+                    → Notify customer: "No drivers available"
+                    → Cleanup: ride:candidates, ride:active_batch, ride:expanded
 ```
 
 ---
@@ -583,35 +608,40 @@ SUBSCRIPTION plan driver:
 ## 8. Cancellation Fee
 
 ```
-Customer cancels ride AFTER driver assignment:
+Customer sends: POST /rides/:rideId/cancel  { reasonCode, note? }
 
-Timeline check:
-  driverAssignedAt = ride record (set when driver accepts)
-  now = cancellation time
-  elapsed = (now - driverAssignedAt) in seconds
+Step 1 — Reason code check (highest priority):
+  DRIVER_ASKED_TO_CANCEL → fee = ₹0, driver penalised (cancellation count++)
+  DRIVER_NOT_MOVING      → fee = ₹0
+  DRIVER_WRONG_VEHICLE   → fee = ₹0
+  DRIVER_BEHAVIOUR       → fee = ₹0
 
-  free_cancel_window_secs = 120 (from platform_config, default 2 minutes)
-  cancel_fee_amount        = 20  (from platform_config, default ₹20)
+Step 2 — If customer-fault reason (CHANGED_MIND / BOOKED_BY_MISTAKE / OTHER):
+  status = REQUESTED        → ₹0 (no driver, no damage done)
+  status = DRIVER_ARRIVED   → cancel_fee_arrived_amount = ₹40 (driver wasted a trip)
+  status = DRIVER_ASSIGNED, elapsed > free_cancel_window_secs → cancel_fee_amount = ₹20
+  status = DRIVER_ASSIGNED, elapsed ≤ free_cancel_window_secs → ₹0 (free window)
 
-  if elapsed <= 120s  → cancellationFee = 0   (free cancellation)
-  if elapsed  > 120s  → cancellationFee = 20  (₹20 fee)
+Platform config keys:
+  free_cancel_window_secs    = 120  (2 min free window — change to 180 for 3 min)
+  cancel_fee_amount          = 20   (₹20 post-window fee, driver en route)
+  cancel_fee_arrived_amount  = 40   (₹40 fee, driver at pickup)
 
-Applies to:
-  → status = DRIVER_ASSIGNED: driver en route, not arrived yet
-  → status = DRIVER_ARRIVED: driver at pickup, waiting
+DRIVER_ASKED_TO_CANCEL special handling:
+  → Driver pressured customer to cancel to dodge their own cancellation count
+  → System detects this: driver's driverCancellationCount still increments
+  → RideEvent DRIVER_FORCED_CANCEL logged for admin audit
+  → Customer pays ₹0
 
-Does NOT apply to:
-  → status = REQUESTED: no driver yet, always free
-  → status = SCHEDULED: future rides, always free
-
-Fee collection (V1):
-  → Fee is returned in the API response
-  → Cash rides: customer pays driver the full fare + fee amount
-  → UPI rides: Razorpay charge (not yet implemented — V2)
+Fee collection (V1 — cash rides):
+  → Fee displayed on screen before customer confirms cancel
+  → Customer pays driver the full fare + fee in cash
+  → UPI: wallet deduction (V2)
 
 Config admin commands:
-  PUT /admin/config/free_cancel_window_secs  { "value": "180" }  → 3 min window
-  PUT /admin/config/cancel_fee_amount        { "value": "30" }   → ₹30 fee
+  PUT /admin/config/free_cancel_window_secs   { "value": "180" }  → 3 min window
+  PUT /admin/config/cancel_fee_amount         { "value": "25" }   → ₹25 post-window
+  PUT /admin/config/cancel_fee_arrived_amount { "value": "50" }   → ₹50 arrived
 ```
 
 ---
@@ -721,16 +751,33 @@ PUT /admin/config/:key   { "value": "18" }
 → Clears fare:config Redis cache so next fare calc uses new value
 
 Configurable keys:
-  commission_percentage     → 15    (% per ride for COMMISSION drivers)
-  subscription_fee_weekly   → 199   (₹199/week for SUBSCRIPTION drivers)
-  min_fare                  → 30    (₹30 minimum fare)
-  base_fare_per_km          → 12    (₹12/km)
-  base_fare_per_min         → 2     (₹2/min)
-  surge_enabled             → false (turn surge on/off)
-  surge_multiplier          → 1.0   (manual surge override)
-  settlement_days           → 2     (T+2 payout window)
-  free_cancel_window_secs   → 120   (2-min free cancel window)
-  cancel_fee_amount         → 20    (₹20 after free window)
+  commission_percentage           → 15    (% per ride for COMMISSION drivers)
+  subscription_fee_weekly         → 199   (₹199/week for SUBSCRIPTION drivers)
+  min_fare                        → 30    (₹30 minimum fare)
+  base_fare_per_km                → 12    (₹12/km)
+  base_fare_per_min               → 2     (₹2/min)
+  surge_enabled                   → false (turn surge on/off)
+  surge_multiplier                → 1.0   (manual surge override)
+  settlement_days                 → 2     (T+2 payout window)
+  free_cancel_window_secs         → 120   (2-min free cancel window)
+  cancel_fee_amount               → 20    (₹20 after free window, driver en route)
+  cancel_fee_arrived_amount       → 40    (₹40 when driver already at pickup)
+  gst_percentage                  → 5     (5% GST — internal accounting, not shown to users)
+  driver_search_radius_km_expanded → 12   (Pass 2 search radius in km)
+```
+
+### Ride Filter (failed payments / by status)
+
+```
+GET /admin/rides?paymentStatus=FAILED&status=COMPLETED&page=1&limit=20
+→ Paginated list of rides filtered by any combination of paymentStatus and status
+→ Use for manual follow-up on uncollected UPI payments
+
+paymentStatus values: PENDING | COMPLETED | FAILED | REFUNDED
+status values: REQUESTED | DRIVER_ASSIGNED | DRIVER_ARRIVED | IN_PROGRESS | COMPLETED | CANCELLED | NO_DRIVER | SCHEDULED
+
+Common query for ops team: ?paymentStatus=FAILED&status=COMPLETED
+→ Rides where driver completed but UPI payment never went through
 ```
 
 ### Bootstrap (no admin token needed — INTERNAL_API_KEY instead)
@@ -873,11 +920,25 @@ Two queues, two workers.
 
 ```
 Job: otp-cleanup
-  → Runs every hour (or triggered manually)
+  → Runs every 24 hours (also once immediately at server startup)
   → Deletes from otp_verifications WHERE:
       expiresAt < now (expired)
       OR (verified = true AND createdAt < 24h ago)
   → Keeps DB clean
+
+Job: scheduled-ride-dispatch  (every 1 minute)
+  → Finds rides WHERE status = SCHEDULED AND scheduledAt ≤ (now + 15 min) AND driverId IS NULL
+  → Transitions each: status = REQUESTED (with REQUESTED RideEvent)
+  → Calls rideService.searchAndNotifyDriversPublic() for each — triggers full driver search pipeline
+  → No app-open required — fully server-driven dispatch
+  → Config: SCHEDULED_RIDE_DISPATCH_MINS_BEFORE = 15
+
+Job: driver-offline-check  (every 2 minutes)
+  → Finds drivers WHERE isOnline = true AND lastLocationUpdate < (now - 3 min)
+  → Bulk UPDATE driver_profiles SET isOnline = false
+  → Syncs each to RTDB: drivers/{userId}/isOnline = false
+  → Handles: app crash, phone died, background process killed
+  → Config: DRIVER_OFFLINE_TIMEOUT_MINS = 3
 ```
 
 ### Queue 2: chalo-rides
@@ -917,7 +978,7 @@ All original P0 critical features are implemented and tested:
 | OTP-based ride start (driver enters 4-digit OTP) | ✅ Done |
 | Customer rates driver (`POST /rides/:rideId/rate`) | ✅ Done |
 | Driver rates customer (`POST /driver/rides/:rideId/rate-customer`) | ✅ Done |
-| Cancellation fee logic (time-based, platform_config-driven) | ✅ Done |
+| Cancellation fee logic (3-tier: reason-based / arrived / time-based) | ✅ Done |
 | Driver registration endpoint with atomic DriverProfile creation | ✅ Done |
 | Admin promote endpoint (INTERNAL_API_KEY, no SQL needed) | ✅ Done |
 | Ride receipt endpoint (`GET /rides/:rideId/receipt`) | ✅ Done |
@@ -963,7 +1024,7 @@ Small to medium items. All decision context documented below.
 | **Dispute resolution** | Customer files dispute on a ride (FARE_ISSUE, WRONG_ROUTE, DRIVER_BEHAVIOUR). Admin resolves with optional refund. New `disputes` table. |
 | **Document expiry alerts** | Add `licenseExpiry`, `rcExpiry` to `driver_profiles`. BullMQ daily cron: warn 7 days before, auto-suspend on expiry date. |
 | **Auto-settlement (T+2)** | BullMQ daily job: find Earnings with `settlementDueDate <= today` → trigger Razorpay Payout → mark SETTLED. Currently manual. |
-| **Scheduled ride dispatch** | BullMQ job every minute: find `SCHEDULED` rides due in 15 min → trigger normal driver search. Field `scheduledFor` already exists on Ride. |
+| **Auto-settlement (T+2)** | BullMQ daily job: find Earnings with `settlementDueDate <= today` → trigger Razorpay Payout → mark SETTLED. Currently manual. |
 | **Driver bank verification** | Validate IFSC + account number via Razorpay Route API before first payout to prevent failed transfers. |
 
 ---
@@ -994,7 +1055,7 @@ npx prisma migrate deploy
 
 ---
 
-## Appendix — All 58 Endpoints
+## Appendix — All 60 Endpoints
 
 ### Auth (8 endpoints)
 ```
@@ -1064,7 +1125,7 @@ PATCH /notifications/:notificationId/read
 PATCH /notifications/read-all
 ```
 
-### Admin (9 endpoints)
+### Admin (10 endpoints)
 ```
 POST /admin/promote                        ← NEW (INTERNAL_API_KEY)
 GET  /admin/drivers/pending
@@ -1073,6 +1134,7 @@ POST /admin/drivers/:driverId/approve
 POST /admin/drivers/:driverId/reject
 POST /admin/drivers/:driverId/auto-verify
 GET  /admin/rides/live
+GET  /admin/rides                          ← NEW (filter by paymentStatus/status)
 GET  /admin/config
 PUT  /admin/config/:key
 ```

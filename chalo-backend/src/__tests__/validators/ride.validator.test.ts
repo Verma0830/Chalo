@@ -153,16 +153,28 @@ describe('rateRideSchema', () => {
 
 // ─── cancelRideSchema ─────────────────────────────────────────
 describe('cancelRideSchema', () => {
-  it('accepts empty object (reason is optional)', () => {
-    expect(cancelRideSchema.safeParse({}).success).toBe(true);
+  it('accepts a valid driver-fault reason code', () => {
+    expect(cancelRideSchema.safeParse({ reasonCode: 'DRIVER_ASKED_TO_CANCEL' }).success).toBe(true);
   });
 
-  it('accepts valid reason', () => {
-    expect(cancelRideSchema.safeParse({ reason: 'Change of plans' }).success).toBe(true);
+  it('accepts a customer-fault reason code', () => {
+    expect(cancelRideSchema.safeParse({ reasonCode: 'CHANGED_MIND' }).success).toBe(true);
   });
 
-  it('rejects reason > 500 chars', () => {
-    expect(cancelRideSchema.safeParse({ reason: 'X'.repeat(501) }).success).toBe(false);
+  it('accepts reasonCode + optional note', () => {
+    expect(cancelRideSchema.safeParse({ reasonCode: 'OTHER', note: 'Custom reason' }).success).toBe(true);
+  });
+
+  it('rejects when reasonCode is missing', () => {
+    expect(cancelRideSchema.safeParse({}).success).toBe(false);
+  });
+
+  it('rejects an invalid reason code string', () => {
+    expect(cancelRideSchema.safeParse({ reasonCode: 'INVALID_REASON' }).success).toBe(false);
+  });
+
+  it('rejects note longer than 500 chars', () => {
+    expect(cancelRideSchema.safeParse({ reasonCode: 'OTHER', note: 'X'.repeat(501) }).success).toBe(false);
   });
 });
 

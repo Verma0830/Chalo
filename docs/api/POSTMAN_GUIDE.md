@@ -1,7 +1,7 @@
 # Chalo Backend — Postman Testing Guide
 ### Complete beginner guide — start here if you've never used Postman
 
-**Status: Updated March 2026. 58 endpoints. Trip sharing and driver cancellation tracking verified.**
+**Status: Updated March 2026. 60 endpoints. All V1 features implemented and tested.**
 
 ---
 
@@ -38,10 +38,11 @@ Before doing anything in Postman, the server must be running.
 Open a terminal in VS Code (`Ctrl + ~`) and run:
 
 ```
-docker start chalo-db
 cd chalo-backend
 npm run dev
 ```
+
+> Docker containers (`chalo-postgres` and `chalo-redis`) start automatically when Docker Desktop opens. If they're not running, open Docker Desktop and wait a few seconds, then run `npm run dev`.
 
 You should see this in the terminal:
 ```
@@ -156,7 +157,14 @@ Seeding platform config...
 ✓ base_fare_per_km = 12
 ✓ base_fare_per_min = 2
 ✓ settlement_days = 2
-Seed complete.
+✓ surge_enabled = false
+✓ surge_multiplier = 1.0
+✓ free_cancel_window_secs = 120
+✓ cancel_fee_amount = 20
+✓ cancel_fee_arrived_amount = 40
+✓ gst_percentage = 5
+✓ driver_search_radius_km_expanded = 12
+Seed complete. 13 config keys upserted.
 ```
 
 You only need to run this **once**. After that the data stays in the DB.
@@ -170,11 +178,11 @@ npx prisma migrate deploy
 
 You should see:
 ```
-3 migrations found in prisma/migrations
+10 migrations found in prisma/migrations
 All migrations have been successfully applied.
 ```
 
-If it says `Can't reach database server` — run `docker start chalo-db` first and try again.
+If it says `Can't reach database server` — open Docker Desktop, wait for the `chalo-postgres` container to show as running, then try again.
 
 ### 6c. What order to do everything in
 
@@ -303,7 +311,7 @@ Now `{{customer_token}}` will automatically send this token in all future reques
 This is only required for new users (`isNewUser: true` in the previous response).
 
 ```
-Method: POST
+Method: PUT
 URL: {{base_url}}/auth/profile
 Headers:
   Content-Type: application/json
@@ -468,7 +476,7 @@ Copy the token → save it in the `driver_token` environment variable.
 ### Step 3 — Complete Profile (Driver)
 
 ```
-Method: POST
+Method: PUT
 URL: {{base_url}}/auth/profile
 Headers:
   Content-Type: application/json
@@ -513,7 +521,7 @@ The driver cannot go online until their status is `VERIFIED`.
 
 Open a terminal and run:
 ```bash
-docker exec -it chalo-db psql -U postgres -d chalo
+docker exec -it chalo-postgres psql -U postgres -d chalo_db
 ```
 
 Then run this SQL (replace `<driver-user-id>` with the `id` you got from the verify OTP response):
@@ -536,7 +544,7 @@ You need both the customer and driver registered and the driver approved. Keep t
 
 ```
 Method: POST
-URL: {{base_url}}/driver/online
+URL: {{base_url}}/driver/go-online
 Headers:
   Content-Type: application/json
   Authorization: Bearer {{driver_token}}
@@ -720,7 +728,7 @@ Replace `XXXX` with the 4-digit code from the terminal.
 #### Step 3 — Complete the profile
 
 ```
-Method: POST
+Method: PUT
 URL: {{base_url}}/auth/profile
 Headers:
   Content-Type: application/json
@@ -910,18 +918,21 @@ Body:
 
 Valid keys you can update:
 
-| Key                       | What it controls                          | Default |
-|---------------------------|-------------------------------------------|---------|
-| `commission_percentage`   | Platform cut per ride (%)                 | 15      |
-| `subscription_fee_weekly` | Driver weekly plan (₹)                    | 199     |
-| `min_fare`                | Minimum ride fare (₹)                     | 30      |
-| `base_fare_per_km`        | Rate per kilometer (₹)                    | 12      |
-| `base_fare_per_min`       | Rate per minute (₹)                       | 2       |
-| `surge_enabled`           | Turn surge pricing on/off                 | false   |
-| `surge_multiplier`        | Surge multiplier (1.0–2.0)                | 1.0     |
-| `settlement_days`         | Payout delay (T+N days)                   | 2       |
-| `free_cancel_window_secs` | Seconds before cancellation fee kicks in  | 120     |
-| `cancel_fee_amount`       | Cancellation fee in ₹ (after window)      | 20      |
+| Key                                | What it controls                                | Default |
+|------------------------------------|------------------------------------------------|---------|
+| `commission_percentage`            | Platform cut per ride (%)                       | 15      |
+| `subscription_fee_weekly`          | Driver weekly plan (₹)                          | 199     |
+| `min_fare`                         | Minimum ride fare (₹)                           | 30      |
+| `base_fare_per_km`                 | Rate per kilometer (₹)                          | 12      |
+| `base_fare_per_min`                | Rate per minute (₹)                             | 2       |
+| `surge_enabled`                    | Turn surge pricing on/off                       | false   |
+| `surge_multiplier`                 | Surge multiplier (1.0–2.0)                      | 1.0     |
+| `settlement_days`                  | Payout delay (T+N days)                         | 2       |
+| `free_cancel_window_secs`          | Seconds before cancellation fee kicks in        | 120     |
+| `cancel_fee_amount`                | Cancellation fee in ₹ (driver en route)         | 20      |
+| `cancel_fee_arrived_amount`        | Cancellation fee in ₹ (driver at pickup)        | 40      |
+| `gst_percentage`                   | GST % baked into fare (internal accounting)     | 5       |
+| `driver_search_radius_km_expanded` | Radius (km) for Pass 2 driver search            | 12      |
 
 ---
 
@@ -1296,6 +1307,93 @@ What to verify:
 
 ---
 
+## Flow 15 — Cancellation with Reason Code (3-tier fee)
+
+The cancel endpoint now requires a `reasonCode`. Driver-fault reasons waive the fee and penalise the driver.
+
+```
+Method: POST
+URL: {{base_url}}/rides/{{ride_id}}/cancel
+Headers:
+  Content-Type: application/json
+  Authorization: Bearer {{customer_token}}
+Body:
+{
+  "reasonCode": "CHANGED_MIND"
+}
+```
+
+**Reason codes:**
+
+| Code | Fee | Effect |
+|------|-----|--------|
+| `CHANGED_MIND` | 3-tier (see below) | Customer fault |
+| `BOOKED_BY_MISTAKE` | 3-tier | Customer fault |
+| `OTHER` | 3-tier | Customer fault, optional `note` field |
+| `DRIVER_ASKED_TO_CANCEL` | ₹0 | Driver's cancel count incremented |
+| `DRIVER_NOT_MOVING` | ₹0 | Driver fault |
+| `DRIVER_WRONG_VEHICLE` | ₹0 | Driver fault |
+| `DRIVER_BEHAVIOUR` | ₹0 | Driver fault |
+
+**3-tier fee (customer fault codes only):**
+- Status `REQUESTED` (no driver yet) → ₹0
+- Status `DRIVER_ASSIGNED`, elapsed ≤ 120s → ₹0 (free window)
+- Status `DRIVER_ASSIGNED`, elapsed > 120s → ₹20
+- Status `DRIVER_ARRIVED` → ₹40
+
+**Expected Response:**
+```json
+{
+  "data": {
+    "rideId": "...",
+    "status": "CANCELLED",
+    "cancellationFee": 20,
+    "reasonCode": "CHANGED_MIND"
+  }
+}
+```
+
+---
+
+## Flow 16 — Admin Ride Filter (Failed Payments)
+
+Find rides where UPI payment failed so operations can follow up manually.
+
+```
+Method: GET
+URL: {{base_url}}/admin/rides?paymentStatus=FAILED&status=COMPLETED
+Headers:
+  Authorization: Bearer {{admin_token}}
+```
+
+Query params (all optional):
+- `paymentStatus`: `PENDING | COMPLETED | FAILED | REFUNDED`
+- `status`: `REQUESTED | DRIVER_ASSIGNED | DRIVER_ARRIVED | IN_PROGRESS | COMPLETED | CANCELLED | NO_DRIVER | SCHEDULED`
+- `page`: page number (default 1)
+- `limit`: results per page (default 20)
+
+**Expected Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "...",
+      "status": "COMPLETED",
+      "paymentStatus": "FAILED",
+      "finalFare": 85,
+      "paymentMethod": "UPI",
+      "customer": { "name": "Rahul Kumar", "phone": "+919876543210" },
+      "driver": { "name": "Ravi Kumar", "vehicleNumber": "HR 51 AB 1234" },
+      "completedAt": "2026-03-10T14:30:00.000Z"
+    }
+  ],
+  "meta": { "page": 1, "limit": 20, "total": 3, "totalPages": 1 }
+}
+```
+
+---
+
 ## Common Errors and What They Mean
 
 | Status Code | Error Code            | What went wrong | How to fix |
@@ -1314,30 +1412,32 @@ What to verify:
 Go through these in order. Put a tick next to each when it passes.
 
 **One-time setup:**
-- [ ] `docker start chalo-db` runs without error
-- [ ] `npx prisma migrate deploy` → "All migrations successfully applied"
-- [ ] `npm run db:seed` → shows all config keys seeded
+- [ ] Docker Desktop open, `chalo-postgres` and `chalo-redis` containers running
+- [ ] `npx prisma migrate deploy` → "10 migrations found... All migrations have been successfully applied"
+- [ ] `npm run db:seed` → shows all 13 config keys seeded
 - [ ] `GET http://localhost:3001/health` → returns `status: ok, database: connected`
 
 **Create test data:**
 - [ ] Flow 1 passed — customer OTP → token → profile complete
 - [ ] Flow 6 (Admin creation) — promoted a user to ADMIN, got admin token with `role: ADMIN`
-- [ ] Flow 4 passed — driver registered and documents submitted
+- [ ] Flow 7 passed — driver registered via API (no SQL needed)
+- [ ] Flow 4 (Step 4) passed — driver documents submitted
 - [ ] Flow 6c passed — admin approved the driver via API
 
 **Verify ride lifecycle:**
-- [ ] Flow 2 passed — fare estimate returns a number
+- [ ] Flow 2 passed — fare estimate returns a number (check `minimumFareApplied` field present)
 - [ ] Flow 3 passed — ride created with `status: REQUESTED`
 - [ ] Flow 5 passed — full ride completed end-to-end (online → accept → arrive → start with OTP → complete → rate)
+- [ ] Flow 8 passed — ride start requires and validates OTP (wrong OTP returns 400)
 - [ ] Flow 9 passed — driver rated customer after completion
 - [ ] Flow 10 passed — ride receipt returns fare breakdown
 - [ ] Flow 13 passed — trip share link opens public tracking data
 - [ ] Flow 14 passed — driver cancellation stats increment and threshold triggers
 
 **Verify new features:**
-- [ ] Flow 7 passed — driver registered via API (no SQL needed)
-- [ ] Flow 8 passed — ride start requires and validates OTP
 - [ ] Flow 11 passed — driver earnings summary returns totals
-- [ ] Flow 12 tested — cancellation fee returned correctly
+- [ ] Flow 12 tested — cancellation fee returned correctly (₹0/₹20/₹40 per tier)
+- [ ] Flow 15 tested — cancel with reason code (DRIVER_ASKED_TO_CANCEL → ₹0, CHANGED_MIND → fee)
+- [ ] Flow 16 tested — admin ride filter returns rides filtered by paymentStatus
 
-**All 17 checked = backend is ready. Start the customer app.**
+**All 20 checked = backend is ready. Start the customer app.**

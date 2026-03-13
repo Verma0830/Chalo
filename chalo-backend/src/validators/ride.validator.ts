@@ -70,13 +70,29 @@ export const rateRideSchema = z.object({
 });
 
 /**
- * Cancel a ride
+ * Cancel a ride — requires a structured reason code.
+ * Driver-fault codes waive the fee; customer-fault codes apply the appropriate tier.
  */
+export const CANCELLATION_REASON_CODES = [
+  'DRIVER_ASKED_TO_CANCEL',
+  'DRIVER_NOT_MOVING',
+  'DRIVER_WRONG_VEHICLE',
+  'DRIVER_BEHAVIOUR',
+  'CHANGED_MIND',
+  'BOOKED_BY_MISTAKE',
+  'OTHER',
+] as const;
+
+export type CancellationReasonCode = typeof CANCELLATION_REASON_CODES[number];
+
 export const cancelRideSchema = z.object({
-  reason: z
+  reasonCode: z.enum(CANCELLATION_REASON_CODES, {
+    message: 'Invalid cancellation reason. Must be one of: ' + CANCELLATION_REASON_CODES.join(', '),
+  }),
+  note: z
     .string()
     .trim()
-    .max(500, 'Reason too long')
+    .max(500, 'Note too long')
     .optional(),
 });
 

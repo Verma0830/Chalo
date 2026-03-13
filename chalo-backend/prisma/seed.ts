@@ -24,8 +24,10 @@ async function main() {
     { key: 'base_fare_per_min', value: '2', description: 'Fare per minute in INR' },
     { key: 'settlement_days', value: '2', description: 'T+N days for earnings settlement' },
     { key: 'free_cancel_window_secs', value: '120', description: 'Free cancellation window in seconds after driver assignment (default 2 min)' },
-    { key: 'cancel_fee_amount', value: '20', description: 'Cancellation fee in INR charged after free window expires' },
+    { key: 'cancel_fee_amount', value: '20', description: 'Cancellation fee in INR when customer cancels after the free window (driver assigned, not yet arrived)' },
+    { key: 'cancel_fee_arrived_amount', value: '40', description: 'Cancellation fee in INR when driver has physically arrived at pickup and customer cancels' },
     { key: 'gst_percentage', value: '5', description: 'GST % on ride fare — tracked internally for accounting, not shown to customer/driver' },
+    { key: 'driver_search_radius_km_expanded', value: '12', description: 'Expanded driver search radius in km for pass 2 when initial 5km pass finds nothing (tuned for Punjab city sizes — Ludhiana, Amritsar)' },
   ];
 
   for (const cfg of configs) {
@@ -47,7 +49,7 @@ async function main() {
   console.log('  Per Min:           ₹2');
   console.log('  Settlement:        T+2 days');
   console.log('  Cancel Window:     120s (2 min free)');
-  console.log('  Cancel Fee:        ₹20');
+  console.log('  Cancel Fee:        ₹20 (post-window) / ₹40 (after driver arrives)');
   console.log('  GST:               5% (internal accounting)');
 }
 

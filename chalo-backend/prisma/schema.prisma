@@ -83,6 +83,19 @@ enum CancellationBy {
   SYSTEM
 }
 
+enum CancellationReasonCode {
+  // Driver-fault reasons — fee is waived, driver may be penalised
+  DRIVER_ASKED_TO_CANCEL    // Driver pressured customer to cancel (driver gets cancellation count)
+  DRIVER_NOT_MOVING         // Driver accepted but is not moving toward pickup
+  DRIVER_WRONG_VEHICLE      // Vehicle doesn't match the listed details
+  DRIVER_BEHAVIOUR          // Driver was rude, inappropriate, or unsafe
+
+  // Customer-fault reasons — cancellation fee applies
+  CHANGED_MIND              // Customer no longer wants the ride
+  BOOKED_BY_MISTAKE         // Accidental booking
+  OTHER                     // Free-text fallback — fee applies
+}
+
 enum SOSStatus {
   ACTIVE
   RESOLVED
@@ -146,6 +159,7 @@ model CustomerProfile {
   savedWorkAddress       String?
   totalRides             Int      @default(0)
   cancellationCount      Int      @default(0)
+  cancellationCooldownUntil DateTime?               // Set when serial canceller cooldown is active
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 
@@ -189,7 +203,9 @@ model DriverProfile {
   driverCancellationCount Int               @default(0)
   driverCancellationCountDaily Int          @default(0)
   driverCancellationLastAt DateTime?
-  
+  driverAcceptCount     Int                 @default(0)  // Total rides accepted
+  driverDeclineCount    Int                 @default(0)  // Total rides declined (explicit decline, not timeout)
+
   // Real-time state (also mirrored in Firebase RTDB for speed)
   isOnline              Boolean             @default(false)
   currentLat            Float?
@@ -279,8 +295,9 @@ model Ride {
   isManualRide      Boolean       @default(false)
   
   // Cancellation
-  cancelledBy       CancellationBy?
-  cancellationReason String?
+  cancelledBy             CancellationBy?
+  cancellationReasonCode  CancellationReasonCode?  // Structured reason code (drives fee logic)
+  cancellationReason      String?                  // Optional free-text note (used with OTHER)
   
   // Timestamps — every state transition is tracked
   requestedAt       DateTime      @default(now())

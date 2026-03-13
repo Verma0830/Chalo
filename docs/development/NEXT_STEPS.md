@@ -1,7 +1,7 @@
 # Chalo — What's Left To Do
 
 > Last updated: March 2026
-> Backend: ✅ Complete — 58 endpoints, 8.5/10 score
+> Backend: ✅ Complete — 60 endpoints, 8.5/10 score
 > Android apps: ⬜ Not started — start here next
 > Deployment: ⬜ Not started
 
@@ -20,6 +20,7 @@ This document covers everything that is still pending, in priority order.
 7. [Driver Android App](#7-driver-android-app)
 8. [Deployment](#8-deployment)
 9. [Post-Launch (P2 / P3)](#9-post-launch-p2--p3)
+10. [Post-Production Decisions (Policy + Architecture)](#10-post-production-decisions)
 
 ---
 
@@ -31,12 +32,21 @@ This document covers everything that is still pending, in priority order.
 |---|---|---|
 | GST (5%) on ride fare | ✅ Done | Stored in `rides.gstAmount`. Not shown to customer/driver — internal accounting only. Config: `gst_percentage = 5` in platform_config. |
 | Rating window (48h + skip) | ✅ Done | `rides.ratingSkippedAt` field + `POST /rides/:rideId/skip-rating` endpoint. 48h/2-prompt logic is Android-only (SharedPreferences). |
+| Reason-based cancellation fee (3-tier) | ✅ Done | `CancellationReasonCode` enum. Driver-fault reasons waive fee + penalise driver. 3 fee tiers: ₹0 (free window) / ₹20 (post-window) / ₹40 (driver arrived). Config: `cancel_fee_arrived_amount = 40`. |
 | Trip share / tracking link | ✅ Done | `POST /rides/:rideId/share` returns a 24h share URL. Public `GET /track/:token` returns ride status + live driver coordinates without auth. |
 | Driver cancellation tracking | ✅ Done | `driver_profiles.driverCancellationCount*` fields track totals and daily counts. `POST /driver/rides/:rideId/cancel` now returns `cancellationStats` and alerts admins at 3 cancellations/day. |
+| NO_DRIVER radius expansion (Punjab) | ✅ Done | Two-pass search: 5km initial → 12km expanded when first pass finds nothing (either 0 initial results or all candidates decline). Works for both paths. Expanded radius config-driven via `driver_search_radius_km_expanded = 12` in `platform_config`. Tuned for Punjab city sizes (Ludhiana 310 km², Amritsar 135 km²). |
+| Scheduled ride dispatch (BullMQ) | ✅ Done | `scheduled-ride-dispatch` repeating job runs every 1 minute. Finds `SCHEDULED` rides with `scheduledAt ≤ now + 15 min`, transitions them to `REQUESTED`, and triggers the full driver search pipeline. No app-open required. |
+| Driver offline cron (phantom driver fix) | ✅ Done | `driver-offline-check` repeating job runs every 2 minutes. Finds drivers with `isOnline=true` but `lastLocationUpdate < now - 3 min` (app crash / phone died) and marks them offline, syncing to RTDB. |
+| New driver neutral rating in matching | ✅ Done | Drivers with `ratingCount < 10` now use a neutral `3.5/5` effective rating in the matching score instead of `0`. Prevents new drivers from always ranking last. `NEW_DRIVER_RATING_THRESHOLD = 10`, `NEW_DRIVER_NEUTRAL_RATING = 3.5` in constants. |
+| Minimum fare transparency | ✅ Done | Fare estimate response now includes `minimumFareApplied: boolean` and `minimumFare: number`. Android shows "Minimum fare applies" label when `minimumFareApplied = true`. `min_fare` is now fetched from DB config (was hardcoded before). |
+| Serial canceller policy | ✅ Done | Tracks hourly cancellation count in Redis. 3 cancellations within 1 hour → 15-minute booking cooldown (`SERIAL_CANCEL_COOLDOWN_MINS`). 5+ lifetime cancellations → `cancellationWarning` returned in cancel response. Cancellation cooldown stored in `cancel:cooldown:{customerId}` Redis key. |
+| Driver accept/decline count tracking | ✅ Done | `driverAcceptCount` and `driverDeclineCount` added to `DriverProfile` schema (migration `20260301080000`). Incremented on every accept/decline. Acceptance rate can be derived as `driverAcceptCount / (driverAcceptCount + driverDeclineCount)`. |
+| Admin failed payment filter | ✅ Done | New `GET /admin/rides?paymentStatus=FAILED` endpoint. Supports filtering by any `paymentStatus` (PENDING/COMPLETED/FAILED/REFUNDED) and `status` (ride lifecycle). Used for manual follow-up on uncollected UPI payments. |
 
 ### Remaining launch-critical backend work
 
-None for this gap set. The only meaningful customer-facing backend launch blocker here was trip sharing, and it is now implemented.
+None. Backend is feature-complete for V1 launch.
 
 ### Decided against (and why)
 
@@ -44,7 +54,7 @@ None for this gap set. The only meaningful customer-facing backend launch blocke
 |---|---|---|
 | Notification badge count endpoint | ❌ Not needed for V1 | All critical ride notifications show live on ride screen via RTDB. App shows a red dot using existing `GET /notifications?limit=1`. Add count endpoint in P2 when promo notifications launch. |
 | SMS receipt on completion | ❌ Not sending SMS | MSG91 costs ₹0.18–0.22/SMS (transactional tier). ₹600/month at 100 rides/day, ₹6,000/month at 1,000 rides/day. Full receipt already available in-app via `GET /rides/:rideId/receipt`. No SMS needed. |
-| Razorpay auto-charge cancellation fee | ❌ Not for V1 | 90% of Faridabad rides are cash — cannot auto-charge. For UPI: RBI regulations require explicit user approval per debit. Fee shown clearly before cancel. Driver collects cash. V2: deduct from wallet. |
+| Razorpay auto-charge cancellation fee | ❌ Not for V1 | 90% of Faridabad rides are cash. For UPI: RBI regulations require explicit user approval per debit. Fee shown on screen. Driver collects cash. Reason-based logic and 3-tier amounts (₹0/₹20/₹40) are implemented. Auto-charging V2 via wallet. |
 
 ### Rating UX design (implemented)
 
@@ -512,3 +522,95 @@ Build these after V1 is live and generating real rides. Priority based on user f
 | GST invoice generation (PDF) | Before filing GST returns |
 | iOS app | Low priority — Faridabad is Android-dominant |
 | Web booking page | After Android app is stable |
+
+---
+
+## 10. Post-Production Decisions (Policy + Architecture)
+
+These items have been implemented in code. The decisions below document the exact policy choices made and the rationale behind them — for the team's reference when revisiting.
+
+### Driver cancellation fee (mirror of customer fee)
+
+**Decided:** Not for V1. Track and warn only.
+- `driverCancellationCount` + `driverCancellationCountDaily` are tracked on `DriverProfile`
+- Admin is alerted (in-app notification) when a driver hits 3 cancellations in a day
+- Actual suspension + penalty policy is a P2 ops decision — requires legal/ops review of Haryana auto-driver regulations
+- Automatic suspension endpoint: `POST /admin/drivers/:id/suspend` — scheduled for P3
+
+### Serial canceller policy
+
+**Implemented.** Two-layer protection:
+- **Hourly layer:** ≥ 3 cancellations within 60 minutes → 15-minute booking cooldown (`cancel:cooldown:{customerId}` Redis key, TTL = 900s)
+- **Lifetime warning:** ≥ 5 lifetime cancellations → `cancellationWarning: true` in cancel response (Android shows a soft warning)
+- Config: `SERIAL_CANCEL_THRESHOLD_HOURLY = 3`, `SERIAL_CANCEL_COOLDOWN_MINS = 15`, `SERIAL_CANCEL_WARNING_COUNT = 5`
+- Hourly bucket uses `cancel:hourly:{customerId}:{bucketMinute}` Redis keys (expire in 65 minutes)
+- **What we chose not to do (V1):** permanent ban, fare surcharge for serial cancellers, hard block after lifetime count
+
+### Scheduled ride dispatch
+
+**Implemented.** BullMQ repeating job (`scheduled-ride-dispatch`) runs every 1 minute.
+- Finds `SCHEDULED` rides with `scheduledAt ≤ now + 15 min`
+- Transitions to `REQUESTED` and triggers full driver search pipeline
+- Config: `SCHEDULED_RIDE_DISPATCH_MINS_BEFORE = 15` in constants
+- No app-open required — fully server-driven
+
+### New driver showing 0.0 rating
+
+**Implemented.** Neutral rating (3.5/5) used in matching score for new drivers.
+- Drivers with `ratingCount < 10` use `NEW_DRIVER_NEUTRAL_RATING = 3.5` in `scoreAndSort()`
+- Prevents new drivers from always ranking last in driver matching
+- After 10 rides, their real average takes over
+- **What we chose:** neutral 3.5 (middle of scale). Alternative was 4.0 (slight advantage for new drivers) — chose 3.5 as fairer to experienced drivers
+
+### Phantom driver (app crash / phone died)
+
+**Implemented.** `driver-offline-check` BullMQ job runs every 2 minutes.
+- Finds drivers with `isOnline=true` but `lastLocationUpdate < now - 3 min`
+- Bulk marks them offline in DB + syncs `isOnline: false` to RTDB
+- Config: `DRIVER_OFFLINE_TIMEOUT_MINS = 3` in constants
+- **Tuning note:** 3 minutes chosen to handle Indian 4G dropouts (reconnect usually within 60–90 seconds). If too aggressive, increase to 5 minutes.
+
+### UPI payment failure recovery
+
+**Not implemented (V1 decision).** Handled operationally:
+- Failed UPI payments: ride is logged with `paymentStatus = FAILED`
+- Admin uses `GET /admin/rides?paymentStatus=FAILED` to pull failed-payment rides daily
+- Operations team follows up manually (call customer, collect cash as fallback)
+- **Why not auto-retry:** RBI regulations require explicit user action per debit. Auto-retry without user consent is non-compliant. V2 option: add "Retry Payment" button in app.
+- Admin endpoint added: `GET /admin/rides?paymentStatus=FAILED&status=COMPLETED`
+
+### FCM retry / reliability
+
+**Not implemented (V1 decision).** Current behaviour:
+- FCM failure is logged as a warning, not retried
+- Stale FCM tokens auto-cleared when Firebase returns `messaging/registration-token-not-registered`
+- Duplicate notification protection: offer keys in Redis serve as deduplication (if Redis has no offer key, no notification sent)
+- **V2 option:** Add BullMQ retry job for critical notifications (driver found, ride started) with 3 retries at 5s intervals
+
+### Driver accept/decline ratio
+
+**Implemented (tracking only).** No enforcement in V1.
+- `driverAcceptCount` and `driverDeclineCount` tracked on `DriverProfile` (incremented on each action)
+- Acceptance rate derivable: `driverAcceptCount / (driverAcceptCount + driverDeclineCount)`
+- **Enforcement (V2):** Driver with acceptance rate < 50% over 30 days → warning notification. < 30% → temporary downrank in matching score. Requires ops review first.
+- Not included in current matching `scoreAndSort()` (would need 30-day rolling window query — use Redis sorted set in V2)
+
+### Minimum fare transparency
+
+**Implemented.** Fare estimate response now includes:
+- `minimumFareApplied: boolean` — true if the minimum fare floor was applied
+- `minimumFare: number` — the minimum fare value in ₹
+- Android shows a "Minimum fare applies" label when `minimumFareApplied = true`
+- `min_fare` is now config-driven (was hardcoded): `GET /admin/config` → `min_fare = 30`
+
+### Driver rating window (matching score for new drivers)
+
+**Implemented.** See "New driver showing 0.0 rating" above.
+
+### Radius expansion strategy
+
+**Implemented.** Two-pass Punjab-tuned search:
+- Pass 1: 5km radius (`DRIVER_SEARCH_RADIUS_KM = 5`)
+- Pass 2: 12km radius if Pass 1 finds 0 candidates or all candidates exhaust (`driver_search_radius_km_expanded = 12` in platform_config)
+- 12km chosen for Faridabad/Punjab city sizes (Faridabad ~220 km², Amritsar ~135 km²)
+- Config-overridable: `PUT /admin/config/driver_search_radius_km_expanded { "value": "15" }`

@@ -22,7 +22,7 @@ A **bike ride-hailing app** for Faridabad, Haryana. Customers book bike rides vi
 | Language | TypeScript 5.3 strict mode |
 | Framework | Express 4 |
 | ORM | Prisma 5 |
-| Database | PostgreSQL 15 + PostGIS (geospatial), Docker container `chalo-db` on port 5432 |
+| Database | PostgreSQL 15 + PostGIS (geospatial), Docker container `chalo-postgres` on port 5433 (external) |
 | Cache | Redis 7 (localhost:6379) — requires `REDIS_URL` env var; if absent in dev, app runs without Redis |
 | Auth | Firebase Admin SDK — phone OTP → Firebase token → verified by middleware |
 | Push | Firebase Cloud Messaging (FCM) |
@@ -34,7 +34,7 @@ A **bike ride-hailing app** for Faridabad, Haryana. Customers book bike rides vi
 | Jobs | BullMQ (two queues: `chalo-maintenance`, `chalo-rides`) |
 | Circuit breaker | opossum (on Razorpay calls) |
 | Metrics | prom-client → `/metrics` endpoint |
-| Tests | Jest + ts-jest — 249 tests, 100% passing |
+| Tests | Jest + ts-jest — 319 tests, 100% passing |
 
 ---
 
@@ -46,10 +46,16 @@ chalo-backend/
 │   ├── schema.prisma          # Single source of truth for DB schema
 │   ├── seed.ts                # Seeds platform_config table
 │   └── migrations/
-│       ├── 20260301011006_init/            # Full schema init
-│       ├── 20260301011007_add_postgis_indexes/ # GIST indexes for lat/lng
-│       ├── 20260301020000_add_verification_metadata/ # verificationNote + verificationMetadata
-│       └── 20260301030000_add_ride_otp_and_driver_rating/ # rideStartOtp, driverRating, driverComment
+│       ├── 20260301011006_init/                           # Full schema init
+│       ├── 20260301011007_add_postgis_indexes/            # GIST indexes for lat/lng
+│       ├── 20260301020000_add_verification_metadata/      # verificationNote + verificationMetadata
+│       ├── 20260301030000_add_ride_otp_and_driver_rating/ # rideStartOtp, driverRating, driverComment
+│       ├── 20260301040000_add_gst_amount/                 # rides.gstAmount
+│       ├── 20260301050000_add_rating_skipped_at/          # rides.ratingSkippedAt
+│       ├── 20260301060000_add_cancellation_reason_code/   # CancellationReasonCode enum + fields
+│       ├── 20260301080000_add_driver_accept_decline_and_customer_cooldown/ # DriverProfile accept/decline counts, CustomerProfile cooldown
+│       ├── 20260309110000_add_ride_share_links/           # RideShareLink model
+│       └── 20260309111000_add_driver_cancellation_tracking/ # driverCancellationCount* fields
 │
 └── src/
     ├── app.ts                 # Express app setup (middleware stack, routes mount)
@@ -228,8 +234,9 @@ File: `src/utils/constants.ts` — `CONSTANTS` object (as const).
 
 **Ride:**
 - `RIDE_ACCEPT_WINDOW_SECS = 60` — window for a driver to accept before batch expires
-- `DRIVER_SEARCH_RADIUS_KM = 5` — search radius for nearby drivers
-- `DRIVER_SEARCH_MAX_CANDIDATES = 10` — max drivers fetched for scoring
+- `DRIVER_SEARCH_RADIUS_KM = 5` — search radius for nearby drivers (Pass 1)
+- `DRIVER_SEARCH_RADIUS_KM_EXPANDED = 12` — expanded search radius (Pass 2, Punjab-tuned)
+- `DRIVER_SEARCH_MAX_CANDIDATES = 10` — max drivers fetched for scoring per pass
 - `DRIVER_BROADCAST_SIZE = 5` — drivers notified per batch (top-5 simultaneous FCM)
 - `RIDE_OFFER_BATCH_TTL_SECS = 65` — TTL for batch offer window (60s + 5s grace)
 - `RIDE_CANDIDATES_TTL_SECS = 600` — Redis TTL for full candidate list (10 min)
@@ -237,6 +244,8 @@ File: `src/utils/constants.ts` — `CONSTANTS` object (as const).
 - `RIDE_SHARE_TTL_HOURS = 24` — lifetime of the public family tracking link
 - `RIDE_SHARE_TOKEN_BYTES = 24` — cryptographic token size before base64url encoding
 - `DRIVER_CANCELLATION_ALERT_THRESHOLD = 3` — admin alert threshold per IST day
+- `DRIVER_OFFLINE_TIMEOUT_MINS = 3` — mark driver offline if no location ping for this long
+- `SCHEDULED_RIDE_DISPATCH_MINS_BEFORE = 15` — dispatch driver search this many minutes before scheduled time
 
 **Fare:**
 - `MIN_FARE = 30` — ₹30 minimum fare
@@ -251,13 +260,28 @@ File: `src/utils/constants.ts` — `CONSTANTS` object (as const).
 - `OTP_LENGTH = 4`, `OTP_EXPIRY_MINS = 5`, `MAX_OTP_ATTEMPTS = 3`
 - `PHONE_REGEX`: Indian mobile numbers only (`+91` + 6-9 start + 9 digits)
 
+**Rating:**
+- `NEW_DRIVER_RATING_THRESHOLD = 10` — drivers with fewer ratings than this use neutral score in matching
+- `NEW_DRIVER_NEUTRAL_RATING = 3.5` — neutral rating used in `scoreAndSort()` for new drivers
+
+**Serial canceller policy:**
+- `SERIAL_CANCEL_THRESHOLD_HOURLY = 3` — cancellations within 1 hour before cooldown
+- `SERIAL_CANCEL_COOLDOWN_MINS = 15` — booking cooldown duration after threshold hit
+- `SERIAL_CANCEL_WARNING_COUNT = 5` — lifetime cancellations before warning flag returned
+
 **Platform config keys (DB):**
 - `CONFIG_KEYS.COMMISSION_PERCENTAGE = 'commission_percentage'`
 - `CONFIG_KEYS.SURGE_ENABLED = 'surge_enabled'`
 - `CONFIG_KEYS.MIN_FARE = 'min_fare'`
 - `CONFIG_KEYS.BASE_FARE_PER_KM = 'base_fare_per_km'`
 - `CONFIG_KEYS.BASE_FARE_PER_MIN = 'base_fare_per_min'`
-- (etc — see file for full list)
+- `CONFIG_KEYS.FREE_CANCEL_WINDOW_SECS = 'free_cancel_window_secs'`
+- `CONFIG_KEYS.CANCEL_FEE_AMOUNT = 'cancel_fee_amount'`
+- `CONFIG_KEYS.CANCEL_FEE_ARRIVED_AMOUNT = 'cancel_fee_arrived_amount'`
+- `CONFIG_KEYS.GST_PERCENTAGE = 'gst_percentage'`
+- `CONFIG_KEYS.DRIVER_SEARCH_RADIUS_KM_EXPANDED = 'driver_search_radius_km_expanded'`
+- `CONFIG_KEYS.SETTLEMENT_DAYS = 'settlement_days'`
+- `CONFIG_KEYS.SUBSCRIPTION_FEE_WEEKLY = 'subscription_fee_weekly'`
 
 **IMPORTANT:** DB config keys are lowercase snake_case. Test mocks must use lowercase keys too (`'base_fare_per_km'`, not `'BASE_FARE_PER_KM'`).
 
@@ -272,7 +296,10 @@ File: `src/utils/constants.ts` — `CONSTANTS` object (as const).
 | `ride:offer:{driverUserId}` | 65s | Pending ride offer for this driver (value = rideId) |
 | `ride:active_batch:{rideId}` | 65s | Array of userIds in the current broadcast batch |
 | `ride:candidates:{rideId}` | 600s | Array of all candidate userIds sorted by score |
+| `ride:expanded:{rideId}` | 600s | Flag: expanded search already attempted for this ride |
 | `fare:config` | 300s | Cached platform config for fare calculation |
+| `cancel:cooldown:{customerId}` | 900s (15 min) | Serial canceller booking cooldown — key presence = on cooldown |
+| `cancel:hourly:{customerId}:{bucketMin}` | ~65 min | Hourly cancellation counter bucket for serial cancel detection |
 | `idempotency:{userId}:{key}` | 86400s (24h) | Payment idempotency keys |
 | Rate limit keys | varies | Per-endpoint, per-IP rate limits |
 
@@ -283,7 +310,9 @@ File: `src/utils/constants.ts` — `CONSTANTS` object (as const).
 Two queues in `src/jobs/queue.ts`:
 
 **`chalo-maintenance`**
-- `otp-cleanup` — periodic job that deletes expired OTP records from DB
+- `otp-cleanup` — runs every 24h, deletes expired OTP records from DB (also runs once on startup)
+- `scheduled-ride-dispatch` — runs every 1 minute, finds `SCHEDULED` rides due within 15 min, transitions to `REQUESTED`, triggers driver search pipeline
+- `driver-offline-check` — runs every 2 minutes, finds drivers with `isOnline=true` and `lastLocationUpdate < now - 3 min`, bulk marks offline + syncs RTDB
 
 **`chalo-rides`**
 - `ride-offer-expired` — delayed job, fires at `RIDE_OFFER_BATCH_TTL_SECS * 1000` ms
@@ -440,7 +469,10 @@ All configurable via `PUT /api/v1/admin/config/:key` (ADMIN role required):
 | `base_fare_per_min` | 2 | ₹2/min |
 | `settlement_days` | 2 | T+2 settlement |
 | `free_cancel_window_secs` | 120 | Seconds after driver assignment before cancel fee applies |
-| `cancel_fee_amount` | 20 | ₹20 cancellation fee (charged after free window) |
+| `cancel_fee_amount` | 20 | ₹20 cancellation fee (charged after free window, driver en route) |
+| `cancel_fee_arrived_amount` | 40 | ₹40 cancellation fee (driver already at pickup) |
+| `gst_percentage` | 5 | GST % baked into fare — internal accounting only, not shown to users |
+| `driver_search_radius_km_expanded` | 12 | Expanded search radius (km) for Pass 2 driver search |
 
 SUBSCRIPTION plan drivers pay zero commission (fixed weekly fee instead). COMMISSION plan drivers pay 15% per ride.
 
@@ -497,22 +529,33 @@ jest.mock('../../config/logger', () => ({
 ## 18. Current Status (March 2026)
 
 **Done:**
-- All 48 API endpoints implemented (41 original + 7 new P0 features)
-- Broadcast driver search (top-5 batch, BullMQ timeout)
-- Admin panel (9 endpoints, ADMIN role gate + INTERNAL_API_KEY bootstrap)
+- All 60 API endpoints implemented and tested (319/319 tests passing)
+- Broadcast driver search (top-5 batch, BullMQ timeout, two-pass radius expansion)
+- Admin panel (10 endpoints, ADMIN role gate + INTERNAL_API_KEY bootstrap)
 - KYC provider (pluggable — Surepass activates automatically via env var)
 - Firebase auth, FCM, RTDB sync
-- Prisma schema with PostGIS (4 migrations applied)
+- Prisma schema with PostGIS (10 migrations applied)
 - Docker Compose for full-stack local dev
 
-**New features added (March 2026):**
+**All features added (March 2026):**
 - `POST /auth/register-driver` — atomic driver registration (OTP + User + DriverProfile)
 - OTP ride start — 4-digit OTP generated on driver assignment, validated on ride start
 - `POST /driver/rides/:rideId/rate-customer` — driver-to-customer rating
-- Cancellation fee logic — ₹20 after 2-minute free window (configurable via platform_config)
+- Cancellation fee logic — 3-tier: ₹0 (free window/no driver) / ₹20 (post-window) / ₹40 (driver arrived)
 - `GET /rides/:rideId/receipt` — full fare breakdown for completed rides
 - `GET /driver/earnings/summary?period=week|month` — lightweight earnings dashboard card
-- `POST /admin/promote` — promote user to ADMIN via INTERNAL_API_KEY (no Firebase auth required)
+- `POST /admin/promote` — promote user to ADMIN via INTERNAL_API_KEY
+- Trip share/tracking link — `POST /rides/:rideId/share` + public `GET /track/:token`
+- Driver cancellation tracking — `driverCancellationCount*` fields + admin threshold alerts
+- GST (5%) on fare — stored in `rides.gstAmount`, not exposed to customer/driver
+- Rating skip endpoint — `POST /rides/:rideId/skip-rating` + `rides.ratingSkippedAt`
+- Scheduled ride dispatch — BullMQ job every 1 min, dispatches 15 min before `scheduledAt`
+- Phantom driver fix — BullMQ job every 2 min marks stale-online drivers offline
+- New driver neutral rating (3.5) in matching score — prevents new drivers ranking last
+- Minimum fare transparency — `minimumFareApplied` + `minimumFare` in fare estimate response
+- Serial canceller policy — Redis hourly counter + 15-min cooldown + lifetime warning
+- Driver accept/decline count tracking — `driverAcceptCount` + `driverDeclineCount` on DriverProfile
+- Admin failed payment filter — `GET /admin/rides?paymentStatus=FAILED`
 
 **Next steps:**
 - Customer Android app (Kotlin + Jetpack Compose)

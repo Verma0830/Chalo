@@ -588,6 +588,12 @@ export class DriverService {
 
       activeRidesGauge.inc({ status: 'DRIVER_ASSIGNED' });
 
+      // Track accept count for acceptance rate calculation (fire-and-forget — non-critical)
+      void prisma.driverProfile.update({
+        where: { userId },
+        data: { driverAcceptCount: { increment: 1 } },
+      }).catch((err) => logger.warn('Failed to increment driverAcceptCount', { userId, error: err }));
+
       logger.info('Driver accepted ride', {
         rideId,
         driverId: userId,
@@ -672,6 +678,12 @@ export class DriverService {
           .catch(() => null);
       }
     }
+
+    // Track decline count for acceptance rate calculation (fire-and-forget — non-critical)
+    void prisma.driverProfile.update({
+      where: { userId },
+      data: { driverDeclineCount: { increment: 1 } },
+    }).catch((err) => logger.warn('Failed to increment driverDeclineCount', { userId, error: err }));
 
     logger.info('Driver declined ride', { rideId, driverId: userId });
 

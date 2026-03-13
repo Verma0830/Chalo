@@ -10,6 +10,7 @@ import { adminController } from '../controllers/admin.controller';
 import { ApiError } from '../utils/apiError';
 import {
   adminPaginationSchema,
+  adminRidesFilterSchema,
   adminDriverParamSchema,
   approveDriverSchema,
   rejectDriverSchema,
@@ -94,6 +95,13 @@ router.get(
   '/rides/live',
   validateQuery(adminPaginationSchema),
   adminController.getLiveRides.bind(adminController)
+);
+
+// GET /api/v1/admin/rides?paymentStatus=FAILED&status=COMPLETED
+router.get(
+  '/rides',
+  validateQuery(adminRidesFilterSchema),
+  adminController.getRides.bind(adminController)
 );
 
 // -------------------------------------------------------

@@ -71,6 +71,10 @@ export interface FareEstimate {
   currency: string;
   /** GST amount (5% of totalFare) — internal accounting only, not exposed to customer/driver */
   gstAmount: number;
+  /** true when the minimum fare floor was applied (short trip) — Android shows a label */
+  minimumFareApplied: boolean;
+  /** The minimum fare value in INR — display as "Minimum fare" label when minimumFareApplied is true */
+  minimumFare: number;
 }
 
 export interface RideRequest {

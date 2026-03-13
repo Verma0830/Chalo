@@ -16,7 +16,7 @@ import { ridesCreatedTotal, ridesCancelledTotal, driverSearchDuration } from '..
 import logger from '../config/logger';
 import { getDatabase } from '../config/firebase';
 import { getRedisClient, isRedisReady } from '../config/redis';
-import { Prisma, RideStatus, CancellationBy } from '@prisma/client';
+import { Prisma, RideStatus, CancellationBy, CancellationReasonCode } from '@prisma/client';
 
 // ---------------------------------------------------------------------------
 // Typed select shape for ride history — using Prisma.RideGetPayload ensures
@@ -615,12 +615,22 @@ export class RideService {
 
   /**
    * Cancel a ride (by customer)
-   * Uses transaction to ensure atomic updates across ride and customer profile
+   * 3-tier fee logic:
+   *   1. Driver-fault reason code  → fee = ₹0 (waived). DRIVER_ASKED_TO_CANCEL also penalises driver.
+   *   2. Status = DRIVER_ARRIVED   → fee = cancel_fee_arrived_amount (₹40, driver wasted a trip)
+   *   3. Time > free window        → fee = cancel_fee_amount (₹20, deterrent)
+   *   4. Within free window        → fee = ₹0
    * @param rideId - The ride ID to cancel
    * @param customerId - The customer's user ID
-   * @param reason - Optional cancellation reason
+   * @param reasonCode - Structured reason from CancellationReasonCode enum
+   * @param note - Optional free-text note (typically used with OTHER)
    */
-  async cancelRide(rideId: string, customerId: string, reason?: string) {
+  async cancelRide(
+    rideId: string,
+    customerId: string,
+    reasonCode: CancellationReasonCode,
+    note?: string
+  ) {
     // Validate inputs
     if (!rideId || !customerId) {
       throw ApiError.badRequest('Ride ID and Customer ID are required', ErrorCode.VALIDATION_ERROR);
@@ -634,6 +644,20 @@ export class RideService {
 
     if (ride.customerId !== customerId) {
       throw ApiError.forbidden('You can only cancel your own rides', ErrorCode.FORBIDDEN);
+    }
+
+    // Serial canceller policy: check if customer is in a cooldown period
+    const redis = getRedisClient();
+    const cooldownKey = `cancel:cooldown:${customerId}`;
+    if (redis && isRedisReady()) {
+      const cooldownTtl = await redis.ttl(cooldownKey).catch(() => -1);
+      if (cooldownTtl > 0) {
+        const minutesLeft = Math.ceil(cooldownTtl / 60);
+        throw ApiError.badRequest(
+          `You have cancelled too many rides recently. Please wait ${minutesLeft} minute${minutesLeft !== 1 ? 's' : ''} before cancelling again.`,
+          ErrorCode.VALIDATION_ERROR
+        );
+      }
     }
 
     const cancellableStatuses: RideStatus[] = [
@@ -650,14 +674,33 @@ export class RideService {
       );
     }
 
-    // --- Cancellation fee logic ---
-    // Fee applies if customer cancels AFTER the free window AND a driver is assigned.
+    // --- 3-tier cancellation fee logic ---
+    const isDriverFault = (CONSTANTS.DRIVER_FAULT_REASON_CODES as readonly string[]).includes(reasonCode);
+    const isDriverForced = reasonCode === CONSTANTS.DRIVER_FORCED_CANCEL_CODE;
     let cancellationFee = 0;
-    if (
+    let feeWaivedReason: string | undefined;
+
+    if (isDriverFault) {
+      // Tier 0: Driver-fault — always free for the customer
+      feeWaivedReason = reasonCode;
+    } else if (
+      ride.driverId &&
+      (ride.status === RideStatus.DRIVER_ARRIVED)
+    ) {
+      // Tier 1: Driver physically at pickup — highest fee (driver burned fuel + time)
+      const arrivedFeeConfig = await prisma.platformConfig.findUnique({
+        where: { key: CONSTANTS.CONFIG_KEYS.CANCEL_FEE_ARRIVED_AMOUNT },
+        select: { value: true },
+      });
+      cancellationFee = arrivedFeeConfig
+        ? Number(arrivedFeeConfig.value)
+        : CONSTANTS.DEFAULT_CANCEL_FEE_ARRIVED;
+    } else if (
       ride.driverId &&
       ride.driverAssignedAt &&
-      (ride.status === RideStatus.DRIVER_ASSIGNED || ride.status === RideStatus.DRIVER_ARRIVED)
+      ride.status === RideStatus.DRIVER_ASSIGNED
     ) {
+      // Tier 2: After free window (driver assigned, en route but not arrived)
       const [windowConfig, feeConfig] = await Promise.all([
         prisma.platformConfig.findUnique({
           where: { key: CONSTANTS.CONFIG_KEYS.FREE_CANCEL_WINDOW_SECS },
@@ -668,14 +711,13 @@ export class RideService {
           select: { value: true },
         }),
       ]);
-
       const windowSecs = windowConfig ? Number(windowConfig.value) : CONSTANTS.FREE_CANCEL_WINDOW_SECS;
       const feeAmount  = feeConfig   ? Number(feeConfig.value)   : CONSTANTS.DEFAULT_CANCEL_FEE;
-
       const secsSinceAssigned = (Date.now() - ride.driverAssignedAt.getTime()) / 1000;
       if (secsSinceAssigned > windowSecs) {
         cancellationFee = feeAmount;
       }
+      // Tier 3: Within free window — fee stays ₹0
     }
 
     // Use transaction for atomic updates
@@ -686,18 +728,19 @@ export class RideService {
         data: {
           status: RideStatus.CANCELLED,
           cancelledBy: CancellationBy.CUSTOMER,
-          cancellationReason: reason,
+          cancellationReasonCode: reasonCode,
+          cancellationReason: note,
           cancelledAt: new Date(),
           rideEvents: {
             create: {
               eventType: 'CANCELLED',
-              metadata: { cancelledBy: 'CUSTOMER', reason, cancellationFee },
+              metadata: { cancelledBy: 'CUSTOMER', reasonCode, note, cancellationFee, feeWaivedReason },
             },
           },
         },
       });
 
-      // Increment cancellation count (for penalty logic + driver visibility)
+      // Increment lifetime cancellation count
       await tx.customerProfile.update({
         where: { userId: customerId },
         data: { cancellationCount: { increment: 1 } },
@@ -705,6 +748,78 @@ export class RideService {
 
       return updatedRide;
     });
+
+    // Serial canceller policy: track hourly count in Redis and apply cooldown if needed
+    let cancellationWarning: string | undefined;
+    if (redis && isRedisReady()) {
+      const hourlyKey = `cancel:hourly:${customerId}`;
+      try {
+        const hourlyCount = await redis.incr(hourlyKey);
+        // Set/refresh 1-hour expiry on first increment
+        if (hourlyCount === 1) {
+          await redis.expire(hourlyKey, 3600);
+        }
+        if (hourlyCount >= CONSTANTS.SERIAL_CANCEL_THRESHOLD_HOURLY) {
+          // Apply cooldown — block cancellations for SERIAL_CANCEL_COOLDOWN_MINS
+          await redis.setEx(cooldownKey, CONSTANTS.SERIAL_CANCEL_COOLDOWN_MINS * 60, '1');
+          logger.warn('Serial canceller cooldown applied', { customerId, hourlyCount });
+        }
+      } catch (err) {
+        logger.warn('Failed to update serial cancel Redis counters', { customerId, error: err });
+      }
+    }
+
+    // Fetch updated lifetime count to decide whether to show a warning
+    const updatedProfile = await prisma.customerProfile.findUnique({
+      where: { userId: customerId },
+      select: { cancellationCount: true },
+    });
+    if (updatedProfile && updatedProfile.cancellationCount >= CONSTANTS.SERIAL_CANCEL_WARNING_COUNT) {
+      cancellationWarning = 'You have a high cancellation rate. Frequent cancellations may limit your ability to book rides.';
+    }
+
+    // If driver forced the customer to cancel, penalise driver's cancellation count
+    if (isDriverForced && ride.driverId) {
+      try {
+        const driverProfile = await prisma.driverProfile.findFirst({
+          where: { userId: ride.driverId },
+          select: { id: true, driverCancellationCount: true, driverCancellationCountDaily: true, driverCancellationLastAt: true },
+        });
+        if (driverProfile) {
+          const now = new Date();
+          const isSameDay = driverProfile.driverCancellationLastAt !== null &&
+            (() => {
+              const last = new Date(driverProfile.driverCancellationLastAt!);
+              const toIST = (d: Date) => new Date(d.getTime() + 5.5 * 60 * 60 * 1000);
+              const lastIST = toIST(last), nowIST = toIST(now);
+              return lastIST.getFullYear() === nowIST.getFullYear() &&
+                lastIST.getMonth() === nowIST.getMonth() &&
+                lastIST.getDate() === nowIST.getDate();
+            })();
+          const dailyCount = isSameDay ? driverProfile.driverCancellationCountDaily + 1 : 1;
+          await prisma.driverProfile.update({
+            where: { id: driverProfile.id },
+            data: {
+              driverCancellationCount: { increment: 1 },
+              driverCancellationCountDaily: dailyCount,
+              driverCancellationLastAt: now,
+            },
+          });
+          // Log event for admin audit
+          await prisma.rideEvent.create({
+            data: {
+              rideId,
+              eventType: 'DRIVER_FORCED_CANCEL',
+              metadata: { driverUserId: ride.driverId, driverDailyCount: dailyCount },
+            },
+          });
+          logger.warn('Driver forced customer to cancel', { rideId, driverUserId: ride.driverId, dailyCount });
+        }
+      } catch (err) {
+        // Non-fatal — log and continue. Ride is already cancelled.
+        logger.error('Failed to update driver cancellation count after forced cancel', { rideId, error: err });
+      }
+    }
 
     // Record metric
     ridesCancelledTotal.inc({ cancelled_by: 'customer' });
@@ -722,9 +837,9 @@ export class RideService {
       });
     }
 
-    logger.info('Ride cancelled by customer', { rideId, customerId, reason, cancellationFee });
+    logger.info('Ride cancelled by customer', { rideId, customerId, reasonCode, cancellationFee, isDriverFault });
 
-    return { rideId: cancelled.id, status: cancelled.status, cancellationFee };
+    return { rideId: cancelled.id, status: cancelled.status, cancellationFee, feeWaivedReason, cancellationWarning };
   }
 
   /**
@@ -866,34 +981,29 @@ export class RideService {
   }
 
   /**
-   * Search for nearby drivers and send ride requests
-   * This is the matching engine with scoring-based selection
-   * @param rideId - The ride to match
-   * @param pickupLat - Pickup latitude
-   * @param pickupLng - Pickup longitude
+   * Raw PostGIS query: returns nearby online+verified drivers sorted by score.
+   * Excludes any driver IDs in excludeIds (already tried in a previous pass).
    */
-  private async searchAndNotifyDrivers(
-    rideId: string,
+  private async queryNearbyDrivers(
     pickupLat: number,
     pickupLng: number,
-    fare: number
-  ): Promise<void> {
-    // Validate inputs
-    if (!rideId || pickupLat === undefined || pickupLng === undefined) {
-      logger.error('Invalid params for driver search', { rideId, pickupLat, pickupLng });
-      return;
-    }
-
-    const searchStart = Date.now();
-
-    // Find online, verified drivers within radius using PostGIS ST_DWithin
-    const radiusKm = CONSTANTS.DRIVER_SEARCH_RADIUS_KM;
+    radiusKm: number,
+    excludeIds: string[]
+  ): Promise<
+    Array<{
+      id: string;
+      userId: string;
+      userName: string;
+      currentLat: number;
+      currentLng: number;
+      ratingAvg: number;
+      ratingCount: number;
+      distanceMeters: number;
+    }>
+  > {
     const radiusMeters = radiusKm * 1000;
 
-    // PostGIS spatial query — delegates distance computation to the DB engine
-    // instead of fetching all drivers and filtering in JS.
-    // ST_DWithin operates on geography type for metre-accurate results.
-    const nearbyDrivers = await prisma.$queryRaw<
+    const rows = await prisma.$queryRaw<
       Array<{
         id: string;
         userId: string;
@@ -923,6 +1033,7 @@ export class RideService {
         AND dp."verificationStatus" = 'VERIFIED'
         AND dp."currentLat" IS NOT NULL
         AND dp."currentLng" IS NOT NULL
+        AND NOT (dp."userId" = ANY(${excludeIds}))
         AND ST_DWithin(
           ST_SetSRID(ST_Point(dp."currentLng", dp."currentLat"), 4326)::geography,
           ST_SetSRID(ST_Point(${pickupLng}, ${pickupLat}), 4326)::geography,
@@ -932,91 +1043,197 @@ export class RideService {
       LIMIT ${CONSTANTS.DRIVER_SEARCH_MAX_CANDIDATES}
     `;
 
-    // Record search duration metric
-    const searchDurationSecs = (Date.now() - searchStart) / 1000;
-    driverSearchDuration.observe(searchDurationSecs);
+    return rows;
+  }
 
-    if (nearbyDrivers.length === 0) {
-      // No drivers available — update ride status
-      await prisma.ride.update({
-        where: { id: rideId },
-        data: {
-          status: RideStatus.NO_DRIVER,
-          rideEvents: {
-            create: {
-              eventType: 'NO_DRIVER_FOUND',
-              metadata: { searchRadiusKm: radiusKm, searchDurationSecs },
-            },
-          },
-        },
-      });
+  /** Score drivers and return sorted userId[] */
+  private scoreAndSort(
+    drivers: Array<{ userId: string; distanceMeters: number; ratingAvg: number; ratingCount: number }>,
+    radiusKm: number
+  ): string[] {
+    return drivers
+      .map((d) => {
+        const distanceKm = d.distanceMeters / 1000;
+        const distanceScore = Math.max(0, 1 - distanceKm / radiusKm);
+        // New drivers (< 10 ratings) get a neutral 3.5/5 score instead of 0 — prevents
+        // them from always ranking last and never getting rides to build their rating.
+        const effectiveRating = d.ratingCount < CONSTANTS.NEW_DRIVER_RATING_THRESHOLD
+          ? CONSTANTS.NEW_DRIVER_NEUTRAL_RATING
+          : d.ratingAvg;
+        const ratingScore = effectiveRating / CONSTANTS.MAX_RATING;
+        const idleTimeScore = 0.5; // placeholder for V2
+        return { userId: d.userId, score: distanceScore * 0.5 + ratingScore * 0.3 + idleTimeScore * 0.2 };
+      })
+      .sort((a, b) => b.score - a.score)
+      .map((d) => d.userId);
+  }
 
-      // Notify customer
-      const ride = await prisma.ride.findUnique({ where: { id: rideId } });
-      if (ride) {
-        await notificationService.sendPushNotification({
-          userId: ride.customerId,
-          title: 'No riders available',
-          body: 'No riders are available nearby. Please try again in a few minutes.',
-          data: { rideId, type: 'NO_DRIVER' },
-        });
-      }
+  /**
+   * Search for nearby drivers and send ride requests.
+   * Two-pass: 5km first → if none, expand to 12km before giving up.
+   */
+  /** Public alias used by the scheduled-ride-dispatch BullMQ job */
+  async searchAndNotifyDriversPublic(rideId: string, pickupLat: number, pickupLng: number, fare: number): Promise<void> {
+    return this.searchAndNotifyDrivers(rideId, pickupLat, pickupLng, fare);
+  }
 
-      // Sync no-driver status to RTDB
-      this.syncRideToRTDB(rideId, { status: RideStatus.NO_DRIVER });
-
+  private async searchAndNotifyDrivers(
+    rideId: string,
+    pickupLat: number,
+    pickupLng: number,
+    fare: number
+  ): Promise<void> {
+    if (!rideId || pickupLat === undefined || pickupLng === undefined) {
+      logger.error('Invalid params for driver search', { rideId, pickupLat, pickupLng });
       return;
     }
 
-    // Score-based driver selection (V2 improvement)
-    // Score = (distance_score * 0.5) + (rating_score * 0.3) + (idle_time_score * 0.2)
-    const scoredDrivers = nearbyDrivers.map((driver) => {
-      const distanceKm = driver.distanceMeters / 1000;
+    const searchStart = Date.now();
+    const initialRadius = CONSTANTS.DRIVER_SEARCH_RADIUS_KM;
 
-      // Distance score: closer is better (1.0 at 0km, 0.0 at maxRadius)
-      const distanceScore = Math.max(0, 1 - distanceKm / radiusKm);
+    let nearbyDrivers = await this.queryNearbyDrivers(pickupLat, pickupLng, initialRadius, []);
+    const searchDurationSecs = (Date.now() - searchStart) / 1000;
+    driverSearchDuration.observe(searchDurationSecs);
 
-      // Rating score: normalized to 0-1 (5 stars = 1.0)
-      const ratingScore = driver.ratingAvg / CONSTANTS.MAX_RATING;
+    // Pass 1 empty → try expanded radius immediately
+    if (nearbyDrivers.length === 0) {
+      const expandedRadius = CONSTANTS.DRIVER_SEARCH_RADIUS_KM_EXPANDED;
+      logger.info('Pass 1 empty — expanding radius', { rideId, initialRadius, expandedRadius });
 
-      // Idle time score: longer idle = higher priority (placeholder for V2)
-      const idleTimeScore = 0.5;
+      nearbyDrivers = await this.queryNearbyDrivers(pickupLat, pickupLng, expandedRadius, []);
 
-      const totalScore = distanceScore * 0.5 + ratingScore * 0.3 + idleTimeScore * 0.2;
+      if (nearbyDrivers.length === 0) {
+        await this.markNoDriver(rideId, expandedRadius, searchDurationSecs, true);
+        return;
+      }
 
-      return { driver, distanceKm, totalScore };
-    });
+      // Mark expanded pass used so BullMQ knows not to expand again
+      const redis = getRedisClient();
+      if (redis && isRedisReady()) {
+        void redis.setEx(`ride:expanded:${rideId}`, CONSTANTS.RIDE_CANDIDATES_TTL_SECS, '1').catch(() => null);
+      }
 
-    // Sort by score descending
-    scoredDrivers.sort((a, b) => b.totalScore - a.totalScore);
+      await prisma.ride.update({
+        where: { id: rideId },
+        data: {
+          rideEvents: { create: { eventType: 'DRIVER_SEARCH_EXPANDED', metadata: { expandedRadius } } },
+        },
+      });
 
-    // Extract all candidate IDs sorted by score
-    const allCandidateIds = scoredDrivers.map((s) => s.driver.userId);
-
-    // Persist full candidate list in Redis for batch advance by BullMQ worker
-    const redis = getRedisClient();
-    if (redis && isRedisReady()) {
-      void redis
-        .setEx(
-          `ride:candidates:${rideId}`,
-          CONSTANTS.RIDE_CANDIDATES_TTL_SECS,
-          JSON.stringify(allCandidateIds)
-        )
-        .catch((err) => {
-          logger.warn('Redis candidate list write failed', { rideId, error: String(err) });
-        });
+      const sortedIds = this.scoreAndSort(nearbyDrivers, expandedRadius);
+      await this.storeAndDispatch(rideId, sortedIds, fare, pickupLat, pickupLng);
+      logger.info('Pass 2 dispatch started', { rideId, candidates: sortedIds.length, expandedRadius });
+      return;
     }
 
-    // Dispatch first batch — top DRIVER_BROADCAST_SIZE drivers simultaneously
-    const firstBatch = allCandidateIds.slice(0, CONSTANTS.DRIVER_BROADCAST_SIZE);
-    await this.dispatchBatch(rideId, firstBatch, fare, pickupLat, pickupLng, CONSTANTS.DRIVER_BROADCAST_SIZE);
+    const sortedIds = this.scoreAndSort(nearbyDrivers, initialRadius);
+    await this.storeAndDispatch(rideId, sortedIds, fare, pickupLat, pickupLng);
 
     logger.info('Broadcast driver search initiated', {
       rideId,
-      totalCandidates: allCandidateIds.length,
-      firstBatchSize: firstBatch.length,
+      totalCandidates: sortedIds.length,
+      firstBatchSize: Math.min(sortedIds.length, CONSTANTS.DRIVER_BROADCAST_SIZE),
       searchDurationSecs,
     });
+  }
+
+  /** Store candidate list in Redis and dispatch first batch */
+  private async storeAndDispatch(
+    rideId: string,
+    candidateIds: string[],
+    fare: number,
+    pickupLat: number,
+    pickupLng: number
+  ): Promise<void> {
+    const redis = getRedisClient();
+    if (redis && isRedisReady()) {
+      void redis
+        .setEx(`ride:candidates:${rideId}`, CONSTANTS.RIDE_CANDIDATES_TTL_SECS, JSON.stringify(candidateIds))
+        .catch((err) => logger.warn('Redis candidate list write failed', { rideId, error: String(err) }));
+    }
+    const firstBatch = candidateIds.slice(0, CONSTANTS.DRIVER_BROADCAST_SIZE);
+    await this.dispatchBatch(rideId, firstBatch, fare, pickupLat, pickupLng, CONSTANTS.DRIVER_BROADCAST_SIZE);
+  }
+
+  /** Mark ride as NO_DRIVER, notify customer, sync RTDB */
+  private async markNoDriver(
+    rideId: string,
+    searchRadiusKm: number,
+    searchDurationSecs: number,
+    wasExpanded: boolean
+  ): Promise<void> {
+    await prisma.ride.update({
+      where: { id: rideId },
+      data: {
+        status: RideStatus.NO_DRIVER,
+        rideEvents: {
+          create: {
+            eventType: 'NO_DRIVER_FOUND',
+            metadata: { searchRadiusKm, searchDurationSecs, wasExpanded },
+          },
+        },
+      },
+    });
+
+    const ride = await prisma.ride.findUnique({ where: { id: rideId }, select: { customerId: true } });
+    if (ride) {
+      await notificationService.sendPushNotification({
+        userId: ride.customerId,
+        title: 'No riders available',
+        body: 'No riders are available nearby. Please try again in a few minutes.',
+        data: { rideId, type: 'NO_DRIVER' },
+      });
+    }
+
+    this.syncRideToRTDB(rideId, { status: RideStatus.NO_DRIVER });
+  }
+
+  /**
+   * Expanded radius search — called by BullMQ when all 5km candidates are exhausted.
+   * Searches at 12km (config-driven), excluding already-tried driver IDs.
+   * Returns true if new candidates were found and dispatched; false if still empty.
+   */
+  async expandDriverSearch(
+    rideId: string,
+    pickupLat: number,
+    pickupLng: number,
+    fare: number,
+    alreadyTriedIds: string[]
+  ): Promise<boolean> {
+    const expandedRadius = CONSTANTS.DRIVER_SEARCH_RADIUS_KM_EXPANDED;
+
+    const newDrivers = await this.queryNearbyDrivers(pickupLat, pickupLng, expandedRadius, alreadyTriedIds);
+
+    if (newDrivers.length === 0) {
+      logger.info('Expanded search returned 0 — final NO_DRIVER', { rideId, expandedRadius, alreadyTriedIds: alreadyTriedIds.length });
+      return false;
+    }
+
+    const sortedIds = this.scoreAndSort(newDrivers, expandedRadius);
+
+    // Append new candidates to Redis (replace, since old ones already tried)
+    const redis = getRedisClient();
+    if (redis && isRedisReady()) {
+      void redis.setEx(`ride:candidates:${rideId}`, CONSTANTS.RIDE_CANDIDATES_TTL_SECS, JSON.stringify(sortedIds)).catch(() => null);
+      void redis.setEx(`ride:expanded:${rideId}`, CONSTANTS.RIDE_CANDIDATES_TTL_SECS, '1').catch(() => null);
+    }
+
+    await prisma.ride.update({
+      where: { id: rideId },
+      data: {
+        rideEvents: {
+          create: {
+            eventType: 'DRIVER_SEARCH_EXPANDED',
+            metadata: { expandedRadius, newCandidates: sortedIds.length, alreadyTriedCount: alreadyTriedIds.length },
+          },
+        },
+      },
+    });
+
+    await this.storeAndDispatch(rideId, sortedIds, fare, pickupLat, pickupLng);
+
+    logger.info('Expanded search dispatched', { rideId, expandedRadius, newCandidates: sortedIds.length });
+    return true;
   }
 
   /**

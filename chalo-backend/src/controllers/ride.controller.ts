@@ -158,7 +158,7 @@ export class RideController {
       const { rideId } = req.params;
       const input = req.body as CancelRideInput;
 
-      const result = await rideService.cancelRide(rideId, userId, input.reason);
+      const result = await rideService.cancelRide(rideId, userId, input.reasonCode, input.note);
       ApiResponse.success(res, result, 'Ride cancelled');
     } catch (error) {
       next(error);

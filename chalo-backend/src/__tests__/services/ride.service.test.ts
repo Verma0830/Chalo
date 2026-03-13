@@ -29,6 +29,7 @@ jest.mock('../../config/database', () => {
     },
     customerProfile: {
       update: jest.fn(),
+      findUnique: jest.fn().mockResolvedValue({ cancellationCount: 1 }),
     },
     platformConfig: {
       findUnique: jest.fn().mockResolvedValue(null),
@@ -164,7 +165,7 @@ describe('RideService', () => {
       });
 
       await expect(
-        rideService.cancelRide('ride_001', 'customer_001', 'Changed my mind')
+        rideService.cancelRide('ride_001', 'customer_001', 'CHANGED_MIND')
       ).rejects.toMatchObject({ code: ErrorCode.RIDE_CANNOT_CANCEL });
     });
 
@@ -172,7 +173,7 @@ describe('RideService', () => {
       (prisma.ride.findUnique as jest.Mock).mockResolvedValue(null);
 
       await expect(
-        rideService.cancelRide('nonexistent', 'customer_001')
+        rideService.cancelRide('nonexistent', 'customer_001', 'CHANGED_MIND')
       ).rejects.toMatchObject({ code: ErrorCode.RIDE_NOT_FOUND });
     });
   });
@@ -445,7 +446,7 @@ describe('RideService', () => {
 
       (prisma.customerProfile.update as jest.Mock).mockResolvedValue({});
 
-      const result = await rideService.cancelRide('ride_001', 'customer_001', 'Changed plans');
+      const result = await rideService.cancelRide('ride_001', 'customer_001', 'CHANGED_MIND');
 
       expect(result.rideId).toBe('ride_001');
       expect(result.status).toBe(RideStatus.CANCELLED);
@@ -599,7 +600,7 @@ describe('RideService', () => {
 
       (prisma.customerProfile.update as jest.Mock).mockResolvedValue({});
 
-      const result = await rideService.cancelRide('ride_001', 'customer_001', 'Changed my mind');
+      const result = await rideService.cancelRide('ride_001', 'customer_001', 'CHANGED_MIND');
 
       expect(result.cancellationFee).toBe(20); // DEFAULT_CANCEL_FEE
     });
@@ -624,7 +625,7 @@ describe('RideService', () => {
 
       (prisma.customerProfile.update as jest.Mock).mockResolvedValue({});
 
-      const result = await rideService.cancelRide('ride_001', 'customer_001');
+      const result = await rideService.cancelRide('ride_001', 'customer_001', 'CHANGED_MIND');
 
       expect(result.cancellationFee).toBe(0);
     });
@@ -645,7 +646,7 @@ describe('RideService', () => {
 
       (prisma.customerProfile.update as jest.Mock).mockResolvedValue({});
 
-      const result = await rideService.cancelRide('ride_001', 'customer_001');
+      const result = await rideService.cancelRide('ride_001', 'customer_001', 'BOOKED_BY_MISTAKE');
 
       expect(result.cancellationFee).toBe(0);
     });

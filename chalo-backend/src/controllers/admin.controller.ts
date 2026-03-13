@@ -88,6 +88,17 @@ export class AdminController {
     }
   }
 
+  async getRides(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { page, limit } = req.query as unknown as AdminPaginationQuery;
+      const { paymentStatus, status } = req.query as { paymentStatus?: string; status?: string };
+      const result = await adminService.getRidesByFilter(page, limit, { paymentStatus, status });
+      ApiResponse.paginated(res, result.rides, result.meta, 'Rides retrieved');
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // -------------------------------------------------------
   // Platform Config
   // -------------------------------------------------------

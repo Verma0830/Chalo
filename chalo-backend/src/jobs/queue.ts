@@ -88,6 +88,28 @@ export async function initJobQueue(): Promise<void> {
     removeOnFail: { count: 50 },
   });
 
+  // Dispatch scheduled rides 15 min before their scheduled time (checks every 1 minute)
+  await maintenanceQueue.add(
+    'scheduled-ride-dispatch',
+    {},
+    {
+      repeat: { every: 60 * 1000 },
+      removeOnComplete: { count: 10 },
+      removeOnFail: { count: 50 },
+    }
+  );
+
+  // Mark phantom online drivers offline if no location ping for 3+ minutes (every 2 minutes)
+  await maintenanceQueue.add(
+    'driver-offline-check',
+    {},
+    {
+      repeat: { every: 2 * 60 * 1000 },
+      removeOnComplete: { count: 10 },
+      removeOnFail: { count: 50 },
+    }
+  );
+
   // Worker processes maintenance jobs
   maintenanceWorker = new Worker(
     MAINTENANCE_QUEUE,
@@ -97,6 +119,97 @@ export async function initJobQueue(): Promise<void> {
           const deleted = await authService.cleanupExpiredOTPs();
           return { deletedCount: deleted };
         }
+
+        case 'scheduled-ride-dispatch': {
+          // Find SCHEDULED rides whose scheduledAt is within the next SCHEDULED_RIDE_DISPATCH_MINS_BEFORE minutes
+          // and haven't been dispatched yet (still in SCHEDULED status with no driverId)
+          const { default: prisma } = await import('../config/database');
+          const { RideStatus } = await import('@prisma/client');
+          const dispatchWindowMs = CONSTANTS.SCHEDULED_RIDE_DISPATCH_MINS_BEFORE * 60 * 1000;
+          const now = new Date();
+          const windowEnd = new Date(now.getTime() + dispatchWindowMs);
+
+          const dueRides = await prisma.ride.findMany({
+            where: {
+              status: RideStatus.SCHEDULED,
+              isScheduled: true,
+              scheduledAt: { lte: windowEnd },
+              driverId: null,
+            },
+            select: {
+              id: true,
+              pickupLat: true,
+              pickupLng: true,
+              finalFare: true,
+              scheduledAt: true,
+            },
+          });
+
+          if (dueRides.length === 0) return { dispatched: 0 };
+
+          // Transition to REQUESTED and trigger driver search for each due ride
+          const { rideService } = await import('../services/ride.service');
+          let dispatched = 0;
+          for (const ride of dueRides) {
+            try {
+              await prisma.ride.update({
+                where: { id: ride.id },
+                data: {
+                  status: RideStatus.REQUESTED,
+                  rideEvents: {
+                    create: { eventType: 'REQUESTED', metadata: { source: 'scheduled_dispatch' } },
+                  },
+                },
+              });
+              await rideService.searchAndNotifyDriversPublic(ride.id, ride.pickupLat, ride.pickupLng, ride.finalFare);
+              dispatched++;
+              logger.info('Scheduled ride dispatched', { rideId: ride.id, scheduledAt: ride.scheduledAt });
+            } catch (err) {
+              logger.error('Failed to dispatch scheduled ride', { rideId: ride.id, error: err });
+            }
+          }
+          return { dispatched };
+        }
+
+        case 'driver-offline-check': {
+          // Find drivers who are marked online but haven't sent a location ping in DRIVER_OFFLINE_TIMEOUT_MINS
+          const { default: prisma } = await import('../config/database');
+          const cutoff = new Date(Date.now() - CONSTANTS.DRIVER_OFFLINE_TIMEOUT_MINS * 60 * 1000);
+
+          const staleDrivers = await prisma.driverProfile.findMany({
+            where: {
+              isOnline: true,
+              lastLocationUpdate: { lt: cutoff },
+            },
+            select: { userId: true, id: true },
+          });
+
+          if (staleDrivers.length === 0) return { markedOffline: 0 };
+
+          // Mark them all offline in one batch update
+          await prisma.driverProfile.updateMany({
+            where: { id: { in: staleDrivers.map((d) => d.id) } },
+            data: { isOnline: false },
+          });
+
+          // Sync each to RTDB
+          const { getDatabase } = await import('../config/firebase');
+          const db = getDatabase();
+          if (db) {
+            await Promise.allSettled(
+              staleDrivers.map((d) =>
+                db.ref(`drivers/${d.userId}`).update({ isOnline: false }).catch(() => null)
+              )
+            );
+          }
+
+          logger.warn('Stale online drivers marked offline', {
+            count: staleDrivers.length,
+            userIds: staleDrivers.map((d) => d.userId),
+          });
+          return { markedOffline: staleDrivers.length };
+        }
+
         default:
           logger.warn('Unknown maintenance job type', { jobName: job.name });
           return;
@@ -150,8 +263,28 @@ export async function initJobQueue(): Promise<void> {
 
           const nextBatch = allCandidateIds.slice(nextBatchStart, nextBatchStart + CONSTANTS.DRIVER_BROADCAST_SIZE);
 
-          // 3. No more drivers — mark NO_DRIVER
+          // 3. All batches exhausted — try expanded radius before giving up
           if (nextBatch.length === 0) {
+            // Check if we already did an expanded search for this ride
+            const alreadyExpanded = await redis.get(`ride:expanded:${rideId}`).catch(() => null);
+
+            if (!alreadyExpanded) {
+              const { rideService } = await import('../services/ride.service');
+              const dispatched = await rideService.expandDriverSearch(
+                rideId,
+                pickupLat,
+                pickupLng,
+                fare,
+                allCandidateIds // already-tried IDs from pass 1
+              );
+              if (dispatched) {
+                // expandDriverSearch handled dispatch — job done for this event
+                logger.info('ride-offer-expired: expanded search dispatched', { rideId });
+                return;
+              }
+            }
+
+            // Still no drivers after expansion (or expansion already tried) — final NO_DRIVER
             await prisma.ride.update({
               where: { id: rideId },
               data: {
@@ -159,7 +292,7 @@ export async function initJobQueue(): Promise<void> {
                 rideEvents: {
                   create: {
                     eventType: 'NO_DRIVER_FOUND',
-                    metadata: { reason: 'all_batches_exhausted', nextBatchStart },
+                    metadata: { reason: 'all_batches_exhausted', nextBatchStart, expandedSearchAttempted: !alreadyExpanded },
                   },
                 },
               },
@@ -187,6 +320,7 @@ export async function initJobQueue(): Promise<void> {
             // Cleanup Redis
             void redis.del(`ride:candidates:${rideId}`).catch(() => null);
             void redis.del(`ride:active_batch:${rideId}`).catch(() => null);
+            void redis.del(`ride:expanded:${rideId}`).catch(() => null);
 
             logger.info('ride-offer-expired: no more candidates, marked NO_DRIVER', { rideId });
             return;

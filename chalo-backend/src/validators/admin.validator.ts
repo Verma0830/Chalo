@@ -11,6 +11,14 @@ export const adminPaginationSchema = z.object({
 });
 export type AdminPaginationQuery = z.infer<typeof adminPaginationSchema>;
 
+export const adminRidesFilterSchema = z.object({
+  page:          z.coerce.number().int().min(1).default(CONSTANTS.DEFAULT_PAGE),
+  limit:         z.coerce.number().int().min(1).max(CONSTANTS.MAX_LIMIT).default(CONSTANTS.DEFAULT_LIMIT),
+  paymentStatus: z.enum(['PENDING', 'COMPLETED', 'FAILED', 'REFUNDED']).optional(),
+  status:        z.enum(['REQUESTED', 'DRIVER_ASSIGNED', 'DRIVER_ARRIVED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'NO_DRIVER', 'SCHEDULED']).optional(),
+});
+export type AdminRidesFilterQuery = z.infer<typeof adminRidesFilterSchema>;
+
 export const adminDriverParamSchema = z.object({
   driverId: z.string().cuid('Invalid driver ID'),
 });

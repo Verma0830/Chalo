@@ -233,6 +233,44 @@ class AdminService {
     return { rides, meta: buildPaginationMeta(page, limit, total) };
   }
 
+  /**
+   * General ride search for admin — supports filtering by paymentStatus.
+   * Primary use case: find rides with paymentStatus=FAILED for manual follow-up.
+   */
+  async getRidesByFilter(
+    page: number,
+    limit: number,
+    filters: { paymentStatus?: string; status?: string }
+  ) {
+    const skip = (page - 1) * limit;
+    const where: Record<string, unknown> = {};
+    if (filters.paymentStatus) where['paymentStatus'] = filters.paymentStatus;
+    if (filters.status) where['status'] = filters.status;
+
+    const [rides, total] = await Promise.all([
+      prisma.ride.findMany({
+        where,
+        include: {
+          customer: { select: { id: true, name: true, phone: true } },
+          driver: {
+            select: {
+              id: true,
+              name: true,
+              phone: true,
+              driverProfile: { select: { vehicleNumber: true } },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.ride.count({ where }),
+    ]);
+
+    return { rides, meta: buildPaginationMeta(page, limit, total) };
+  }
+
   // -------------------------------------------------------
   // Platform Config
   // -------------------------------------------------------
