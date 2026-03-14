@@ -609,6 +609,18 @@ Headers:
 
 **Expected Response (200 OK):** status becomes `DRIVER_ASSIGNED`
 
+### Step 4.5 — Customer Fetches Ride OTP (source of truth)
+
+```
+Method: GET
+URL: {{base_url}}/rides/{{ride_id}}
+Headers:
+  Authorization: Bearer {{customer_token}}
+```
+
+When status is `DRIVER_ASSIGNED` or `DRIVER_ARRIVED`, copy `data.rideStartOtp`.
+Use this OTP value in Step 6.
+
 ### Step 5 — Driver Arrives at Pickup
 
 ```
@@ -632,7 +644,12 @@ The driver must be within 200 meters of the pickup. Use the exact same coordinat
 Method: POST
 URL: {{base_url}}/driver/rides/{{ride_id}}/start
 Headers:
+  Content-Type: application/json
   Authorization: Bearer {{driver_token}}
+Body:
+{
+  "otp": "4821"
+}
 ```
 
 ### Step 7 — Driver Completes the Ride
@@ -1005,9 +1022,11 @@ The ride start flow now requires a 4-digit OTP that the customer receives when a
 
 ### What happens automatically
 
-1. Driver calls `POST /driver/rides/:rideId/accept` → backend generates OTP, stores it in ride, and sends FCM `"Ride OTP: 4821"`
-2. Customer app reads OTP from `GET /rides/:rideId` (`rideStartOtp`) and shows it on the ride screen
-3. Driver enters OTP when starting the ride
+1. Driver calls `POST /driver/rides/:rideId/accept` → backend atomically assigns the ride and persists `rideStartOtp` in the same write
+2. Backend sends FCM `"Ride OTP: 4821"` (best effort)
+3. If a legacy/inconsistent row is ever found without OTP on idempotent re-accept, backend backfills `rideStartOtp`
+4. Customer app reads OTP from `GET /rides/:rideId` (`rideStartOtp`) and shows it on the ride screen
+5. Driver enters OTP when starting the ride
 
 ### Start Ride with OTP
 
