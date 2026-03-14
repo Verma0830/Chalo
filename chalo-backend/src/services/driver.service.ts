@@ -463,6 +463,8 @@ export class DriverService {
    * UPDATE handles the race automatically.
    */
   async acceptRide(userId: string, rideId: string) {
+    const assignedRideOtp = generateOTP();
+
     // Atomic compare-and-swap: succeed only if ride is still unassigned + REQUESTED
     const updated = await prisma.$transaction(async (tx) => {
       const result = await tx.ride.updateMany({
@@ -475,6 +477,8 @@ export class DriverService {
           driverId: userId,
           status: RideStatus.DRIVER_ASSIGNED,
           driverAssignedAt: new Date(),
+          // Persist OTP atomically with assignment so we never end up assigned-without-OTP.
+          rideStartOtp: assignedRideOtp,
         },
       });
 
@@ -526,6 +530,7 @@ export class DriverService {
       select: {
         status: true,
         customerId: true,
+        rideStartOtp: true,
         pickupLat: true,
         pickupLng: true,
         pickupAddress: true,
@@ -542,21 +547,28 @@ export class DriverService {
       throw ApiError.internal('Ride state inconsistent after acceptance');
     }
 
-    if (!updated.idempotent) {
-      // Generate OTP and store it — customer shows this to driver to start the ride
-      const otp = generateOTP();
+    // Self-heal for legacy/inconsistent rows where assignment succeeded but OTP is missing.
+    // This can happen only if old code assigned a ride before writing rideStartOtp.
+    let otpForCustomer = ride.rideStartOtp;
+    let otpBackfilled = false;
+    if (!otpForCustomer) {
+      otpForCustomer = generateOTP();
       await prisma.ride.update({
         where: { id: rideId },
-        data: { rideStartOtp: otp },
+        data: { rideStartOtp: otpForCustomer },
       });
+      otpBackfilled = true;
+      logger.warn('Backfilled missing rideStartOtp for assigned ride', { rideId, driverId: userId });
+    }
 
+    if (!updated.idempotent || otpBackfilled) {
       // Notify customer with OTP — fire-and-forget
       void notificationService
         .sendPushNotification({
           userId: ride.customerId,
           title: 'Driver Found!',
-          body: `Your driver is on the way. Ride OTP: ${otp}`,
-          data: { rideId, type: 'DRIVER_ASSIGNED', driverId: userId, rideOtp: otp },
+          body: `Your driver is on the way. Ride OTP: ${otpForCustomer}`,
+          data: { rideId, type: 'DRIVER_ASSIGNED', driverId: userId, rideOtp: otpForCustomer },
         })
         .catch((err) => {
           logger.error('Customer notification failed after ride acceptance', { rideId, error: err });
