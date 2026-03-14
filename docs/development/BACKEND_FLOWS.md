@@ -181,6 +181,11 @@ Header: Idempotency-Key: <uuid>   ← prevents duplicate rides on retry
 Customer app polls GET /rides/:rideId to check status
 OR listens on Firebase RTDB: rides/{rideId}/status
 
+Important OTP contract:
+  → When status is DRIVER_ASSIGNED or DRIVER_ARRIVED,
+    GET /rides/:rideId also returns rideStartOtp for the ride owner.
+  → This is the fallback path if FCM push is delayed/missed.
+
 Behind the scenes (see section 5 for full detail):
   → Two-pass driver search (Punjab-tuned):
     Pass 1: PostGIS finds nearby online VERIFIED drivers (5km radius)
@@ -199,6 +204,7 @@ Behind the scenes (see section 5 for full detail):
 ```
 When driver accepts:
   → Customer gets FCM: "Driver Found! Ride OTP: 4821"
+  → Customer can also fetch OTP from GET /rides/:rideId → rideStartOtp
   → Customer sees OTP on screen — must show this to driver
   → status = DRIVER_ASSIGNED
 
@@ -328,6 +334,8 @@ Driver can:
   → Generates 4-digit ride OTP (e.g. "4821")
   → Stores OTP in ride.rideStartOtp
   → Notifies customer via FCM: "Driver Found! Ride OTP: 4821"
+  → Customer can fetch the same OTP from GET /rides/:rideId while status is
+    DRIVER_ASSIGNED or DRIVER_ARRIVED
   → Syncs to RTDB: rides/{rideId}/status = DRIVER_ASSIGNED
   → Cleans up Redis: removes offer keys for all drivers in this batch
 

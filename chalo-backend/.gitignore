@@ -15,6 +15,7 @@ firebase-service-account.json
 
 # Prisma (migrations are intentionally tracked — needed for prisma migrate deploy)
 tsconfig.build.tsbuildinfo
+*.tsbuildinfo
 
 # IDE
 .idea/

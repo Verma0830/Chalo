@@ -438,6 +438,13 @@ Headers:
 
 **Expected Response:** Full ride object with `status: "REQUESTED"` (if no driver found yet) or `status: "DRIVER_ASSIGNED"` (if a driver accepted).
 
+When status is `DRIVER_ASSIGNED` or `DRIVER_ARRIVED`, response also includes:
+```json
+"rideStartOtp": "4821"
+```
+
+Use this field as the source of truth in customer UI. FCM notification is additive, not the only OTP delivery path.
+
 ---
 
 ## Flow 4 — Driver Registration
@@ -998,8 +1005,8 @@ The ride start flow now requires a 4-digit OTP that the customer receives when a
 
 ### What happens automatically
 
-1. Driver calls `POST /driver/rides/:rideId/accept` → customer receives FCM notification with an OTP like `"Ride OTP: 4821"`
-2. Customer shows OTP to driver
+1. Driver calls `POST /driver/rides/:rideId/accept` → backend generates OTP, stores it in ride, and sends FCM `"Ride OTP: 4821"`
+2. Customer app reads OTP from `GET /rides/:rideId` (`rideStartOtp`) and shows it on the ride screen
 3. Driver enters OTP when starting the ride
 
 ### Start Ride with OTP

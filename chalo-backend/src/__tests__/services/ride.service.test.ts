@@ -369,6 +369,7 @@ describe('RideService', () => {
         durationMins: 10,
         isScheduled: false,
         scheduledAt: null,
+        rideStartOtp: null,
         customerRating: null,
         status: RideStatus.IN_PROGRESS,
         requestedAt: new Date(),
@@ -398,6 +399,75 @@ describe('RideService', () => {
       expect(result.status).toBe(RideStatus.IN_PROGRESS);
       expect(result.driver?.name).toBe('Ravi');
       expect(result.fare.finalFare).toBe(55);
+      expect(result.rideStartOtp).toBeNull();
+    });
+
+    it('includes rideStartOtp for DRIVER_ASSIGNED and DRIVER_ARRIVED statuses', async () => {
+      (prisma.ride.findUnique as jest.Mock).mockResolvedValue({
+        id: 'ride_otp_001',
+        customerId: 'customer_001',
+        pickupLat: 28.4,
+        pickupLng: 77.3,
+        pickupAddress: 'Pickup',
+        dropLat: 28.5,
+        dropLng: 77.4,
+        dropAddress: 'Drop',
+        baseFare: 50,
+        surgeMultiplier: 1.0,
+        finalFare: 55,
+        paymentMethod: 'CASH',
+        paymentStatus: 'PENDING',
+        distanceKm: 3.5,
+        durationMins: 10,
+        isScheduled: false,
+        scheduledAt: null,
+        rideStartOtp: '4821',
+        customerRating: null,
+        status: RideStatus.DRIVER_ASSIGNED,
+        requestedAt: new Date(),
+        driverAssignedAt: new Date(),
+        driverArrivedAt: null,
+        startedAt: null,
+        completedAt: null,
+        cancelledAt: null,
+        driver: null,
+      });
+
+      const assignedResult = await rideService.getRideDetails('ride_otp_001', 'customer_001');
+      expect(assignedResult.rideStartOtp).toBe('4821');
+
+      (prisma.ride.findUnique as jest.Mock).mockResolvedValue({
+        id: 'ride_otp_002',
+        customerId: 'customer_001',
+        pickupLat: 28.4,
+        pickupLng: 77.3,
+        pickupAddress: 'Pickup',
+        dropLat: 28.5,
+        dropLng: 77.4,
+        dropAddress: 'Drop',
+        baseFare: 50,
+        surgeMultiplier: 1.0,
+        finalFare: 55,
+        paymentMethod: 'CASH',
+        paymentStatus: 'PENDING',
+        distanceKm: 3.5,
+        durationMins: 10,
+        isScheduled: false,
+        scheduledAt: null,
+        rideStartOtp: '9134',
+        customerRating: null,
+        status: RideStatus.DRIVER_ARRIVED,
+        requestedAt: new Date(),
+        driverAssignedAt: new Date(),
+        driverArrivedAt: new Date(),
+        startedAt: null,
+        completedAt: null,
+        cancelledAt: null,
+        driver: null,
+      });
+
+      const arrivedResult = await rideService.getRideDetails('ride_otp_002', 'customer_001');
+      expect(arrivedResult.rideStartOtp).toBe('9134');
     });
   });
 

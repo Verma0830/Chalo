@@ -284,6 +284,11 @@ export class RideService {
       throw ApiError.forbidden('You can only view your own rides', ErrorCode.FORBIDDEN);
     }
 
+    const rideStartOtp =
+      (ride.status === RideStatus.DRIVER_ASSIGNED || ride.status === RideStatus.DRIVER_ARRIVED)
+        ? ride.rideStartOtp
+        : null;
+
     return {
       id: ride.id,
       status: ride.status,
@@ -300,6 +305,7 @@ export class RideService {
       durationMins: ride.durationMins,
       isScheduled: ride.isScheduled,
       scheduledAt: ride.scheduledAt,
+      rideStartOtp,
       driver: ride.driver
         ? {
             id: ride.driver.id,

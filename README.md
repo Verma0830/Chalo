@@ -251,7 +251,7 @@ docker-compose up --build    # Alternative: run entire stack via Docker Compose
 | POST | `/api/v1/rides/schedule` | CUSTOMER | Schedule a future ride |
 | GET | `/api/v1/rides/history` | CUSTOMER | Paginated ride history |
 | GET | `/api/v1/rides/scheduled` | CUSTOMER | Upcoming scheduled rides |
-| GET | `/api/v1/rides/:rideId` | Required | Ride details |
+| GET | `/api/v1/rides/:rideId` | Required | Ride details (includes `rideStartOtp` in `DRIVER_ASSIGNED` / `DRIVER_ARRIVED`) |
 | GET | `/api/v1/rides/:rideId/location` | Required | Live driver location |
 | POST | `/api/v1/rides/:rideId/cancel` | CUSTOMER | Cancel a ride |
 | POST | `/api/v1/rides/:rideId/rate` | CUSTOMER | Rate a completed ride |

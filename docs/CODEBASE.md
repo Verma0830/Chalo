@@ -539,7 +539,7 @@ jest.mock('../../config/logger', () => ({
 
 **All features added (March 2026):**
 - `POST /auth/register-driver` — atomic driver registration (OTP + User + DriverProfile)
-- OTP ride start — 4-digit OTP generated on driver assignment, validated on ride start
+- OTP ride start — 4-digit OTP generated on driver assignment, validated on ride start, exposed to customer via `GET /rides/:rideId` (`rideStartOtp`) during `DRIVER_ASSIGNED`/`DRIVER_ARRIVED`
 - `POST /driver/rides/:rideId/rate-customer` — driver-to-customer rating
 - Cancellation fee logic — 3-tier: ₹0 (free window/no driver) / ₹20 (post-window) / ₹40 (driver arrived)
 - `GET /rides/:rideId/receipt` — full fare breakdown for completed rides
