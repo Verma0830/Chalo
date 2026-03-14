@@ -69,7 +69,7 @@ export const authenticate = async (
     // Cache miss — query database
     if (!user) {
       const dbUser = await prisma.user.findUnique({
-        where: { phone: decodedToken.phone_number },
+        where: { id: decodedToken.uid },
         include: {
           customerProfile: true,
           driverProfile: true,
@@ -197,3 +197,4 @@ export const optionalAuth = async (
     next();
   }
 };
+
