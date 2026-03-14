@@ -77,6 +77,7 @@ export class AuthService {
    */
   async verifyOTP(input: VerifyOTPInput): Promise<{
     isNewUser: boolean;
+    token: string;
     user: {
       id: string;
       phone: string;
@@ -163,8 +164,11 @@ export class AuthService {
       data: { lastLoginAt: new Date() },
     });
 
+    const token = await getAuth().createCustomToken(user.id);
+
     return {
       isNewUser,
+      token,
       user: {
         id: user.id,
         phone: user.phone,
@@ -375,3 +379,5 @@ export class AuthService {
 
 export const authService = new AuthService();
 export default authService;
+
+
