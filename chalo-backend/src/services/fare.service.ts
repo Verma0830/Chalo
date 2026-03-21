@@ -62,6 +62,7 @@ export class FareService {
       gstAmount,
       minimumFareApplied,
       minimumFare,
+      routePolyline: routeDetails.polyline,
     };
   }
 

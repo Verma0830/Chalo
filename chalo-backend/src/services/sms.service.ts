@@ -118,4 +118,20 @@ export async function sendSOSAlerts(params: SOSAlertParams): Promise<number> {
   return sentCount;
 }
 
-export default { sendSOSAlerts };
+/**
+ * Send a transactional OTP SMS via MSG91
+ * Call from auth.service.ts — never from a controller directly.
+ */
+export async function sendOTPSms(phone: string, otp: string): Promise<void> {
+  const authKey = config.msg91.authKey;
+
+  if (!authKey) {
+    logger.warn('MSG91 auth key not configured — OTP not sent via SMS', { phone: phone.slice(-4) });
+    return;
+  }
+
+  const message = `${otp} is your Chalo OTP. Valid for ${CONSTANTS.OTP_EXPIRY_MINS} minutes. Do not share it with anyone.`;
+  await sendSMSViaMSG91(phone, message);
+}
+
+export default { sendSOSAlerts, sendOTPSms };

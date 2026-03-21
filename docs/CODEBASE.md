@@ -1,597 +1,520 @@
-# Chalo Backend — Codebase Reference for AI Assistants
+# Chalo Codebase Reference
 
-> Give this file to any Claude (or other AI) at the start of a session so it instantly understands the project without needing to explore the repo from scratch.
+Last updated: 2026-03-21
 
----
-
-## 1. What Is Chalo?
-
-A **bike ride-hailing app** for Faridabad, Haryana. Customers book bike rides via an Android app (Kotlin + Jetpack Compose). Drivers accept rides through a separate driver app.
-
-- **V1 scope**: Bike rides only, cash + UPI payment, Punjabi + English UI.
-- **Market**: Small city (Faridabad) — not scaling to millions, but built correctly.
-- **Backend**: Node.js 20 + TypeScript 5.3 (strict) + Express 4. API running at `http://localhost:3001/api/v1`.
+Authoritative source for what is actually implemented. When this file conflicts with older review docs, trust this file and the source code. When in doubt, trust the source code.
 
 ---
 
-## 2. Tech Stack
+## 1. What exists right now
 
-| Layer | Technology |
-|---|---|
-| Runtime | Node.js 20 |
-| Language | TypeScript 5.3 strict mode |
-| Framework | Express 4 |
-| ORM | Prisma 5 |
-| Database | PostgreSQL 15 + PostGIS (geospatial), Docker container `chalo-postgres` on port 5433 (external) |
-| Cache | Redis 7 (localhost:6379) — requires `REDIS_URL` env var; if absent in dev, app runs without Redis |
-| Auth | Firebase Admin SDK — phone OTP → Firebase token → verified by middleware |
-| Push | Firebase Cloud Messaging (FCM) |
-| Realtime | Firebase Realtime Database (driver location + ride status sync) |
-| Storage | Firebase Storage (document uploads) |
-| Payments | Razorpay (UPI + webhooks) |
-| Maps | Google Maps Directions API (Haversine fallback if key absent) |
-| Validation | Zod — every endpoint has a validator |
-| Jobs | BullMQ (two queues: `chalo-maintenance`, `chalo-rides`) |
-| Circuit breaker | opossum (on Razorpay calls) |
-| Metrics | prom-client → `/metrics` endpoint |
-| Tests | Jest + ts-jest — 319 tests, 100% passing |
+Two modules in the monorepo:
+
+- **`chalo-backend`** — Node.js/TypeScript REST API. 60 routed endpoints across 7 route groups. 319 passing tests. Fully running on port 3001.
+- **`chalo-customer-app`** — Android app (Kotlin + Jetpack Compose). All major screen groups implemented. No test coverage yet.
 
 ---
 
-## 3. Directory Structure
+## 2. Workspace layout
 
 ```
-chalo-backend/
-├── prisma/
-│   ├── schema.prisma          # Single source of truth for DB schema
-│   ├── seed.ts                # Seeds platform_config table
-│   └── migrations/
-│       ├── 20260301011006_init/                           # Full schema init
-│       ├── 20260301011007_add_postgis_indexes/            # GIST indexes for lat/lng
-│       ├── 20260301020000_add_verification_metadata/      # verificationNote + verificationMetadata
-│       ├── 20260301030000_add_ride_otp_and_driver_rating/ # rideStartOtp, driverRating, driverComment
-│       ├── 20260301040000_add_gst_amount/                 # rides.gstAmount
-│       ├── 20260301050000_add_rating_skipped_at/          # rides.ratingSkippedAt
-│       ├── 20260301060000_add_cancellation_reason_code/   # CancellationReasonCode enum + fields
-│       ├── 20260301080000_add_driver_accept_decline_and_customer_cooldown/ # DriverProfile accept/decline counts, CustomerProfile cooldown
-│       ├── 20260309110000_add_ride_share_links/           # RideShareLink model
-│       └── 20260309111000_add_driver_cancellation_tracking/ # driverCancellationCount* fields
+Chalo/
+├── chalo-backend/
+│   ├── prisma/
+│   │   ├── schema.prisma          # DB schema (no postgresqlExtensions — removed due to PostGIS issue)
+│   │   ├── migrations/            # 10 migrations applied
+│   │   └── seed.ts                # Seeds 13 platform_config keys
+│   ├── src/
+│   │   ├── config/                # env.ts, database.ts, redis.ts, firebase.ts, logger.ts
+│   │   ├── middleware/            # auth, validate, idempotency, rateLimiter, requestId, sanitize, errorHandler
+│   │   ├── routes/                # auth, ride, driver, payment, notification, admin, track
+│   │   ├── controllers/           # HTTP layer — thin, delegates to services
+│   │   ├── services/              # Business logic: auth, ride, driver, fare, payment, notification, sos, admin, kyc/*
+│   │   ├── jobs/                  # queue.ts — BullMQ queue + worker definitions
+│   │   ├── validators/            # Zod schemas for every route
+│   │   └── utils/                 # constants.ts, apiError.ts, helpers.ts
+│   └── src/__tests__/
+│       ├── integration/           # api.integration.test.ts
+│       ├── services/              # auth, ride, driver, fare, notification, sos, sms
+│       └── validators/            # auth, ride, driver, payment
 │
-└── src/
-    ├── app.ts                 # Express app setup (middleware stack, routes mount)
-    ├── server.ts              # Entry point (connects DB, Redis, starts HTTP server)
-    │
-    ├── config/
-    │   ├── index.ts           # Reads env vars, exports typed config object
-    │   ├── database.ts        # Prisma client singleton (import as `prisma`)
-    │   ├── redis.ts           # Redis client singleton — connectRedis(), getRedisClient(), isRedisReady()
-    │   ├── firebase.ts        # Firebase Admin init — getAuth(), getDb(), getStorage(), getMessaging()
-    │   └── logger.ts          # Winston logger (JSON in prod, colorized in dev)
-    │
-    ├── controllers/
-    │   ├── auth.controller.ts
-    │   ├── ride.controller.ts
-    │   ├── driver.controller.ts
-    │   ├── payment.controller.ts
-    │   ├── notification.controller.ts
-    │   └── admin.controller.ts
-    │
-    ├── jobs/
-    │   └── queue.ts           # BullMQ queues + workers + scheduleRideOfferExpiry()
-    │
-    ├── middleware/
-    │   ├── auth.ts            # authenticate (Firebase token verify) + authorize(role)
-    │   ├── validate.ts        # validateBody / validateQuery / validateParams (Zod wrappers)
-    │   ├── errorHandler.ts    # Catches all errors, formats ApiError → JSON response
-    │   ├── rateLimiter.ts     # Per-endpoint Redis-backed rate limiting
-    │   ├── idempotency.ts     # 24h idempotency keys for payment endpoints
-    │   ├── requestId.ts       # Attaches X-Request-ID to every request
-    │   └── sanitize.middleware.ts # HPP + XSS sanitization
-    │
-    ├── routes/
-    │   ├── index.ts           # Mounts all sub-routers under /api/v1/
-    │   ├── auth.routes.ts
-    │   ├── ride.routes.ts
-    │   ├── driver.routes.ts
-    │   ├── payment.routes.ts
-    │   ├── notification.routes.ts
-    │   └── admin.routes.ts    # All admin routes — requires ADMIN role
-    │
-    ├── services/
-    │   ├── auth.service.ts    # OTP send/verify, profile CRUD
-    │   ├── ride.service.ts    # Core ride lifecycle + broadcast driver search + dispatchBatch()
-    │   ├── driver.service.ts  # Driver online/offline, accept/decline/complete ride, earnings
-    │   ├── fare.service.ts    # Fare estimation (Google Maps + Haversine fallback) + commission calc
-    │   ├── payment.service.ts # Razorpay order creation, payment verification, webhook
-    │   ├── notification.service.ts # FCM push + in-DB notification storage
-    │   ├── sos.service.ts     # SOS trigger + SMS/WhatsApp via MSG91
-    │   ├── sms.service.ts     # MSG91 SMS/WhatsApp wrapper
-    │   ├── admin.service.ts   # Driver verification, live rides, platform config CRUD
-    │   └── kyc/
-    │       ├── kyc.interface.ts    # KYCProvider interface + KYCResult / FaceMatchResult types
-    │       ├── manual.provider.ts  # Returns unverified — admin must review manually (V1 default)
-    │       ├── surepass.provider.ts # Calls Surepass REST API (activates if SUREPASS_API_KEY set)
-    │       └── index.ts            # getKYCProvider() factory singleton
-    │
-    ├── types/
-    │   └── index.ts           # AuthenticatedRequest, Location, PaginationMeta, etc.
-    │
-    ├── utils/
-    │   ├── constants.ts       # All magic numbers (CONSTANTS object) — see section 7
-    │   ├── apiError.ts        # ApiError class + ErrorCode enum
-    │   ├── apiResponse.ts     # ApiResponse static helpers (success, paginated, error)
-    │   ├── helpers.ts         # paginationToSkip(), buildPaginationMeta(), haversineDistance()
-    │   ├── circuitBreaker.ts  # withCircuitBreaker(), withCircuitBreakerFallback() wrappers
-    │   └── metrics.ts         # prom-client metrics definitions
-    │
-    ├── validators/
-    │   ├── auth.validator.ts
-    │   ├── ride.validator.ts
-    │   ├── driver.validator.ts
-    │   ├── payment.validator.ts
-    │   └── admin.validator.ts
-    │
-    └── __tests__/
-        ├── services/
-        │   ├── fare.service.test.ts
-        │   ├── ride.service.test.ts
-        │   └── ...
-        └── integration/
-            └── ...
+├── chalo-customer-app/
+│   └── app/src/main/java/com/chalo/customer/
+│       ├── ChaloApplication.kt    # Hilt app class, Timber init
+│       ├── MainActivity.kt        # Single activity, NavHost root
+│       ├── di/                    # NetworkModule, DatabaseModule, RepositoryModule
+│       ├── data/
+│       │   ├── remote/
+│       │   │   ├── api/           # AuthApiService, RideApiService, PaymentApiService, NotificationApiService
+│       │   │   ├── dto/           # AuthDtos, RideDtos, PaymentDtos, NotificationDtos, ApiResponse
+│       │   │   └── interceptor/   # AuthInterceptor (auto-attaches Firebase ID token)
+│       │   ├── local/
+│       │   │   ├── AppDatabase.kt # Room DB v1 — RideEntity, NotificationEntity
+│       │   │   ├── dao/           # RideDao, NotificationDao
+│       │   │   ├── entity/        # RideEntity, NotificationEntity
+│       │   │   └── preferences/   # UserPreferences (DataStore)
+│       │   └── repository/        # AuthRepositoryImpl, RideRepositoryImpl, RtdbRepositoryImpl,
+│       │                          # NotificationRepositoryImpl, PaymentRepositoryImpl
+│       ├── domain/
+│       │   ├── model/             # User, Ride, Notification (pure Kotlin, no Android deps)
+│       │   └── repository/        # AuthRepository, RideRepository, RtdbRepository,
+│       │                          # NotificationRepository, PaymentRepository (interfaces)
+│       └── presentation/
+│           └── screens/
+│               ├── auth/          # Splash, PhoneInput, OtpVerify, CompleteProfile (+ ViewModels)
+│               ├── home/          # Home, FareEstimate (+ ViewModels)
+│               ├── activeride/    # ActiveRide (+ ViewModel)
+│               ├── postride/      # Payment, Rating, Receipt (+ ViewModels)
+│               ├── history/       # RideHistory, RideDetail (+ ViewModels)
+│               ├── profile/       # Profile, EmergencyContact, SavedLocations (+ ViewModels)
+│               ├── notifications/ # Notifications (+ ViewModel)
+│               └── scheduled/     # ScheduleRide, ScheduledList (+ ViewModels)
+│
+└── docs/
+    ├── CODEBASE.md                # This file
+    ├── api/                       # POSTMAN_GUIDE.md, token-exchange-guide.md
+    ├── development/               # NEXT_STEPS.md, EMULATOR_SETUP.md, FRIEND_SETUP.md, IMPROVEMENTS.md
+    ├── reviews/                   # CODE_REVIEW.md, SECURITY_PERFORMANCE_REVIEW.md
+    ├── design/                    # UI/UX HTML mockups
+    └── product/                   # chalo-product-documentation.md
 ```
 
 ---
 
-## 4. Request Lifecycle
+## 3. Backend endpoint surface
 
-Every request flows through this chain:
+Total: **60 endpoints** across 7 route groups. All under `/api/v1`.
 
-```
-HTTP Request
-  → requestId middleware          (attaches X-Request-ID)
-  → helmet / cors / hpp           (security headers)
-  → sanitize middleware            (XSS clean)
-  → rateLimiter                   (Redis-backed, per-endpoint)
-  → authenticate                  (Firebase token → req.user)
-  → authorize('ROLE')             (optional role check)
-  → validateBody/Query/Params     (Zod schema)
-  → idempotency                   (payment endpoints only)
-  → Controller method
-      → Service method(s)
-          → Prisma (DB)
-          → Redis
-          → Firebase / external APIs
-      → ApiResponse.success(res, data, message)
-  ← JSON response
+### Auth — 8 endpoints
 
-  ← On any error: errorHandler catches, formats as { success: false, message, code, errors[] }
-```
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/auth/otp/send` | Public | Send 4-digit OTP to phone. Rate limited: 5/15 min |
+| POST | `/auth/otp/verify` | Public | Verify OTP → returns Firebase custom token |
+| POST | `/auth/register-driver` | Public | OTP verify + driver account creation in one call |
+| GET  | `/auth/profile` | Bearer | Get current user profile |
+| PUT  | `/auth/profile` | Bearer | Complete or update profile (name, email, languagePref) |
+| PUT  | `/auth/emergency-contact` | Bearer | Set emergency contact name + phone |
+| PUT  | `/auth/saved-location` | Bearer | Save home or work location |
+| PUT  | `/auth/device-token` | Bearer | Register FCM token for push notifications |
+
+### Rides — 14 endpoints (CUSTOMER role)
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/rides/fare-estimate` | Bearer | Get estimated fare for pickup → drop |
+| POST | `/rides` | CUSTOMER + Idempotency-Key | Create on-demand ride |
+| POST | `/rides/schedule` | CUSTOMER + Idempotency-Key | Create scheduled ride (future datetime, max 7 days) |
+| GET  | `/rides/history` | CUSTOMER | Paginated ride history. Query: `page`, `limit`, `status` |
+| GET  | `/rides/scheduled` | CUSTOMER | List upcoming scheduled rides |
+| GET  | `/rides/:rideId` | Bearer | Get ride details (status, driver, OTP, fare) |
+| GET  | `/rides/:rideId/location` | Bearer | Get current driver lat/lng from RTDB |
+| GET  | `/rides/:rideId/receipt` | CUSTOMER | Fare breakdown for completed ride |
+| POST | `/rides/:rideId/cancel` | CUSTOMER | Cancel ride with structured reason code |
+| POST | `/rides/:rideId/share` | CUSTOMER | Generate public tracking share link |
+| POST | `/rides/:rideId/rate` | CUSTOMER | Rate driver (1–5) after completion |
+| POST | `/rides/:rideId/skip-rating` | CUSTOMER | Mark rating as permanently skipped |
+| POST | `/rides/:rideId/sos` | Bearer | Trigger SOS alert with current location |
+| POST | `/rides/sos/:sosAlertId/resolve` | Bearer | Resolve an active SOS alert |
+
+### Driver — 19 endpoints (DRIVER role)
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/driver/documents` | DRIVER | Submit KYC documents for admin review |
+| POST | `/driver/go-online` | DRIVER | Go online with current GPS location |
+| POST | `/driver/go-offline` | DRIVER | Go offline |
+| GET  | `/driver/status` | DRIVER | Current online/offline state + active ride |
+| POST | `/driver/location` | DRIVER | Update GPS location (called periodically) |
+| GET  | `/driver/rides/incoming` | DRIVER | Poll for pending ride offer |
+| POST | `/driver/rides/:rideId/accept` | DRIVER | Accept an incoming ride |
+| POST | `/driver/rides/:rideId/decline` | DRIVER | Decline a ride offer |
+| POST | `/driver/rides/:rideId/arrived` | DRIVER | Mark arrived at pickup |
+| POST | `/driver/rides/:rideId/start` | DRIVER | Start ride (requires customer's 4-digit OTP) |
+| POST | `/driver/rides/:rideId/complete` | DRIVER | Complete the ride |
+| POST | `/driver/rides/:rideId/cancel` | DRIVER | Cancel active ride |
+| POST | `/driver/rides/:rideId/rate-customer` | DRIVER | Rate customer (1–5) after completion |
+| GET  | `/driver/trips` | DRIVER | Paginated trip history |
+| GET  | `/driver/earnings` | DRIVER | Earnings list — period: `today`/`week`/`month` |
+| GET  | `/driver/earnings/summary` | DRIVER | Aggregated totals — period: `week`/`month` |
+| GET  | `/driver/earnings/settlement` | DRIVER | Settled vs unsettled balance |
+| POST | `/driver/withdrawals` | DRIVER | Request payout (UPI, bank transfer, or cash agent) |
+| GET  | `/driver/withdrawals/:withdrawalId` | DRIVER | Check withdrawal status |
+
+### Payments — 3 endpoints
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/payments/order` | Bearer | Create Razorpay order for UPI ride |
+| POST | `/payments/verify` | Bearer | Verify Razorpay payment signature |
+| POST | `/payments/webhook` | None (signature) | Razorpay webhook — raw body, verified by HMAC |
+
+### Notifications — 4 endpoints
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET   | `/notifications` | Bearer | Paginated list. Query: `page`, `limit` |
+| GET   | `/notifications/unread-count` | Bearer | Count of unread notifications |
+| PATCH | `/notifications/:notificationId/read` | Bearer | Mark one as read |
+| PATCH | `/notifications/read-all` | Bearer | Mark all as read |
+
+### Admin — 10 endpoints
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| POST | `/admin/promote` | x-internal-api-key header | Promote existing user to ADMIN role |
+| GET  | `/admin/drivers/pending` | ADMIN | List drivers awaiting KYC approval |
+| GET  | `/admin/drivers/:driverId` | ADMIN | Driver detail + documents |
+| POST | `/admin/drivers/:driverId/approve` | ADMIN | Approve driver KYC |
+| POST | `/admin/drivers/:driverId/reject` | ADMIN | Reject driver KYC with reason |
+| POST | `/admin/drivers/:driverId/auto-verify` | ADMIN | Trigger KYC provider (Surepass or manual) |
+| GET  | `/admin/rides/live` | ADMIN | All currently active rides |
+| GET  | `/admin/rides` | ADMIN | Filtered ride list (status, paymentStatus, pagination) |
+| GET  | `/admin/config` | ADMIN | All 13 platform config values |
+| PUT  | `/admin/config/:key` | ADMIN | Update a single config value |
+
+### Track — 1 endpoint
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/track/:token` | None | Public ride tracking via share token |
 
 ---
 
-## 5. Auth System
+## 4. Backend: key implementation details
 
-**How it works:**
+### Auth flow
 
-1. Customer/Driver calls `POST /api/v1/auth/otp/send` with phone number
-2. Server stores SHA-256 hashed OTP in `otp_verifications` table (4-digit, 5-minute TTL)
-3. Customer calls `POST /api/v1/auth/otp/verify` — if OTP matches, server creates/finds User, then **creates a Firebase custom token** for that user
-4. Client exchanges custom token for a Firebase ID token (client-side Firebase SDK)
-5. All subsequent requests send `Authorization: Bearer <firebase_id_token>`
-6. `authenticate` middleware calls `firebase.getAuth().verifyIdToken(token)` → gets Firebase UID
-7. Middleware looks up user in Redis cache (`auth:user:{uid}`, 5-min TTL) or Postgres
-8. Attaches user to `req.user` as `AuthenticatedRequest`
+1. `POST /auth/otp/send` — generates a 4-digit OTP, stores it in Redis with TTL, sends via SMS service (or prints to console in dev).
+2. `POST /auth/otp/verify` — validates OTP from Redis, creates or retrieves user in DB, mints a Firebase custom token via Firebase Admin SDK, returns it with user data.
+3. Client signs into Firebase with the custom token (`signInWithCustomToken`). Firebase SDK then manages the ID token lifecycle (auto-refresh, expiry).
+4. All protected routes receive a Firebase ID token in `Authorization: Bearer`. The `authenticate` middleware verifies it server-side via Firebase Admin.
 
-**Role check:** `authorize('ADMIN')` reads `req.user.role` — role is stored in Postgres, NOT in the Firebase token. So if you change a user's role in the DB, they must **re-login** to get a new token (Redis cache expires in 5 min).
-
-**IMPORTANT:** Admin users must have `role = 'ADMIN'` in the `users` table.
-Use the bootstrap endpoint (no Firebase auth required, protected by `INTERNAL_API_KEY` header):
+### Ride lifecycle states
 
 ```
-POST /api/v1/admin/promote
-Header: x-internal-api-key: chalo-internal-dev-key-change-in-prod
-Body: { "phone": "+91XXXXXXXXXX" }
+REQUESTED → DRIVER_ASSIGNED → DRIVER_ARRIVED → IN_PROGRESS → COMPLETED
+                                                            ↘ CANCELLED
+REQUESTED → NO_DRIVER  (broadcast exhausted, no one accepted)
+SCHEDULED  (pending dispatch, transitions to REQUESTED when scheduled time arrives)
 ```
 
-After promotion, the user must re-send OTP and re-verify to get a fresh token with ADMIN role.
+### Driver broadcast (dispatch)
 
----
+- When a ride is created, top-5 nearest online+approved drivers within initial radius receive FCM push simultaneously.
+- Each batch has a 30-second acceptance window (`RIDE_OFFER_BATCH_TTL_SECS`).
+- BullMQ delayed job (`ride-offer-expired`) fires after window expires. If no acceptance, next batch is dispatched at expanded radius (`driver_search_radius_km_expanded` config key, default 12km).
+- Redis coordinates the offer state and prevents double-assignment.
 
-## 6. Database Schema (12 Models)
+### Cancellation policy
 
-| Model | Table | Purpose |
+- Fee is applied only when status is `DRIVER_ARRIVED` or later.
+- Fee amount is a platform config key: `cancel_fee_arrived_amount` (default ₹40).
+- Driver-fault reason codes (`DRIVER_ASKED_TO_CANCEL`, `DRIVER_NOT_MOVING`, `DRIVER_WRONG_VEHICLE`, `DRIVER_BEHAVIOUR`) waive the fee regardless of status.
+- Serial canceller policy: Redis tracks cancellation count per user. Threshold enforced server-side.
+
+### Fare calculation
+
+- Base fare + per-km rate + booking fee + surge multiplier.
+- GST applied on top as a percentage: `gst_percentage` config key (default 5%).
+- Minimum fare enforced: `minimumFare` returned in estimate response, `minimumFareApplied` flag set.
+- All values in rupees (integers).
+
+### KYC
+
+- Pluggable provider interface: `IKYCProvider`.
+- `ManualKYCProvider` — default when `SUREPASS_API_KEY` is not set. No-op for auto-verify; admin manually approves/rejects via panel.
+- `SurepassKYCProvider` — used when `SUREPASS_API_KEY` is set in env. Calls external verification API.
+
+### BullMQ jobs
+
+Two queues defined in `src/jobs/queue.ts`:
+
+- `chalo-maintenance` — periodic cron jobs: phantom driver cleanup, scheduled ride dispatch.
+- `chalo-rides` — delayed jobs: `ride-offer-expired` (per-ride, fires after broadcast window).
+
+### Platform config keys (seeded by `npm run db:seed`)
+
+| Key | Default | Purpose |
 |---|---|---|
-| `User` | `users` | Core account — shared by customers and drivers. Has `role: CUSTOMER \| DRIVER \| ADMIN` |
-| `CustomerProfile` | `customer_profiles` | Customer extras: emergency contact, saved home/work locations, ride stats |
-| `DriverProfile` | `driver_profiles` | Driver docs (license, RC, Aadhaar), verification status, location, earnings, KYC metadata, and cancellation quality counters |
-| `Ride` | `rides` | Full ride lifecycle — pickup/drop coords, fare breakdown, status, payment, timestamps |
-| `RideEvent` | `ride_events` | Immutable audit log — every status transition is logged here with GPS + metadata |
-| `RideShareLink` | `ride_share_links` | 24-hour public tracking tokens for active rides. Stores hashed token, expiry, revocation, and creator. |
-| `Earning` | `earnings` | Per-ride earning record for driver (gross, commission, net, settlement status) |
-| `Withdrawal` | `withdrawals` | Driver payout requests (bank transfer or UPI) |
-| `SOSAlert` | `sos_alerts` | SOS triggers during active rides — tracks who was notified |
-| `OTPVerification` | `otp_verifications` | OTP records: hashed code, expiry, attempt count |
-| `Notification` | `notifications` | In-app push notification log (FCM history) |
-| `PlatformConfig` | `platform_config` | Key-value table for runtime-configurable business rules |
+| `base_fare` | varies | Minimum base charge |
+| `per_km_rate` | varies | Per-km charge |
+| `booking_fee` | varies | Flat booking fee |
+| `minimum_fare` | varies | Floor fare |
+| `surge_multiplier` | `1.0` | Peak pricing multiplier |
+| `gst_percentage` | `5` | GST on fare |
+| `cancel_fee_arrived_amount` | `40` | Cancellation fee after driver arrived |
+| `driver_search_radius_km` | varies | Initial broadcast radius |
+| `driver_search_radius_km_expanded` | `12` | Expanded radius if first pass fails |
+| `ride_offer_batch_ttl_secs` | varies | Broadcast window per batch |
+| `serial_cancel_threshold` | varies | Cancellations before block |
+| `max_schedule_days` | `7` | How far ahead a ride can be scheduled |
+| `phantom_driver_ttl_mins` | varies | Stale online-driver cleanup threshold |
 
-**Key relationships:**
-- `User` 1–1 `CustomerProfile`, `User` 1–1 `DriverProfile`
-- `User` 1–N `Ride` (as customer), `User` 1–N `Ride` (as driver)
-- `DriverProfile` 1–N `Earning`, `DriverProfile` 1–N `Withdrawal`
+### Middleware stack (applied per-request)
 
-**DriverProfile verification fields:**
-- `verificationStatus`: `PENDING | UNDER_REVIEW | VERIFIED | REJECTED`
-- `verifiedAt`: set when approved
-- `rejectionReason`: set when rejected
-- `verificationNote`: admin note on approve or reject
-- `verificationMetadata`: JSON blob from KYC API (Surepass result or null)
-
----
-
-## 7. Constants (All in One Place)
-
-File: `src/utils/constants.ts` — `CONSTANTS` object (as const).
-
-**Ride:**
-- `RIDE_ACCEPT_WINDOW_SECS = 60` — window for a driver to accept before batch expires
-- `DRIVER_SEARCH_RADIUS_KM = 5` — search radius for nearby drivers (Pass 1)
-- `DRIVER_SEARCH_RADIUS_KM_EXPANDED = 12` — expanded search radius (Pass 2, Punjab-tuned)
-- `DRIVER_SEARCH_MAX_CANDIDATES = 10` — max drivers fetched for scoring per pass
-- `DRIVER_BROADCAST_SIZE = 5` — drivers notified per batch (top-5 simultaneous FCM)
-- `RIDE_OFFER_BATCH_TTL_SECS = 65` — TTL for batch offer window (60s + 5s grace)
-- `RIDE_CANDIDATES_TTL_SECS = 600` — Redis TTL for full candidate list (10 min)
-- `DRIVER_ARRIVED_RADIUS_METERS = 200` — radius for "I've Arrived" button to activate
-- `RIDE_SHARE_TTL_HOURS = 24` — lifetime of the public family tracking link
-- `RIDE_SHARE_TOKEN_BYTES = 24` — cryptographic token size before base64url encoding
-- `DRIVER_CANCELLATION_ALERT_THRESHOLD = 3` — admin alert threshold per IST day
-- `DRIVER_OFFLINE_TIMEOUT_MINS = 3` — mark driver offline if no location ping for this long
-- `SCHEDULED_RIDE_DISPATCH_MINS_BEFORE = 15` — dispatch driver search this many minutes before scheduled time
-
-**Fare:**
-- `MIN_FARE = 30` — ₹30 minimum fare
-- `BASE_FARE_PER_KM = 12` — ₹12/km (DB config overrides this)
-- `BASE_FARE_PER_MIN = 2` — ₹2/min (DB config overrides this)
-- `BOOKING_FEE = 5` — ₹5 flat booking fee
-
-**Surge:**
-- `SURGE_MIN_MULTIPLIER = 1.0`, `SURGE_MAX_MULTIPLIER = 2.0`, `SURGE_STEP = 0.1`
-
-**Auth:**
-- `OTP_LENGTH = 4`, `OTP_EXPIRY_MINS = 5`, `MAX_OTP_ATTEMPTS = 3`
-- `PHONE_REGEX`: Indian mobile numbers only (`+91` + 6-9 start + 9 digits)
-
-**Rating:**
-- `NEW_DRIVER_RATING_THRESHOLD = 10` — drivers with fewer ratings than this use neutral score in matching
-- `NEW_DRIVER_NEUTRAL_RATING = 3.5` — neutral rating used in `scoreAndSort()` for new drivers
-
-**Serial canceller policy:**
-- `SERIAL_CANCEL_THRESHOLD_HOURLY = 3` — cancellations within 1 hour before cooldown
-- `SERIAL_CANCEL_COOLDOWN_MINS = 15` — booking cooldown duration after threshold hit
-- `SERIAL_CANCEL_WARNING_COUNT = 5` — lifetime cancellations before warning flag returned
-
-**Platform config keys (DB):**
-- `CONFIG_KEYS.COMMISSION_PERCENTAGE = 'commission_percentage'`
-- `CONFIG_KEYS.SURGE_ENABLED = 'surge_enabled'`
-- `CONFIG_KEYS.MIN_FARE = 'min_fare'`
-- `CONFIG_KEYS.BASE_FARE_PER_KM = 'base_fare_per_km'`
-- `CONFIG_KEYS.BASE_FARE_PER_MIN = 'base_fare_per_min'`
-- `CONFIG_KEYS.FREE_CANCEL_WINDOW_SECS = 'free_cancel_window_secs'`
-- `CONFIG_KEYS.CANCEL_FEE_AMOUNT = 'cancel_fee_amount'`
-- `CONFIG_KEYS.CANCEL_FEE_ARRIVED_AMOUNT = 'cancel_fee_arrived_amount'`
-- `CONFIG_KEYS.GST_PERCENTAGE = 'gst_percentage'`
-- `CONFIG_KEYS.DRIVER_SEARCH_RADIUS_KM_EXPANDED = 'driver_search_radius_km_expanded'`
-- `CONFIG_KEYS.SETTLEMENT_DAYS = 'settlement_days'`
-- `CONFIG_KEYS.SUBSCRIPTION_FEE_WEEKLY = 'subscription_fee_weekly'`
-
-**IMPORTANT:** DB config keys are lowercase snake_case. Test mocks must use lowercase keys too (`'base_fare_per_km'`, not `'BASE_FARE_PER_KM'`).
-
----
-
-## 8. Redis Key Patterns
-
-| Key | TTL | Purpose |
-|---|---|---|
-| `auth:user:{firebaseUid}` | 300s (5 min) | Cached user record (avoids DB hit on every request) |
-| `otp:{phone}` | varies | OTP rate limiting |
-| `ride:offer:{driverUserId}` | 65s | Pending ride offer for this driver (value = rideId) |
-| `ride:active_batch:{rideId}` | 65s | Array of userIds in the current broadcast batch |
-| `ride:candidates:{rideId}` | 600s | Array of all candidate userIds sorted by score |
-| `ride:expanded:{rideId}` | 600s | Flag: expanded search already attempted for this ride |
-| `fare:config` | 300s | Cached platform config for fare calculation |
-| `cancel:cooldown:{customerId}` | 900s (15 min) | Serial canceller booking cooldown — key presence = on cooldown |
-| `cancel:hourly:{customerId}:{bucketMin}` | ~65 min | Hourly cancellation counter bucket for serial cancel detection |
-| `idempotency:{userId}:{key}` | 86400s (24h) | Payment idempotency keys |
-| Rate limit keys | varies | Per-endpoint, per-IP rate limits |
-
----
-
-## 9. BullMQ Jobs
-
-Two queues in `src/jobs/queue.ts`:
-
-**`chalo-maintenance`**
-- `otp-cleanup` — runs every 24h, deletes expired OTP records from DB (also runs once on startup)
-- `scheduled-ride-dispatch` — runs every 1 minute, finds `SCHEDULED` rides due within 15 min, transitions to `REQUESTED`, triggers driver search pipeline
-- `driver-offline-check` — runs every 2 minutes, finds drivers with `isOnline=true` and `lastLocationUpdate < now - 3 min`, bulk marks offline + syncs RTDB
-
-**`chalo-rides`**
-- `ride-offer-expired` — delayed job, fires at `RIDE_OFFER_BATCH_TTL_SECS * 1000` ms
-  - Checks if ride is still `REQUESTED` (if not, noop — already resolved)
-  - Reads `ride:candidates:{rideId}` from Redis
-  - Slices next batch starting at `nextBatchStart`
-  - If no more candidates → marks ride as `NO_DRIVER`, notifies customer
-  - If candidates remain → calls `rideService.dispatchBatch(...)` with next batch
-
-**Key pattern:** Workers use deferred `import('../services/...')` to avoid circular dependencies.
-
----
-
-## 10. Broadcast Driver Search (How It Works)
-
-Old design: sequential, no timeout → rides stuck forever.
-New design: broadcast + BullMQ timeout.
-
-**Flow:**
-1. Customer creates ride → `rideService.searchAndNotifyDrivers()` is called
-2. PostGIS query finds nearby online drivers within 5km radius
-3. Drivers are **scored** (distance, rating, acceptance rate)
-4. **Top 10 candidates** stored in Redis (`ride:candidates:{rideId}`, 10min TTL)
-5. **First batch of 5** notified simultaneously via FCM
-6. Their offer keys set (`ride:offer:{userId}`, 65s TTL)
-7. BullMQ delayed job scheduled to fire in 65s (`ride-offer-expired`)
-
-**If driver accepts:** Atomic DB update (compare-and-swap on `REQUESTED` status). Cleans up offer keys for the other 4 drivers in the batch. Cancels the BullMQ job (or BullMQ finds ride no longer `REQUESTED` → noop).
-
-**If driver declines:** Their userId removed from `ride:active_batch`. BullMQ timeout handles advancing to next batch.
-
-**If 65s passes:** BullMQ fires `ride-offer-expired`. Checks ride still `REQUESTED`. Loads candidates from Redis. Dispatches next batch of 5 (indices 5–9). If no candidates left → `NO_DRIVER`.
-
----
-
-## 11. Error Handling Pattern
-
-**Always use `ApiError`** — never throw raw errors in services/controllers.
-
-```typescript
-import { ApiError } from '../utils/apiError';
-import { ErrorCode } from '../utils/apiError';
-
-// Examples:
-throw ApiError.notFound('Driver not found', ErrorCode.DRIVER_NOT_FOUND);
-throw ApiError.badRequest('Invalid input', ErrorCode.VALIDATION_ERROR);
-throw ApiError.unauthorized('Token required');
-throw ApiError.forbidden('Admin only');
+```
+requestId → sanitize → [rateLimiter] → authenticate → [authorize(role)] → validateBody/Params/Query → [idempotency] → controller → errorHandler
 ```
 
-**Controller pattern:**
-```typescript
-async myMethod(req: Request, res: Response, next: NextFunction): Promise<void> {
-  try {
-    const result = await myService.doSomething();
-    ApiResponse.success(res, result, 'Success message');
-  } catch (error) {
-    next(error);  // Always pass to errorHandler
-  }
-}
+- `idempotency` — Redis-based. Required on POST /rides and POST /rides/schedule. Same key = same response, no duplicate ride.
+- `rateLimiter` — auth endpoints: 5/15 min. Ride creation: separate limit. Webhook: separate limit.
+- `sanitize` — strips prototype pollution and XSS from request body.
+- `errorHandler` — converts `ApiError` instances and unexpected errors to structured JSON with `success: false`.
+
+### Database migrations (10 applied)
+
+```
+1. init
+2. postgis_indexes
+3. verification_metadata
+4. ride_otp_and_driver_rating
+5. add_gst_amount
+6. add_rating_skipped_at
+7. add_cancellation_reason_code
+8. add_driver_accept_decline_and_customer_cooldown
+9. add_ride_share_links
+10. add_driver_cancellation_tracking
 ```
 
-**Response format:**
-```json
-// Success
-{ "success": true, "message": "...", "data": { ... } }
+Run with: `DATABASE_URL="postgresql://postgres:luffy@localhost:5433/chalo_db?schema=public" npx prisma migrate deploy`
 
-// Paginated
-{ "success": true, "message": "...", "data": [...], "meta": { "page": 1, "limit": 20, "total": 100, "totalPages": 5 } }
-
-// Error
-{ "success": false, "message": "...", "code": "DRIVER_NOT_FOUND", "errors": [] }
-```
+Do **not** use `prisma migrate dev` — shadow DB creation fails with PostGIS on Windows.
 
 ---
 
-## 12. Validation Pattern
+## 5. Android customer app: implementation details
 
-Every endpoint has a Zod schema in `src/validators/`:
+### Architecture
 
-```typescript
-// In validator file:
-export const mySchema = z.object({
-  name: z.string().min(1).max(100),
-  age: z.number().int().min(0),
-});
-export type MyInput = z.infer<typeof mySchema>;
+MVVM + Repository pattern. Clean separation:
 
-// In route file:
-router.post('/path', validateBody(mySchema), controller.myMethod.bind(controller));
+- **Presentation layer**: Compose screens + HiltViewModels. State managed via `StateFlow`. One-time events via `Channel`.
+- **Domain layer**: Pure Kotlin interfaces and models. No Android framework dependencies.
+- **Data layer**: Repository implementations, Retrofit API services, Room DAOs, DataStore.
 
-// In controller:
-const { name, age } = req.body as MyInput;
-```
+### Dependency injection (Hilt)
 
-Middleware: `validateBody`, `validateQuery`, `validateParams` — all in `src/middleware/validate.ts`. They call `schema.parse()` and forward `ZodError` to the error handler.
+- `NetworkModule` — provides `OkHttpClient` (with `AuthInterceptor` + `HttpLoggingInterceptor`), `Retrofit` (base URL from `BuildConfig.BASE_URL`), and all four API service interfaces.
+- `DatabaseModule` — provides `AppDatabase` (Room) and DAOs.
+- `RepositoryModule` — binds repository interfaces to implementations.
 
----
+### Network layer
 
-## 13. KYC Provider
+**OkHttp + Retrofit configuration:**
+- Base URL: `BuildConfig.BASE_URL` (from `local.properties` in debug; hardcoded production URL in release)
+- Timeouts: 30s connect / 30s read / 30s write
+- Logging: BODY level in debug, NONE in release
+- Auth interceptor: attached before logging interceptor
 
-File: `src/services/kyc/`
+**AuthInterceptor behaviour:**
+1. On each request: calls `FirebaseAuth.getInstance().currentUser?.getIdToken(false)` (non-refreshing).
+2. Injects result as `Authorization: Bearer <token>`.
+3. On 401 response: calls `getIdToken(forceRefresh = true)` and retries the request once.
+4. If no Firebase user is logged in, no header is attached (unauthenticated request proceeds as-is).
 
-```typescript
-// Get the active provider (singleton):
-const provider = getKYCProvider();
+**API services (Retrofit interfaces):**
 
-// Returns ManualKYCProvider by default (always returns { verified: false })
-// Returns SurepassKYCProvider if process.env.SUREPASS_API_KEY is set
-
-// Usage in admin.service.ts autoVerifyDriver():
-const result = await provider.verifyDocument({ documentType: 'aadhaar', documentNumber: '...' });
-if (result.confidence && result.confidence >= 0.85) {
-  // Auto-approve
-} else {
-  // Leave for manual review
-}
-```
-
----
-
-## 14. Environment Variables
-
-| Variable | Required in Prod | Default / Notes |
-|---|---|---|
-| `DATABASE_URL` | Yes | `postgresql://postgres:luffy@localhost:5432/chalo?schema=public` |
-| `REDIS_URL` | No (dev only optional) | `redis://localhost:6379` — if absent in dev, Redis features disabled |
-| `PORT` | No | `3001` (use 3001 locally — Docker Desktop uses 5000) |
-| `NODE_ENV` | No | `development` |
-| `FIREBASE_SERVICE_ACCOUNT_PATH` | Yes | `./firebase-service-account.json` |
-| `FIREBASE_DATABASE_URL` | Yes | Firebase project's RTDB URL |
-| `RAZORPAY_KEY_ID` | No (dev, cash works without) | `rzp_test_...` |
-| `RAZORPAY_KEY_SECRET` | No (dev) | — |
-| `RAZORPAY_WEBHOOK_SECRET` | No (dev) | — |
-| `GOOGLE_MAPS_API_KEY` | No | Haversine fallback used if absent |
-| `MSG91_AUTH_KEY` | No | SMS/SOS alert — skipped if absent |
-| `SUREPASS_API_KEY` | No | KYC API — ManualKYCProvider used if absent |
-| `INTERNAL_API_KEY` | Yes (prod) | Protects `POST /admin/promote` + `/metrics` endpoint |
-
----
-
-## 15. Business Rules (Cannot Change Without DB Config)
-
-All configurable via `PUT /api/v1/admin/config/:key` (ADMIN role required):
-
-| Config key | Default | Description |
-|---|---|---|
-| `commission_percentage` | 15 | % platform takes per ride (COMMISSION plan drivers) |
-| `subscription_fee_weekly` | 199 | ₹199/week (SUBSCRIPTION plan) |
-| `surge_enabled` | false | Enable/disable surge pricing |
-| `surge_multiplier` | — | Manual surge multiplier override |
-| `min_fare` | 30 | ₹30 minimum fare |
-| `base_fare_per_km` | 12 | ₹12/km |
-| `base_fare_per_min` | 2 | ₹2/min |
-| `settlement_days` | 2 | T+2 settlement |
-| `free_cancel_window_secs` | 120 | Seconds after driver assignment before cancel fee applies |
-| `cancel_fee_amount` | 20 | ₹20 cancellation fee (charged after free window, driver en route) |
-| `cancel_fee_arrived_amount` | 40 | ₹40 cancellation fee (driver already at pickup) |
-| `gst_percentage` | 5 | GST % baked into fare — internal accounting only, not shown to users |
-| `driver_search_radius_km_expanded` | 12 | Expanded search radius (km) for Pass 2 driver search |
-
-SUBSCRIPTION plan drivers pay zero commission (fixed weekly fee instead). COMMISSION plan drivers pay 15% per ride.
-
----
-
-## 16. Test Structure
-
-Tests in `src/__tests__/`. Run with `npm test` from `chalo-backend/`.
-
-**Standard mocking pattern** (look at any existing test to copy):
-
-```typescript
-// Mock DB
-const mockFindMany = jest.fn();
-jest.mock('../../config/database', () => ({
-  __esModule: true,
-  default: { myModel: { findMany: mockFindMany } },
-}));
-
-// Mock Redis
-const mockRedisGet = jest.fn();
-jest.mock('../../config/redis', () => ({
-  getRedisClient: () => ({ get: mockRedisGet, setEx: jest.fn().mockResolvedValue('OK') }),
-  isRedisReady: () => true,
-}));
-
-// Mock logger (always mock this to avoid noise)
-jest.mock('../../config/logger', () => ({
-  __esModule: true,
-  default: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
-}));
-```
-
-**IMPORTANT:** Config keys in test mocks must be **lowercase snake_case** (matching `CONSTANTS.CONFIG_KEYS`):
-```typescript
-// CORRECT:
-{ key: 'base_fare_per_km', value: '12' }
-
-// WRONG (will cause fare tests to fail at night when surge kicks in):
-{ key: 'BASE_FARE_PER_KM', value: '12' }
-```
-
----
-
-## 17. Migration Gotchas (Windows + PostGIS)
-
-- Always use `npx prisma migrate deploy` — NOT `prisma migrate dev` (shadow DB fails with PostGIS on Windows)
-- SQL in migrations must use `CAST(value AS geography)` — NOT `::geography` (Prisma SQL parser issue)
-- PostGIS extension must be pre-installed on the container before running migrations
-- If you add new fields to `schema.prisma`, run `npx prisma generate` after migration to update the client types
-
----
-
-## 18. Current Status (March 2026)
-
-**Done:**
-- All 60 API endpoints implemented and tested (319/319 tests passing)
-- Broadcast driver search (top-5 batch, BullMQ timeout, two-pass radius expansion)
-- Admin panel (10 endpoints, ADMIN role gate + INTERNAL_API_KEY bootstrap)
-- KYC provider (pluggable — Surepass activates automatically via env var)
-- Firebase auth, FCM, RTDB sync
-- Prisma schema with PostGIS (10 migrations applied)
-- Docker Compose for full-stack local dev
-
-**All features added (March 2026):**
-- `POST /auth/register-driver` — atomic driver registration (OTP + User + DriverProfile)
-- OTP ride start — 4-digit OTP generated on driver assignment, validated on ride start, exposed to customer via `GET /rides/:rideId` (`rideStartOtp`) during `DRIVER_ASSIGNED`/`DRIVER_ARRIVED`
-- `POST /driver/rides/:rideId/rate-customer` — driver-to-customer rating
-- Cancellation fee logic — 3-tier: ₹0 (free window/no driver) / ₹20 (post-window) / ₹40 (driver arrived)
-- `GET /rides/:rideId/receipt` — full fare breakdown for completed rides
-- `GET /driver/earnings/summary?period=week|month` — lightweight earnings dashboard card
-- `POST /admin/promote` — promote user to ADMIN via INTERNAL_API_KEY
-- Trip share/tracking link — `POST /rides/:rideId/share` + public `GET /track/:token`
-- Driver cancellation tracking — `driverCancellationCount*` fields + admin threshold alerts
-- GST (5%) on fare — stored in `rides.gstAmount`, not exposed to customer/driver
-- Rating skip endpoint — `POST /rides/:rideId/skip-rating` + `rides.ratingSkippedAt`
-- Scheduled ride dispatch — BullMQ job every 1 min, dispatches 15 min before `scheduledAt`
-- Phantom driver fix — BullMQ job every 2 min marks stale-online drivers offline
-- New driver neutral rating (3.5) in matching score — prevents new drivers ranking last
-- Minimum fare transparency — `minimumFareApplied` + `minimumFare` in fare estimate response
-- Serial canceller policy — Redis hourly counter + 15-min cooldown + lifetime warning
-- Driver accept/decline count tracking — `driverAcceptCount` + `driverDeclineCount` on DriverProfile
-- Admin failed payment filter — `GET /admin/rides?paymentStatus=FAILED`
-
-**Next steps:**
-- Customer Android app (Kotlin + Jetpack Compose)
-- Driver Android app
-- Google Maps API key (optional — Haversine fallback works)
-- Razorpay live keys (Cash-only mode works without them)
-- Surepass KYC API key (manual review works without it)
-
----
-
-## 19. Common Patterns to Follow
-
-When adding a new endpoint, always follow this pattern:
-
-1. **Validator** (`src/validators/`) — Zod schema + inferred type export
-2. **Service** (`src/services/`) — business logic, uses Prisma + Redis, throws `ApiError`
-3. **Controller** (`src/controllers/`) — thin handler: `try { result = await service.method(); ApiResponse.success(...) } catch(e) { next(e) }`
-4. **Route** (`src/routes/`) — wire validator + controller, apply `authenticate` + `authorize` as needed
-5. **Test** (`src/__tests__/`) — mock DB + Redis + logger, test service logic directly
-
-Do not add business logic to controllers. Do not add HTTP concepts (status codes, req/res) to services.
-
----
-
-## 20. Key File Locations Quick Reference
-
-| What you want to change | File |
+| Interface | Endpoints |
 |---|---|
-| Add a constant | `src/utils/constants.ts` |
-| Add an error code | `src/utils/apiError.ts` (ErrorCode enum) |
-| Change DB schema | `prisma/schema.prisma` → new migration file |
-| Add a platform config key | `prisma/schema.prisma` → seed.ts → CONSTANTS.CONFIG_KEYS |
-| Change fare calculation | `src/services/fare.service.ts` |
-| Change driver search logic | `src/services/ride.service.ts` |
-| Change auth middleware | `src/middleware/auth.ts` |
-| Change BullMQ job logic | `src/jobs/queue.ts` |
-| Add a new KYC provider | `src/services/kyc/` — implement `KYCProvider` interface |
-| Change admin endpoints | `src/services/admin.service.ts` + `src/controllers/admin.controller.ts` |
-| Change rate limits | `src/middleware/rateLimiter.ts` |
+| `AuthApiService` | sendOtp, verifyOtp, getProfile, completeProfile, updateEmergencyContact, updateSavedLocation, registerDeviceToken |
+| `RideApiService` | getFareEstimate, createRide, scheduleRide, getRideHistory, getScheduledRides, getRideDetails, getRideLocation, getRideReceipt, cancelRide, shareRide, rateRide, skipRating, triggerSos |
+| `PaymentApiService` | createOrder, verifyPayment |
+| `NotificationApiService` | getNotifications, getUnreadCount, markAsRead, markAllAsRead |
+
+### Local persistence
+
+**Room database (`AppDatabase`, version 1):**
+
+| Entity | Purpose |
+|---|---|
+| `RideEntity` | Offline cache of ride data |
+| `NotificationEntity` | Offline cache of notifications |
+
+**DataStore (`UserPreferences`):**
+
+| Key | Type | Purpose |
+|---|---|---|
+| `userId` | String | Logged-in user ID |
+| `userName` | String | Display name |
+| `userPhone` | String | Phone number |
+| `profileComplete` | Boolean | Whether profile setup is done |
+| `pendingRatingRideId` | String | Ride awaiting post-trip rating prompt |
+| `pendingRatingShown` | Boolean | Whether rating prompt has been shown |
+| `pendingRatingTime` | Long | Timestamp when rating was saved (for staleness check) |
+
+### Firebase integration
+
+- `google-services.json` — present at `app/google-services.json`. Project: `chalo-dev`.
+- Firebase RTDB URL: `https://chalo-dev-default-rtdb.asia-southeast1.firebasedatabase.app`
+- `ChaloFirebaseMessagingService` — handles FCM push notifications. Default channel: `chalo_rides`.
+- `RtdbRepositoryImpl` — reads driver location updates from RTDB in real time during active ride.
+- Token management: fully handled by Firebase SDK after `signInWithCustomToken`. App never stores or manages raw tokens.
+
+### OTP + sign-in flow (detailed)
+
+```
+PhoneInputViewModel
+  → authRepository.sendOtp(phone)           # POST /auth/otp/send
+  → navigate to OtpVerifyScreen
+
+OtpVerifyViewModel
+  → authRepository.verifyOtp(phone, otp)    # POST /auth/otp/verify
+  → FirebaseAuth.signInWithCustomToken()    # exchanges custom token → Firebase session
+  → userPrefs.saveUser(...)                 # persists user info in DataStore
+  → emit Verified(isNewUser)
+  → navigate: isNewUser → CompleteProfile, else → Home
+
+SplashViewModel
+  → checks FirebaseAuth.currentUser         # non-null = returning user
+  → navigate: logged in → Home, else → PhoneInput
+```
+
+### Screen inventory (36 files = 18 screens + 18 ViewModels)
+
+| Screen group | Screens | ViewModels |
+|---|---|---|
+| auth | SplashScreen, PhoneInputScreen, OtpVerifyScreen, CompleteProfileScreen | SplashViewModel, PhoneInputViewModel, OtpVerifyViewModel, CompleteProfileViewModel |
+| home | HomeScreen, FareEstimateScreen | HomeViewModel, FareEstimateViewModel |
+| activeride | ActiveRideScreen | ActiveRideViewModel |
+| postride | PaymentScreen, RatingScreen, ReceiptScreen | PaymentViewModel, RatingViewModel, ReceiptViewModel |
+| history | RideHistoryScreen, RideDetailScreen | RideHistoryViewModel, RideDetailViewModel |
+| profile | ProfileScreen, EmergencyContactScreen, SavedLocationsScreen | ProfileViewModel, EmergencyContactViewModel, SavedLocationsViewModel |
+| notifications | NotificationsScreen | NotificationsViewModel |
+| scheduled | ScheduleRideScreen, ScheduledListScreen | ScheduleRideViewModel, ScheduledListViewModel |
+
+### Build config
+
+| Field | Debug value | Release value |
+|---|---|---|
+| `BASE_URL` | `DEV_BASE_URL` from `local.properties` | `https://api.chalo.in/api/v1` (hardcoded) |
+| `FIREBASE_DATABASE_URL` | `https://chalo-dev-default-rtdb.asia-southeast1.firebasedatabase.app` | same |
+| `MAPS_API_KEY` | From `local.properties` | From `local.properties` (must be set for release too) |
+| `isMinifyEnabled` | false | true |
+| `isShrinkResources` | false | true |
+| `isDebuggable` | true | false |
+
+- `minSdk`: 28 (Android 9 Pie)
+- `targetSdk`: 34
+- `compileSdk`: 34
+
+---
+
+## 6. Testing coverage
+
+### Backend — 319 passing tests
+
+| Category | Files | What's covered |
+|---|---|---|
+| Integration | `api.integration.test.ts` | Full HTTP request/response cycle against real Express app |
+| Services | auth, ride, driver, fare, notification, sos, sms | Business logic with mocked DB and Redis |
+| Validators | auth, ride, driver, payment | Zod schema edge cases, invalid inputs, boundary values |
+| Utils | constants, helpers, apiError | Pure function correctness |
+
+Run: `cd chalo-backend && npm test`
+
+### Android — 0 tests
+
+No test files exist in `src/test/` or `src/androidTest/`. This is the highest-priority gap in the entire project.
+
+**What needs to be written:**
+
+Unit tests (JUnit + MockK, in `src/test/`):
+- `OtpVerifyViewModel` — verify Firebase sign-in is called after successful OTP verify, error state on failure, auto-verify trigger on 4-digit entry
+- `AuthRepositoryImpl` — mapper from `ProfileDto` → `User` domain model
+- `RideRepositoryImpl` — mapper from `RideDto` → `Ride` domain model, cancellation request shape
+- `FareEstimateViewModel` — estimate request construction, error handling
+- `ActiveRideViewModel` — status polling logic, state transitions
+- `UserPreferences` — read/write/clear DataStore keys (can use in-memory DataStore)
+
+Instrumentation tests (Espresso + Compose test, in `src/androidTest/`):
+- OTP flow: enter phone → enter OTP → verify Firebase sign-in + navigation
+- Book ride flow: fare estimate → create ride → confirmation screen
+- Active ride status: ride status polling → UI updates on status change
+- Post-ride: payment screen → rating screen → receipt screen
+
+---
+
+## 7. Known gaps and issues
+
+### Android test coverage (critical)
+
+No unit or instrumentation tests exist. All Android behaviour relies on manual testing. Any refactor or DTO shape change can silently break the app without any automated signal.
+
+### DTO contract fragility
+
+The Android DTOs (`RideDtos.kt`, `AuthDtos.kt`, etc.) are manually maintained and not generated from the backend Zod schemas. A field rename or type change on the backend produces a silent null in the app rather than a build error. There is no contract enforcement layer between the two sides.
+
+### Network security config IP entries
+
+`network_security_config.xml` lists `192.168.0.0` and `192.168.1.0` as allowed cleartext domains for physical device testing. These are network addresses, not host IPs, and do not work. The actual host machine IP (e.g. `192.168.1.105`) must be added manually per developer environment.
+
+### No CI/CD for Android
+
+No GitHub Actions or equivalent pipeline runs lint, build, or tests on the Android module. Issues only surface locally when a developer happens to build.
+
+### Documentation lag risk
+
+Docs (including this file) are updated manually. Route additions or schema changes that are not reflected here will cause confusion for new contributors. The POSTMAN_GUIDE.md was refreshed in March 2026 but has no automated validation.
+
+---
+
+## 8. Build and run reference
+
+### Backend daily commands
+
+```bash
+cd chalo-backend
+
+# Development (hot reload via ts-node-dev)
+npm run dev
+
+# Run all tests
+npm test
+
+# Apply migrations (use migrate deploy, not migrate dev)
+DATABASE_URL="postgresql://postgres:luffy@localhost:5433/chalo_db?schema=public" npx prisma migrate deploy
+
+# Seed platform config
+npm run db:seed
+
+# Type check
+npx tsc --noEmit
+```
+
+### Android
+
+- **Debug run**: Android Studio → select emulator → Run (Shift+F10)
+- **Base URL**: reads `DEV_BASE_URL` from `local.properties`, falls back to `http://10.0.2.2:3001/api/v1`
+- **Maps key**: `MAPS_API_KEY` in `local.properties` → injected via manifest placeholder
+- **minSdk**: 28 — emulator or device must be API 28+
+- **Emulator image**: must be "Google APIs" or "Google Play" (not plain AOSP) for Maps + Firebase
+
+See [docs/development/EMULATOR_SETUP.md](development/EMULATOR_SETUP.md) for the full setup walkthrough.
+
+### Local infra
+
+| Container | External port | Internal port | Purpose |
+|---|---|---|---|
+| `chalo-postgres` | 5433 | 5432 | PostgreSQL + PostGIS |
+| `chalo-redis` | 6379 | 6379 | Redis |
+| `chalo-api` | 5000 | 5000 | Dockerised API (not used in dev) |
+
+Use `DATABASE_URL` with port **5433** when running commands from the host machine. Port **5432** is for container-to-container communication (inside Docker network).
+
+---
+
+## 9. Documentation map
+
+| File | Purpose |
+|---|---|
+| `docs/CODEBASE.md` | This file — implementation truth |
+| `docs/api/POSTMAN_GUIDE.md` | Full API testing guide — all 60 endpoints with bodies and expected responses |
+| `docs/api/token-exchange-guide.md` | How to exchange custom token for Firebase ID token in Postman |
+| `docs/development/EMULATOR_SETUP.md` | Step-by-step guide to run app on Android emulator |
+| `docs/development/NEXT_STEPS.md` | All pending work — testing, release readiness, product ops |
+| `docs/development/IMPROVEMENTS.md` | Prioritised improvement backlog |
+| `docs/development/FRIEND_SETUP.md` | Onboarding guide for new developers |
+| `docs/reviews/CODE_REVIEW.md` | Historical code review notes |
+| `docs/reviews/SECURITY_PERFORMANCE_REVIEW.md` | Security and performance review |
+| `README.md` | Quick start |

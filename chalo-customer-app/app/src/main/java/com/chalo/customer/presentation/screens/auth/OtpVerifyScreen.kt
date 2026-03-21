@@ -1,5 +1,9 @@
 package com.chalo.customer.presentation.screens.auth
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -17,6 +22,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.chalo.customer.presentation.components.ChaloPrimaryButton
 import com.chalo.customer.presentation.theme.ChaloSpacing
 import com.chalo.customer.util.maskPhone
+import com.google.android.gms.auth.api.phone.SmsRetriever
 import kotlinx.coroutines.flow.collectLatest
 
 @Composable
@@ -26,6 +32,7 @@ fun OtpVerifyScreen(
     viewModel: OtpVerifyViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     LaunchedEffect(phone) { viewModel.init(phone) }
 
@@ -35,6 +42,24 @@ fun OtpVerifyScreen(
                 is OtpVerifyEvent.Verified -> onVerified(event.isNewUser)
             }
         }
+    }
+
+    // Register SMS Retriever broadcast receiver while this screen is visible
+    DisposableEffect(Unit) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context, intent: Intent) {
+                if (SmsRetriever.SMS_RETRIEVED_ACTION == intent.action) {
+                    val extras    = intent.extras ?: return
+                    val smsMessage = extras.getString(SmsRetriever.EXTRA_SMS_MESSAGE) ?: return
+                    // Extract 6-digit OTP from message using regex
+                    val otp = Regex("\\d{6}").find(smsMessage)?.value ?: return
+                    viewModel.onSmsReceived(otp)
+                }
+            }
+        }
+        val filter = IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION)
+        context.registerReceiver(receiver, filter)
+        onDispose { context.unregisterReceiver(receiver) }
     }
 
     Column(

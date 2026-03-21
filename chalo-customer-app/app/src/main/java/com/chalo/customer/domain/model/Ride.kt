@@ -42,6 +42,8 @@ data class FareEstimate(
     val surgeMultiplier: Double,
     val minimumFareApplied: Boolean,
     val minimumFare: Int,
+    /** Encoded Google Maps polyline — empty when Maps API fallback was used */
+    val routePolyline: String = "",
 )
 
 data class Location(

@@ -1,5 +1,7 @@
 package com.chalo.customer.presentation.screens.home
 
+import android.Manifest
+import android.annotation.SuppressLint
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,17 +11,26 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.chalo.customer.presentation.theme.ChaloSpacing
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.permissions.shouldShowRationale
+import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
+import kotlinx.coroutines.tasks.await
 
-// Default map center — Faridabad, Haryana
+// Default map center — Faridabad, Haryana (used only when GPS is unavailable)
 private val FARIDABAD_CENTER = LatLng(28.4089, 77.3178)
 
+@SuppressLint("MissingPermission")
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun HomeScreen(
     onNavigateToFareEstimate: (Double, Double, String, Double, Double, String) -> Unit,
@@ -31,42 +42,79 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    // --- Location permission ---
+    val locationPermission = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
+    val locationGranted = locationPermission.status.isGranted
+
+    // Request permission on first launch
+    LaunchedEffect(Unit) {
+        if (!locationGranted) locationPermission.launchPermissionRequest()
+    }
+
+    // --- Real pickup location (falls back to Faridabad centre) ---
+    var pickupLatLng by remember { mutableStateOf(FARIDABAD_CENTER) }
+
+    LaunchedEffect(locationGranted) {
+        if (locationGranted) {
+            try {
+                val loc = LocationServices
+                    .getFusedLocationProviderClient(context)
+                    .lastLocation
+                    .await()
+                if (loc != null) {
+                    pickupLatLng = LatLng(loc.latitude, loc.longitude)
+                }
+            } catch (_: Exception) { /* keep Faridabad fallback */ }
+        }
+    }
 
     // Navigate to active ride if one exists
     LaunchedEffect(uiState.activeRide) {
-        uiState.activeRide?.let { ride ->
-            onNavigateToActiveRide(ride.id)
-        }
+        uiState.activeRide?.let { ride -> onNavigateToActiveRide(ride.id) }
     }
 
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(FARIDABAD_CENTER, 13f)
     }
 
-    var destinationInput by remember { mutableStateOf("") }
+    // Animate camera to real location when it becomes available
+    LaunchedEffect(pickupLatLng) {
+        if (pickupLatLng != FARIDABAD_CENTER) {
+            cameraPositionState.position = CameraPosition.fromLatLngZoom(pickupLatLng, 15f)
+        }
+    }
+
     var showDestinationSheet by remember { mutableStateOf(false) }
+
+    // Show rationale if permission permanently denied
+    if (!locationGranted && !locationPermission.status.shouldShowRationale) {
+        // Permission permanently denied — show inline banner (does not block the app)
+        LaunchedEffect(Unit) { /* Timber.w("Location permission permanently denied") */ }
+    }
 
     Scaffold(
         bottomBar = {
             HomeBottomNav(
-                onHistory      = onNavigateToHistory,
-                onProfile      = onNavigateToProfile,
+                onHistory       = onNavigateToHistory,
+                onProfile       = onNavigateToProfile,
                 onNotifications = onNavigateToNotifications,
             )
         }
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
 
-            // Full-screen map
+            // Full-screen map — only enable My Location layer when permission is granted
             GoogleMap(
                 modifier = Modifier.fillMaxSize(),
                 cameraPositionState = cameraPositionState,
                 uiSettings = MapUiSettings(
-                    zoomControlsEnabled    = false,
+                    zoomControlsEnabled     = false,
                     myLocationButtonEnabled = false,
-                    compassEnabled         = false,
+                    compassEnabled          = false,
                 ),
-                properties = MapProperties(isMyLocationEnabled = true),
+                properties = MapProperties(isMyLocationEnabled = locationGranted),
             )
 
             // Top search bar
@@ -139,10 +187,8 @@ fun HomeScreen(
             onDismiss = { showDestinationSheet = false },
             onDestinationSelected = { dropLat, dropLng, dropAddr ->
                 showDestinationSheet = false
-                // Use Faridabad center as pickup placeholder
-                // In production, use FusedLocationProvider for real pickup
                 onNavigateToFareEstimate(
-                    FARIDABAD_CENTER.latitude, FARIDABAD_CENTER.longitude, "Current Location",
+                    pickupLatLng.latitude, pickupLatLng.longitude, "Current Location",
                     dropLat, dropLng, dropAddr,
                 )
             }
@@ -157,12 +203,23 @@ private fun DestinationPickerSheet(
     onDestinationSelected: (Double, Double, String) -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var query by remember { mutableStateOf("") }
+    val context    = LocalContext.current
+    var query      by remember { mutableStateOf("") }
 
-    // Hardcoded popular spots for Punjab (expand in V2 with Places API)
-    val suggestions = remember(query) {
-        if (query.isBlank()) popularPlaces
-        else popularPlaces.filter { it.name.contains(query, ignoreCase = true) }
+    // Places autocomplete predictions
+    var predictions by remember { mutableStateOf<List<AutocompletePredictionItem>>(emptyList()) }
+    var isSearching  by remember { mutableStateOf(false) }
+
+    // Debounced search — only call Places API after user pauses typing
+    LaunchedEffect(query) {
+        if (query.length < 3) {
+            predictions = emptyList()
+            return@LaunchedEffect
+        }
+        isSearching = true
+        kotlinx.coroutines.delay(300)   // 300 ms debounce
+        predictions = fetchPlacesPredictions(context, query)
+        isSearching = false
     }
 
     ModalBottomSheet(
@@ -182,28 +239,124 @@ private fun DestinationPickerSheet(
                 value         = query,
                 onValueChange = { query = it },
                 modifier      = Modifier.fillMaxWidth(),
-                placeholder   = { Text("Search destination") },
+                placeholder   = { Text("Search destination in Faridabad") },
                 leadingIcon   = { Icon(Icons.Default.Search, null) },
+                trailingIcon  = {
+                    if (isSearching) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                },
                 singleLine    = true,
                 shape         = RoundedCornerShape(12.dp),
             )
 
             Spacer(Modifier.height(ChaloSpacing.md))
 
-            suggestions.forEach { place ->
-                ListItem(
-                    headlineContent = { Text(place.name) },
-                    supportingContent = { Text(place.address, style = MaterialTheme.typography.bodySmall) },
-                    leadingContent = { Icon(Icons.Default.LocationOn, null, tint = MaterialTheme.colorScheme.primary) },
-                    modifier = Modifier.clickable {
-                        onDestinationSelected(place.lat, place.lng, place.address)
-                    }
-                )
-                HorizontalDivider()
+            if (query.length < 3) {
+                // Show popular places when query is short
+                popularPlaces.forEach { place ->
+                    ListItem(
+                        headlineContent   = { Text(place.name) },
+                        supportingContent = { Text(place.address, style = MaterialTheme.typography.bodySmall) },
+                        leadingContent    = { Icon(Icons.Default.Star, null, tint = MaterialTheme.colorScheme.primary) },
+                        modifier          = Modifier.clickable {
+                            onDestinationSelected(place.lat, place.lng, place.address)
+                        }
+                    )
+                    HorizontalDivider()
+                }
+            } else {
+                // Show Places API results
+                predictions.forEach { prediction ->
+                    ListItem(
+                        headlineContent   = { Text(prediction.primaryText) },
+                        supportingContent = { Text(prediction.secondaryText, style = MaterialTheme.typography.bodySmall) },
+                        leadingContent    = { Icon(Icons.Default.LocationOn, null, tint = MaterialTheme.colorScheme.primary) },
+                        modifier          = Modifier.clickable {
+                            fetchPlaceDetails(context, prediction.placeId) { lat, lng, address ->
+                                onDestinationSelected(lat, lng, address)
+                            }
+                        }
+                    )
+                    HorizontalDivider()
+                }
+
+                if (predictions.isEmpty() && !isSearching && query.length >= 3) {
+                    Text(
+                        "No results for \"$query\"",
+                        modifier = Modifier.padding(ChaloSpacing.md),
+                        style    = MaterialTheme.typography.bodyMedium,
+                        color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
     }
 }
+
+// ── Places API helpers ────────────────────────────────────────────────────────
+
+private data class AutocompletePredictionItem(
+    val placeId: String,
+    val primaryText: String,
+    val secondaryText: String,
+)
+
+private suspend fun fetchPlacesPredictions(
+    context: android.content.Context,
+    query: String,
+): List<AutocompletePredictionItem> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+    try {
+        val client  = com.google.android.libraries.places.api.Places.createClient(context)
+        val request = com.google.android.libraries.places.api.net.FindAutocompletePredictionsRequest
+            .builder()
+            .setQuery(query)
+            // Bias results toward Faridabad / NCR region
+            .setLocationBias(
+                com.google.android.libraries.places.api.model.RectangularBounds.newInstance(
+                    com.google.android.gms.maps.model.LatLng(28.30, 77.20),  // SW corner
+                    com.google.android.gms.maps.model.LatLng(28.55, 77.45),  // NE corner
+                )
+            )
+            .setCountries(listOf("IN"))
+            .build()
+
+        val result = com.google.android.gms.tasks.Tasks.await(
+            client.findAutocompletePredictions(request)
+        )
+        result.autocompletePredictions.map { p ->
+            AutocompletePredictionItem(
+                placeId       = p.placeId,
+                primaryText   = p.getPrimaryText(null).toString(),
+                secondaryText = p.getSecondaryText(null).toString(),
+            )
+        }
+    } catch (e: Exception) {
+        timber.log.Timber.w(e, "Places autocomplete error")
+        emptyList()
+    }
+}
+
+private fun fetchPlaceDetails(
+    context: android.content.Context,
+    placeId: String,
+    onResult: (lat: Double, lng: Double, address: String) -> Unit,
+) {
+    val client  = com.google.android.libraries.places.api.Places.createClient(context)
+    val fields  = listOf(
+        com.google.android.libraries.places.api.model.Place.Field.LAT_LNG,
+        com.google.android.libraries.places.api.model.Place.Field.ADDRESS,
+    )
+    val request = com.google.android.libraries.places.api.net.FetchPlaceRequest.newInstance(placeId, fields)
+    client.fetchPlace(request).addOnSuccessListener { response ->
+        val place   = response.place
+        val latLng  = place.latLng ?: return@addOnSuccessListener
+        val address = place.address ?: "${ latLng.latitude }, ${ latLng.longitude }"
+        onResult(latLng.latitude, latLng.longitude, address)
+    }.addOnFailureListener { e ->
+        timber.log.Timber.w(e, "Place detail fetch failed for $placeId")
+    }
+}
+
+// ── Static popular places (shown before user types) ──────────────────────────
 
 private data class PlaceSuggestion(val name: String, val address: String, val lat: Double, val lng: Double)
 

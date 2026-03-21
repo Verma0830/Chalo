@@ -75,6 +75,8 @@ export interface FareEstimate {
   minimumFareApplied: boolean;
   /** The minimum fare value in INR — display as "Minimum fare" label when minimumFareApplied is true */
   minimumFare: number;
+  /** Encoded Google Maps polyline for the route — empty string when Haversine fallback is used */
+  routePolyline: string;
 }
 
 export interface RideRequest {

@@ -2,6 +2,8 @@ package com.chalo.customer.presentation.screens.activeride
 
 import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,6 +28,7 @@ import com.chalo.customer.presentation.theme.*
 import com.chalo.customer.util.toRupees
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.PolyUtil
 import com.google.maps.android.compose.*
 import kotlinx.coroutines.flow.collectLatest
 
@@ -84,7 +87,7 @@ fun ActiveRideScreen(
     if (uiState.showSosConfirm) {
         SosConfirmDialog(
             onDismiss = viewModel::onSosDismiss,
-            onConfirm = { viewModel.onSosConfirm(0.0, 0.0) },
+            onConfirm = viewModel::onSosConfirm,
         )
     }
 }
@@ -98,14 +101,27 @@ private fun ActiveRideContent(
 ) {
     val ride = uiState.ride ?: return
 
-    val pickupLatLng  = LatLng(ride.pickupLat, ride.pickupLng)
-    val driverLatLng  = uiState.driverLocation ?: pickupLatLng
+    val pickupLatLng = LatLng(ride.pickupLat, ride.pickupLng)
+    val rawDriver    = uiState.driverLocation ?: pickupLatLng
+
+    // Smooth driver marker — animate between GPS updates over 800ms
+    val animLat = remember { Animatable(rawDriver.latitude.toFloat()) }
+    val animLng = remember { Animatable(rawDriver.longitude.toFloat()) }
+
+    LaunchedEffect(uiState.driverLocation) {
+        uiState.driverLocation?.let { target ->
+            launch { animLat.animateTo(target.latitude.toFloat(),  tween(durationMillis = 800)) }
+            launch { animLng.animateTo(target.longitude.toFloat(), tween(durationMillis = 800)) }
+        }
+    }
+
+    val driverLatLng = LatLng(animLat.value.toDouble(), animLng.value.toDouble())
 
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(driverLatLng, 15f)
     }
 
-    // Animate camera to follow driver
+    // Animate camera to follow driver (uses animated position, not raw target)
     LaunchedEffect(uiState.driverLocation) {
         uiState.driverLocation?.let {
             cameraPositionState.position = CameraPosition.fromLatLngZoom(it, 15f)
@@ -114,11 +130,29 @@ private fun ActiveRideContent(
 
     Box(modifier = Modifier.fillMaxSize()) {
         // Map
+        // Decode polyline once — empty list when polyline is unavailable
+        val routePoints = remember(uiState.routePolyline) {
+            if (uiState.routePolyline.isNotEmpty())
+                PolyUtil.decode(uiState.routePolyline)
+            else
+                emptyList()
+        }
+
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
             cameraPositionState = cameraPositionState,
             uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false),
         ) {
+            // Route polyline (driver → pickup → drop)
+            if (routePoints.isNotEmpty()) {
+                Polyline(
+                    points    = routePoints,
+                    color     = androidx.compose.ui.graphics.Color(0xFF1A73E8),
+                    width     = 8f,
+                    geodesic  = true,
+                )
+            }
+
             // Pickup marker
             Marker(
                 state = MarkerState(position = pickupLatLng),
@@ -196,13 +230,25 @@ private fun RideStatusCard(
                 shape  = RoundedCornerShape(8.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(
-                    text      = statusText,
-                    modifier  = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    style     = MaterialTheme.typography.titleSmall,
-                    color     = statusColor,
-                    textAlign = TextAlign.Center,
-                )
+                Column(
+                    modifier              = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalAlignment   = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        text  = statusText,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = statusColor,
+                        textAlign = TextAlign.Center,
+                    )
+                    // Show ETA while driver is en route to pickup
+                    uiState.etaMins?.let { eta ->
+                        Text(
+                            text  = "ETA: $eta min",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = statusColor,
+                        )
+                    }
+                }
             }
 
             Spacer(Modifier.height(ChaloSpacing.sm))
@@ -354,7 +400,7 @@ private fun CancelRideSheet(
 @Composable
 private fun SosConfirmDialog(
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit,
+    onConfirm: () -> Unit,   // ViewModel fetches real GPS internally
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,

@@ -13,6 +13,7 @@ import { getAuth } from '../config/firebase';
 import crypto from 'crypto';
 import { UserRole } from '@prisma/client';
 import { SendOTPInput, VerifyOTPInput, CompleteProfileInput, RegisterDriverInput } from '../validators/auth.validator';
+import { sendOTPSms } from './sms.service';
 
 /**
  * Hash OTP with SHA-256 before storing in database.
@@ -58,11 +59,15 @@ export class AuthService {
       },
     });
 
-    // Log OTP only in development — never in production
     if (config.isDev) {
-      logger.debug(`[DEV] OTP for ${phone}: ${otpCode}`);
+      // Development: log OTP to console so devs can test without SMS credits
+      logger.debug(`[DEV] OTP for ${maskPhone(phone)}: ${otpCode}`);
     } else {
-      logger.info(`OTP sent to ${maskPhone(phone)} (expires: ${expiresAt.toISOString()})`);
+      // Production: deliver via MSG91 SMS (fire-and-forget — DB record already saved)
+      sendOTPSms(phone, otpCode).catch((err) => {
+        logger.error('SMS delivery failed for OTP', { phone: maskPhone(phone), error: String(err) });
+      });
+      logger.info(`OTP dispatched to ${maskPhone(phone)} (expires: ${expiresAt.toISOString()})`);
     }
 
     return {

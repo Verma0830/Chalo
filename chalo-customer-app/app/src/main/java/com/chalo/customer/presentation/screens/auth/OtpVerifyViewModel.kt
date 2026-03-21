@@ -1,11 +1,14 @@
 package com.chalo.customer.presentation.screens.auth
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.chalo.customer.data.local.preferences.UserPreferences
 import com.chalo.customer.domain.repository.AuthRepository
+import com.google.android.gms.auth.api.phone.SmsRetriever
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -34,6 +37,7 @@ sealed class OtpVerifyEvent {
 class OtpVerifyViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val userPrefs: UserPreferences,
+    @ApplicationContext private val context: Context,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(OtpVerifyUiState())
@@ -48,6 +52,33 @@ class OtpVerifyViewModel @Inject constructor(
     fun init(phone: String) {
         this.phone = phone
         startResendCountdown()
+        startSmsRetriever()
+    }
+
+    /**
+     * Starts the SMS Retriever API which listens for a one-time SMS containing a hash.
+     * When the SMS arrives Android delivers it as a broadcast — the UI layer must register
+     * a [SmsRetrieverBroadcastReceiver] and call [onSmsReceived] with the parsed OTP.
+     *
+     * The SMS message must contain the app's 11-char hash (generated via AppSignatureHelper).
+     * Format example: "<#> Your Chalo OTP is 123456 [hash]"
+     */
+    private fun startSmsRetriever() {
+        viewModelScope.launch {
+            try {
+                SmsRetriever.getClient(context).startSmsRetriever().await()
+                Timber.d("SMS Retriever started")
+            } catch (e: Exception) {
+                Timber.w(e, "SMS Retriever could not start — user will enter OTP manually")
+            }
+        }
+    }
+
+    /** Called by the broadcast receiver in the UI layer when an SMS is auto-detected. */
+    fun onSmsReceived(otp: String) {
+        if (otp.length == 6 && otp.all { it.isDigit() }) {
+            onOtpChanged(otp)
+        }
     }
 
     fun onOtpChanged(value: String) {

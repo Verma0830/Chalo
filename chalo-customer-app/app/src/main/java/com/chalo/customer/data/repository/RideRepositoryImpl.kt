@@ -148,6 +148,7 @@ class RideRepositoryImpl @Inject constructor(
         surgeMultiplier    = surgeMultiplier,
         minimumFareApplied = minimumFareApplied,
         minimumFare        = minimumFare,
+        routePolyline      = routePolyline,
     )
 
     private fun RideDto.toDomain() = Ride(

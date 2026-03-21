@@ -33,6 +33,8 @@ firebaseBom            = "32.8.1"
 mapsCompose            = "4.3.3"
 playServicesMaps       = "18.2.0"
 playServicesLocation   = "21.2.0"
+places                 = "3.5.0"
+playServicesAuth       = "21.2.0"
 
 # Permissions
 accompanistPermissions = "0.34.0"
@@ -42,6 +44,13 @@ datastore              = "1.1.1"
 
 # Timber
 timber                 = "5.0.1"
+
+# Testing
+junit                  = "4.13.2"
+mockk                  = "1.13.10"
+turbine                = "1.1.0"
+coroutinesTest         = "1.7.3"
+archCoreTesting        = "2.2.0"
 
 # Android core
 coreKtx                = "1.13.0"
@@ -102,6 +111,8 @@ firebase-crashlytics       = { group = "com.google.firebase", name = "firebase-c
 maps-compose               = { group = "com.google.maps.android", name = "maps-compose",          version.ref = "mapsCompose" }
 play-services-maps         = { group = "com.google.android.gms",  name = "play-services-maps",    version.ref = "playServicesMaps" }
 play-services-location     = { group = "com.google.android.gms",  name = "play-services-location", version.ref = "playServicesLocation" }
+play-services-auth         = { group = "com.google.android.gms",  name = "play-services-auth",     version.ref = "playServicesAuth" }
+places                     = { group = "com.google.android.libraries.places", name = "places",    version.ref = "places" }
 
 # Permissions
 accompanist-permissions    = { group = "com.google.accompanist", name = "accompanist-permissions", version.ref = "accompanistPermissions" }
@@ -111,6 +122,13 @@ datastore-preferences      = { group = "androidx.datastore", name = "datastore-p
 
 # Timber
 timber                     = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
+
+# Testing
+junit                      = { group = "junit",                              name = "junit",                         version.ref = "junit" }
+mockk                      = { group = "io.mockk",                           name = "mockk",                         version.ref = "mockk" }
+turbine                    = { group = "app.cash.turbine",                   name = "turbine",                       version.ref = "turbine" }
+kotlinx-coroutines-test    = { group = "org.jetbrains.kotlinx",             name = "kotlinx-coroutines-test",       version.ref = "coroutinesTest" }
+androidx-arch-core-testing = { group = "androidx.arch.core",                name = "core-testing",                  version.ref = "archCoreTesting" }
 
 [plugins]
 android-application  = { id = "com.android.application",          version.ref = "agp" }

@@ -54,6 +54,8 @@ data class FareEstimateDto(
     @SerializedName("surgeMultiplier")     val surgeMultiplier: Double,
     @SerializedName("minimumFareApplied")  val minimumFareApplied: Boolean,
     @SerializedName("minimumFare")         val minimumFare: Int,
+    /** Encoded Google Maps polyline — empty string when Maps API was unavailable */
+    @SerializedName("routePolyline")       val routePolyline: String = "",
 )
 
 data class RideDto(

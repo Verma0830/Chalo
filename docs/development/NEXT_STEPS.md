@@ -1,616 +1,275 @@
-# Chalo — What's Left To Do
+# Chalo Next Steps
 
-> Last updated: March 2026
-> Backend: ✅ Complete — 60 endpoints, 8.5/10 score
-> Android apps: ⬜ Not started — start here next
-> Deployment: ⬜ Not started
+Last updated: 2026-03-21
 
-This document covers everything that is still pending, in priority order.
+This file contains all pending work. Completed backend milestones are in CODEBASE.md section 4.
 
 ---
 
-## Table of Contents
+## 1. Android customer app completion
 
-1. [Backend — P1 Features (small, build during Android dev)](#1-backend--p1-features)
-2. [Competitive Gap Analysis — What Other Apps Have That We Don't](#2-competitive-gap-analysis)
-3. [Third-Party Integrations to Set Up](#3-third-party-integrations-to-set-up)
-4. [Razorpay Payment Testing Guide](#4-razorpay-payment-testing-guide)
-5. [One-Time DB Setup (not done yet)](#5-one-time-db-setup)
-6. [Customer Android App](#6-customer-android-app)
-7. [Driver Android App](#7-driver-android-app)
-8. [Deployment](#8-deployment)
-9. [Post-Launch (P2 / P3)](#9-post-launch-p2--p3)
-10. [Post-Production Decisions (Policy + Architecture)](#10-post-production-decisions)
+### Validate screens against backend contracts
+
+Every screen that makes API calls needs to be manually walked through end-to-end against the running backend to confirm:
+
+- The correct endpoint is called with the correct field names and types
+- All possible response states (loading, success, error, empty) are handled and shown to the user
+- Navigation after each action goes to the right screen
+
+Priority screens (most likely to have gaps):
+
+- `ActiveRideScreen` — polls ride status, polls driver location, shows OTP to customer, handles SOS
+- `ScheduleRideScreen` — `scheduledAt` must be sent as ISO 8601 UTC, not local time
+- `PaymentScreen` — UPI payment flow involves Razorpay SDK integration; CASH payment should skip to receipt directly
+- `ScheduledListScreen` — cancellation from this screen needs the same reason code as on-demand rides
+
+### Error and empty states
+
+Every screen that loads data from the network must handle:
+
+- **Loading**: spinner or shimmer while fetching
+- **Success with data**: normal UI
+- **Empty**: "no rides yet", "no notifications" type placeholder — not a blank screen
+- **Network error**: message + retry button that re-triggers the same fetch
+- **Auth error (401)**: should navigate back to phone input, not crash or hang
+
+### Partial interactions to finish
+
+- Scheduled ride cancellation from `ScheduledListScreen` — confirm cancel dialog + reason code picker
+- Notification deep-link: tapping a notification should navigate to the relevant ride screen
+- Rating prompt after ride completion — currently tracks a pending rating in DataStore (`pendingRatingRideId`); ensure it surfaces automatically on next app open
 
 ---
 
-## 1. Backend — P1 Features
+## 2. Android testing (highest priority gap)
 
-### Already done (March 2026)
+There are zero tests in the Android module. This is the single biggest risk in the project. Any change to a DTO field name, a navigation path, or a ViewModel function silently breaks the app with no automated signal.
 
-| Feature | Status | Notes |
+### What to write: unit tests
+
+Location: `app/src/test/` — these run on JVM, no emulator needed, fast to run.
+
+Framework: JUnit 5 + MockK + Kotlin coroutines test (`kotlinx-coroutines-test`).
+
+**OtpVerifyViewModel tests:**
+- Entering 4 digits triggers `onVerify()` automatically
+- On successful OTP verify: `FirebaseAuth.signInWithCustomToken` is called with the token from the response
+- On Firebase sign-in failure: `errorMessage` in UI state is set to "Authentication failed"
+- On wrong OTP (API returns error): `errorMessage` in UI state shows the API error message
+- Resend OTP resets the countdown timer
+
+**AuthRepositoryImpl mapper tests:**
+- `ProfileDto.toDomain()` maps every field correctly including optional `customerProfile`
+- `customerProfile = null` → `User.customerProfile = null` (no crash)
+- All numeric nullables (`totalRides`, `cancellationCount`) default to 0 when null
+
+**RideRepositoryImpl mapper tests:**
+- `RideDto` with all optional fields null maps cleanly to a `Ride` domain model
+- `CancelRideRequest` is constructed with the correct `reasonCode` and optional `note`
+- `CreateRideRequest` correctly encodes pickup/drop `LocationDto` and `paymentMethod`
+
+**FareEstimateViewModel tests:**
+- Fare estimate request is built from the entered pickup and drop coordinates
+- Success: UI state contains estimated fare, distance, duration
+- Error: UI state contains error message, not a crash
+
+**ActiveRideViewModel tests:**
+- Status polling interval triggers `getRideDetails` repeatedly
+- When status changes to `COMPLETED`, polling stops and navigation event is emitted
+- When status changes to `CANCELLED`, a cancellation event is emitted with fee amount
+
+**UserPreferences tests (DataStore):**
+- `saveUser()` stores all four fields
+- `clearAll()` removes all keys
+- `savePendingRating()` + `markPendingRatingShown()` produce correct flow values
+- Use `androidx.datastore:datastore-preferences` test artifact with in-memory store
+
+### What to write: integration-style tests
+
+Location: `app/src/test/` — mock the Retrofit service, test repository + ViewModel together.
+
+**Retrofit DTO mapping tests:**
+- Parse a known JSON response string through Gson into the DTO and assert every field
+- Ensures no `@SerializedName` typos and no missing fields
+- Write one test per DTO: `VerifyOtpResponseDto`, `RideDto`, `FareEstimateDto`, `RideReceiptDto`, `CancelRideResponseDto`
+- These tests catch backend field renames before they silently produce nulls in the app
+
+**Error handling tests:**
+- `ApiResponse(success=false, message="...")` is treated as a failure by the repository
+- HTTP 422 is surfaced as a meaningful error message, not an unhandled exception
+- HTTP 401 triggers token refresh via `AuthInterceptor` before failing
+
+### What to write: instrumentation tests
+
+Location: `app/src/androidTest/` — run on emulator or device, test full UI flows.
+
+Framework: Compose testing (`androidx.compose.ui:ui-test-junit4`) + Hilt test (`hilt-android-testing`).
+
+Use fake/mock repositories so tests do not hit the real backend.
+
+**OTP flow:**
+1. Launch app with no Firebase session
+2. Assert `PhoneInputScreen` is shown
+3. Enter a phone number, tap Send OTP
+4. Assert navigation to `OtpVerifyScreen`
+5. Enter 4 digits — assert `onVerify()` is triggered
+6. Fake repository returns success → fake Firebase signs in
+7. Assert navigation to `CompleteProfileScreen` (isNewUser=true) or `HomeScreen` (returning user)
+
+**Book ride flow:**
+1. Start on `HomeScreen` with a mocked authenticated user
+2. Navigate to fare estimate, enter pickup + drop
+3. Assert fare estimate result is displayed
+4. Tap Book → assert ride creation request is made with correct body
+5. Assert navigation to `ActiveRideScreen` with the returned ride ID
+
+**Active ride status updates:**
+1. Start `ActiveRideScreen` with a ride in `DRIVER_ASSIGNED` state
+2. Fake status polling returns `DRIVER_ARRIVED` → assert UI updates
+3. Fake status returns `IN_PROGRESS` → assert OTP display changes
+4. Fake status returns `COMPLETED` → assert navigation to `PaymentScreen` or `RatingScreen`
+
+**Post-ride payment and rating:**
+1. Start `PaymentScreen` with a CASH ride → assert "no payment needed" UI and redirect to rating
+2. Start `RatingScreen` → tap a star rating → assert `rateRide` is called with correct rating integer
+3. Tap Skip → assert `skipRating` is called and navigation proceeds to `ReceiptScreen`
+4. Start `ReceiptScreen` → assert fare, distance, and payment method are displayed correctly
+
+---
+
+## 3. Backend verification and cleanup
+
+### Endpoint contract matrix
+
+Produce a table of all 60 endpoints with: method, path, required fields, optional fields, role required, and example valid/invalid request. This exists implicitly in the validator files and POSTMAN_GUIDE.md but not in a single scannable sheet. Useful for:
+
+- Catching drift between Android DTOs and backend validators
+- Onboarding new contributors
+- QA sign-off checklist before release
+
+### Postman examples for newer endpoints
+
+The following endpoints were added after the original Postman guide and may lack example collections:
+
+- `POST /rides/sos/:sosAlertId/resolve`
+- `GET /admin/rides` (filtered)
+- `POST /admin/drivers/:driverId/auto-verify`
+- `GET /driver/earnings/settlement`
+
+Add example request bodies and expected responses to `docs/api/POSTMAN_GUIDE.md` or a linked Postman collection export.
+
+### Webhook hardening verification
+
+`POST /payments/webhook` uses Razorpay signature validation (`x-razorpay-signature` header, HMAC-SHA256). Verify in a production-like environment:
+
+- A correctly signed webhook payload is accepted
+- A tampered payload is rejected with 400
+- Missing signature header is rejected
+- Replay protection behavior (if any)
+
+---
+
+## 4. Mobile release readiness
+
+### Release signing
+
+- Generate a release keystore: `keytool -genkey -v -keystore chalo-release.jks -keyAlias chalo -keyalg RSA -keysize 2048 -validity 10000`
+- Store securely — never commit to git
+- Add signing config to `build.gradle.kts` under `signingConfigs`
+- Confirm release APK is signed and not debuggable: `apksigner verify --print-certs app-release.apk`
+
+### CI/CD for Android
+
+Minimum pipeline (GitHub Actions or equivalent):
+
+```yaml
+on: [push, pull_request]
+jobs:
+  android:
+    steps:
+      - lint                    # ./gradlew lint
+      - unit tests              # ./gradlew test
+      - debug build             # ./gradlew assembleDebug
+```
+
+Add to `.github/workflows/android.yml`. This catches build breaks and lint regressions before they reach the main branch.
+
+### Crashlytics and FCM in release
+
+- Crashlytics is in the dependencies (`firebase-crashlytics`). Verify it initialises in release builds and reports crashes to Firebase console.
+- FCM: test with a real device in release variant — emulator FCM delivery can be unreliable.
+- Confirm the notification channel `chalo_rides` is created on first launch (Android 8+).
+
+### Network security config for release
+
+Current config blocks all cleartext in release builds (`cleartextTrafficPermitted="false"` on `base-config`). Confirm:
+- Production API base URL (`https://api.chalo.in/api/v1`) uses HTTPS
+- SSL certificate is valid and not self-signed
+- Certificate pinning is not needed for MVP but should be evaluated
+
+### APK size and cold-start
+
+Target metrics for mid-range device (3GB RAM, Snapdragon 680-class):
+- APK size: under 15MB (after minification and resource shrinking in release)
+- Cold start to interactive: under 2 seconds
+- Measure with Android Studio Profiler or Baseline Profiles
+
+---
+
+## 5. Product and operations readiness
+
+### Reconcile business policy docs
+
+The implemented cancellation policy (reason codes, fee tiers, serial canceller threshold) and rating policy (1–5 stars, skip option, driver neutral rating 3.5) should be verified against the product documentation in `docs/product/chalo-product-documentation.md`. Update whichever is wrong.
+
+### Launch runbook
+
+Prepare a document covering:
+
+- **Driver no-show**: what support does, how to trigger refund/credit
+- **Payment failure**: how to identify via admin `/rides` filter (`paymentStatus=FAILED`), how to trigger manual resolution
+- **SOS alert**: who gets notified server-side, what support does, how to resolve via `/rides/sos/:id/resolve`
+- **Ride stuck in REQUESTED**: phantom driver job cleans up stale online drivers — explain TTL and how to manually reset
+
+### Release notes process
+
+Before each release, update:
+1. `versionCode` and `versionName` in `app/build.gradle.kts`
+2. A `CHANGELOG.md` entry summarising changes for customers and drivers
+3. Backend version tag in git
+
+---
+
+## 6. Optional near-term improvements
+
+### OpenAPI generation
+
+The Zod validators in `src/validators/` contain the full schema for every request. A tool like `zod-to-openapi` can generate an OpenAPI 3.0 spec automatically. Benefits:
+- API documentation that stays in sync with code
+- Can generate client SDKs or mock servers from the spec
+- Enables contract testing between backend and mobile
+
+### Feature flags
+
+Before adding any experimental UI behaviour (e.g. a new ride type, a redesigned booking flow), add a feature flag system. Options: Firebase Remote Config (already available on Spark plan) or a simple server-side `platform_config` key.
+
+### Analytics taxonomy
+
+Define a shared event taxonomy before launch. Events should be emitted by both backend (server-side, for ride lifecycle) and app (client-side, for UX actions). Examples:
+- `ride_requested`, `ride_completed`, `ride_cancelled_by_customer`
+- `otp_requested`, `otp_verified`, `profile_completed`
+- `fare_estimate_viewed`, `payment_method_selected`
+
+---
+
+## Known gaps (honest summary)
+
+| Gap | Impact | Priority |
 |---|---|---|
-| GST (5%) on ride fare | ✅ Done | Stored in `rides.gstAmount`. Not shown to customer/driver — internal accounting only. Config: `gst_percentage = 5` in platform_config. |
-| Rating window (48h + skip) | ✅ Done | `rides.ratingSkippedAt` field + `POST /rides/:rideId/skip-rating` endpoint. 48h/2-prompt logic is Android-only (SharedPreferences). |
-| Reason-based cancellation fee (3-tier) | ✅ Done | `CancellationReasonCode` enum. Driver-fault reasons waive fee + penalise driver. 3 fee tiers: ₹0 (free window) / ₹20 (post-window) / ₹40 (driver arrived). Config: `cancel_fee_arrived_amount = 40`. |
-| Trip share / tracking link | ✅ Done | `POST /rides/:rideId/share` returns a 24h share URL. Public `GET /track/:token` returns ride status + live driver coordinates without auth. |
-| Driver cancellation tracking | ✅ Done | `driver_profiles.driverCancellationCount*` fields track totals and daily counts. `POST /driver/rides/:rideId/cancel` now returns `cancellationStats` and alerts admins at 3 cancellations/day. |
-| NO_DRIVER radius expansion (Punjab) | ✅ Done | Two-pass search: 5km initial → 12km expanded when first pass finds nothing (either 0 initial results or all candidates decline). Works for both paths. Expanded radius config-driven via `driver_search_radius_km_expanded = 12` in `platform_config`. Tuned for Punjab city sizes (Ludhiana 310 km², Amritsar 135 km²). |
-| Scheduled ride dispatch (BullMQ) | ✅ Done | `scheduled-ride-dispatch` repeating job runs every 1 minute. Finds `SCHEDULED` rides with `scheduledAt ≤ now + 15 min`, transitions them to `REQUESTED`, and triggers the full driver search pipeline. No app-open required. |
-| Driver offline cron (phantom driver fix) | ✅ Done | `driver-offline-check` repeating job runs every 2 minutes. Finds drivers with `isOnline=true` but `lastLocationUpdate < now - 3 min` (app crash / phone died) and marks them offline, syncing to RTDB. |
-| New driver neutral rating in matching | ✅ Done | Drivers with `ratingCount < 10` now use a neutral `3.5/5` effective rating in the matching score instead of `0`. Prevents new drivers from always ranking last. `NEW_DRIVER_RATING_THRESHOLD = 10`, `NEW_DRIVER_NEUTRAL_RATING = 3.5` in constants. |
-| Minimum fare transparency | ✅ Done | Fare estimate response now includes `minimumFareApplied: boolean` and `minimumFare: number`. Android shows "Minimum fare applies" label when `minimumFareApplied = true`. `min_fare` is now fetched from DB config (was hardcoded before). |
-| Serial canceller policy | ✅ Done | Tracks hourly cancellation count in Redis. 3 cancellations within 1 hour → 15-minute booking cooldown (`SERIAL_CANCEL_COOLDOWN_MINS`). 5+ lifetime cancellations → `cancellationWarning` returned in cancel response. Cancellation cooldown stored in `cancel:cooldown:{customerId}` Redis key. |
-| Driver accept/decline count tracking | ✅ Done | `driverAcceptCount` and `driverDeclineCount` added to `DriverProfile` schema (migration `20260301080000`). Incremented on every accept/decline. Acceptance rate can be derived as `driverAcceptCount / (driverAcceptCount + driverDeclineCount)`. |
-| Admin failed payment filter | ✅ Done | New `GET /admin/rides?paymentStatus=FAILED` endpoint. Supports filtering by any `paymentStatus` (PENDING/COMPLETED/FAILED/REFUNDED) and `status` (ride lifecycle). Used for manual follow-up on uncollected UPI payments. |
-
-### Remaining launch-critical backend work
-
-None. Backend is feature-complete for V1 launch.
-
-### Decided against (and why)
-
-| Feature | Decision | Reason |
-|---|---|---|
-| Notification badge count endpoint | ❌ Not needed for V1 | All critical ride notifications show live on ride screen via RTDB. App shows a red dot using existing `GET /notifications?limit=1`. Add count endpoint in P2 when promo notifications launch. |
-| SMS receipt on completion | ❌ Not sending SMS | MSG91 costs ₹0.18–0.22/SMS (transactional tier). ₹600/month at 100 rides/day, ₹6,000/month at 1,000 rides/day. Full receipt already available in-app via `GET /rides/:rideId/receipt`. No SMS needed. |
-| Razorpay auto-charge cancellation fee | ❌ Not for V1 | 90% of Faridabad rides are cash. For UPI: RBI regulations require explicit user approval per debit. Fee shown on screen. Driver collects cash. Reason-based logic and 3-tier amounts (₹0/₹20/₹40) are implemented. Auto-charging V2 via wallet. |
-
-### Rating UX design (implemented)
-
-**Flow (48-hour window):**
-1. Ride completes → bottom sheet: [★★★★★ Rate] + [Rate Later]
-2. "Rate Later" → Android stores `pendingRatingRideId` in SharedPreferences. No backend call.
-3. Next app open (within **48h**) → shows once more: [Rate] + [Skip]
-4. "Skip" → Android calls `POST /rides/:rideId/skip-rating` + clears SharedPreferences
-5. After 48h → Android auto-clears — no backend call needed
-
-**Total remaining backend work for these launch-critical gaps: ~0 hours.**
-
----
-
-## 2. Competitive Gap Analysis
-
-What Rapido, Ola, and Uber have that Chalo V1 does not. Sorted by how much it would hurt the app in production.
-
-### 🔴 Missing — would directly hurt user trust or safety
-
-| Feature | Rapido | Ola | Uber | Chalo | Impact |
-|---|---|---|---|---|---|
-| **Live trip share link** | ✅ | ✅ | ✅ | ✅ | Implemented in backend. Customer creates a 24h share link and family tracks via a public endpoint. |
-| **In-app call / masked number** | ✅ | ✅ | ✅ | ❌ | Driver and customer can't contact each other without exposing real numbers. At pickup, driver needs to locate customer. Without masked calling, driver either calls with real number (privacy issue) or can't reach customer at all. **Plan: backend stores no phone numbers in responses. App-layer solution needed (Exotel masked calling or just show driver's name + vehicle prominently and expect them to call). Short-term: acceptable. Medium-term: add Exotel masked calling.** |
-
-### 🟡 Missing — noticeable gap, not a blocker for launch
-
-| Feature | Rapido | Ola | Uber | Chalo | Notes |
-|---|---|---|---|---|---|
-| **Driver ETA updates** | ✅ | ✅ | ✅ | Partial | Backend stores `durationMins` at booking, but once driver accepts, no live ETA update. Driver location updates come via RTDB. Android can compute ETA from current driver location + Google Maps Directions API directly — no backend needed. |
-| **Driver cancellation penalty** | ✅ | ✅ | ✅ | ✅ Tracking only | Backend now tracks `driverCancellationCount`, `driverCancellationCountDaily`, and `driverCancellationLastAt`, and auto-alerts admins when a driver hits 3 cancellations in a day. Actual suspensions and penalties remain a P2 ops policy feature. |
-| **Tips for driver** | ❌ | ✅ | ✅ | ❌ | Post-ride, customer can add ₹10/₹20/₹50 tip. Good driver income boost. Skip for V1. |
-| **Feedback categories** | ✅ | ✅ | ✅ | ❌ | After rating: "Safe driving", "Clean vehicle", "Punctual" etc. Star + comment is fine for V1. |
-| **Favourite places** | ✅ | ✅ | ✅ | ✅ | Already in schema: `savedHomeLat`, `savedWorkLat` etc. Backend has it — just needs Android UI. |
-| **Ride again (repeat route)** | ✅ | ✅ | ✅ | ❌ | One tap to re-book a previous ride. All data is in ride history. Android-only feature, no backend needed. |
-
-### 🟢 Not needed for V1 (out of scope)
-
-| Feature | Why not for V1 |
-|---|---|
-| Ride pooling / shared rides | Complex matching, not relevant for bike rides |
-| Corporate accounts | Need billing module — P3 |
-| iOS app | Faridabad is Android-dominant — iOS post-V1 |
-| Automatic refunds | Razorpay refund webhook not handled — P3 |
-| Driver incentive bonuses (auto) | Manual admin ops fine for V1 — P2 |
-
-### What this means for the app launch
-
-The launch-critical backend safety gap is now closed: trip sharing is implemented and testable.
-
-Masked calling is still the main noticeable gap that remains. ETA does not need backend work because Android can derive it from live driver coordinates. Driver cancellation quality is now measurable on the backend, even though automated suspension policy stays post-launch.
-
----
-
-## 3. Third-Party Integrations to Set Up
-
-These require accounts and API keys. None block local development — fallbacks exist for all.
-
-### Google Maps API Key
-
-**Used for:** Real route distance and duration in fare calculation.
-**Without it:** Haversine fallback (×1.2 road correction factor) — works fine for dev and early testing.
-
-```
-1. Go to https://console.cloud.google.com
-2. Create a project (or use an existing one)
-3. Enable: "Directions API" + "Places API"
-4. APIs & Services → Credentials → Create API Key
-5. Restrict key: HTTP referrers (for web) or Android apps (for the app)
-6. Google gives $200/month free credit — covers ~40,000 direction requests/month
-
-Add to chalo-backend/.env:
-  GOOGLE_MAPS_API_KEY=AIzaxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-```
-
-**When to set up:** Before real fare accuracy matters. Not needed for MVP testing.
-
----
-
-### Razorpay (UPI + Card Payments)
-
-**Used for:** UPI payments from customers, cancellation fee charging, driver payouts (P3).
-**Without it:** Cash rides work 100% — no Razorpay needed at all.
-
-```
-1. Go to https://dashboard.razorpay.com
-2. Sign up (free, KYC required for live mode)
-3. Settings → API Keys → Generate Key (TEST mode first)
-4. Settings → Webhooks → Add webhook URL → select events
-
-Add to chalo-backend/.env:
-  RAZORPAY_KEY_ID=rzp_test_xxxxxxxxxxxx
-  RAZORPAY_KEY_SECRET=xxxxxxxxxxxxxxxxxxxx
-  RAZORPAY_WEBHOOK_SECRET=your_webhook_secret
-
-Webhook URL (local dev):
-  Use ngrok: ngrok http 3001
-  Then: http://your-ngrok-url/api/v1/payments/webhook
-
-Switch to live:
-  RAZORPAY_KEY_ID=rzp_live_xxxxxxxxxxxx  (starts with rzp_live_, not rzp_test_)
-```
-
-**When to set up:** Before testing UPI payment flows. See Section 4 for the full test guide.
-
----
-
-### MSG91 (SMS — SOS only)
-
-**Used for:** SOS emergency SMS to emergency contact.
-**Without it:** SOS alert is saved in DB but SMS not sent. OTP works via Firebase (already set up).
-**Note:** Receipt SMS is not needed — full receipt is in-app. MSG91 is ₹0.18–0.22/SMS transactional.
-
-```
-1. Go to https://msg91.com
-2. Sign up → get API key + sender ID
-3. Create a template for:
-   - SOS alert: "SAFETY ALERT: [Name] is in a ride. Driver: [Name], Vehicle: [Number]. Location: [link]"
-
-Add to chalo-backend/.env:
-  MSG91_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxx
-  MSG91_SENDER_ID=CHALOM
-  MSG91_TEMPLATE_ID_SOS=xxxxxxxxxx
-```
-
-**When to set up:** Before SOS feature is tested end-to-end.
-
----
-
-### Firebase Storage (Driver Document Uploads)
-
-**Used for:** Storing driver KYC photos (DL, RC, Aadhaar, bike photo).
-**Without it:** Documents are stored as plain URLs — driver app must upload elsewhere and pass URL.
-
-```
-Firebase Storage is already enabled on your project (Spark plan: 5 GB free).
-No extra setup needed on the backend — the driver app uploads directly to Firebase Storage
-using the Firebase Storage SDK, then passes the download URL to POST /driver/documents.
-
-CORS rules (set in Firebase console → Storage → Rules):
-  Allow read/write only to authenticated users.
-```
-
-**When to set up:** When building the driver app document upload screen.
-
----
-
-## 4. Razorpay Payment Testing Guide
-
-### Test mode vs Live mode
-
-```
-rzp_test_ keys → test mode  → no real money moves, use test cards
-rzp_live_ keys → live mode  → real money, real bank accounts
-
-Always test thoroughly in test mode before switching to live.
-```
-
-### Test card numbers (always work in test mode)
-
-| Scenario | Card number | CVV | Expiry |
-|---|---|---|---|
-| Success | 4111 1111 1111 1111 | Any 3 digits | Any future date |
-| Success (Indian) | 5267 3181 8797 5449 | 123 | 10/25 |
-| Payment failed | 4000 0000 0000 0002 | Any | Any future |
-| Insufficient funds | 4000 0000 0000 9995 | Any | Any future |
-
-### Test UPI IDs (Razorpay test mode)
-
-```
-success@razorpay  → always succeeds
-failure@razorpay  → always fails
-```
-
-### What to test (Postman flows)
-
-**Flow 1 — UPI ride payment (happy path)**
-```
-1. POST /rides/fare-estimate              → get fare amount
-2. POST /rides   { paymentMethod: "UPI" }  → create ride
-3. [simulate driver accepting + completing ride via driver endpoints]
-4. POST /payments/order                  → get razorpayOrderId
-5. [Razorpay SDK completes payment using test UPI ID: success@razorpay]
-6. POST /payments/verify  { razorpayOrderId, razorpayPaymentId, razorpaySignature }
-   → ride.paymentStatus should be COMPLETED
-7. GET  /rides/:rideId/receipt           → check fare breakdown
-```
-
-**Flow 2 — Payment failure**
-```
-1–4. Same as above
-5. Use UPI ID: failure@razorpay
-6. POST /payments/verify → should return 400 PAYMENT_VERIFICATION_FAILED
-   → ride.paymentStatus should stay PENDING
-```
-
-**Flow 3 — Webhook testing**
-```
-1. Start ngrok: ngrok http 3001
-2. Set webhook URL in Razorpay dashboard: https://your-ngrok/api/v1/payments/webhook
-3. Trigger a test payment through the Razorpay dashboard (Test → Simulate payment)
-4. Check server logs — should see "Webhook received: payment.captured"
-5. Check ride in DB — paymentStatus should update to COMPLETED
-```
-
-**Flow 4 — Cancellation fee (informational)**
-```
-1. POST /rides  { paymentMethod: "UPI" }   → create ride
-2. [driver accepts → wait 3 minutes]
-3. POST /rides/:rideId/cancel
-   → response includes cancellationFee: 20
-   → fee shown on screen — driver collects cash (or deducted from wallet in V2)
-```
-
-**Flow 5 — Refund testing**
-```
-Via Razorpay dashboard (test mode):
-  Payments → select a payment → Refund
-  → Razorpay sends refund webhook
-  → Backend should handle (currently not implemented — P3)
-```
-
-### Webhook events to handle (current + future)
-
-| Event | Current support | Future |
-|---|---|---|
-| `payment.captured` | ✅ Handled — marks ride PAID | |
-| `payment.failed` | ✅ Handled — marks ride FAILED | |
-| `refund.created` | ❌ Not handled | P3: mark dispute as refunded |
-| `payout.processed` | ❌ Not handled | P3: mark driver withdrawal COMPLETED |
-| `payout.failed` | ❌ Not handled | P3: notify driver, retry |
-
-### Switching to live mode (production checklist)
-
-```
-[ ] Replace rzp_test_ keys with rzp_live_ keys in production .env
-[ ] KYC completed on Razorpay account (required for live)
-[ ] Webhook URL points to production server (not ngrok)
-[ ] Webhook secret updated to production value
-[ ] Test one live payment with a real card before launch
-[ ] Enable Razorpay fraud protection (dashboard → Settings → Risk)
-```
-
----
-
-## 5. One-Time DB Setup
-
-These need to be run once against the production (and dev) database:
-
-```bash
-# Run inside chalo-backend/
-
-# 1. Apply all pending migrations
-npx prisma migrate deploy
-
-# 2. Seed platform config (fares, commission %, cancellation window)
-#    Without this, fare calculations use hardcoded CONSTANTS defaults — still works,
-#    but admin config endpoints won't have any rows to read from.
-npm run db:seed
-
-# 3. Promote first admin (replace phone number)
-curl -X POST http://localhost:3001/api/v1/admin/promote \
-  -H "Content-Type: application/json" \
-  -H "x-internal-api-key: chalo-internal-dev-key-change-in-prod" \
-  -d '{ "phone": "+91XXXXXXXXXX" }'
-```
-
----
-
-## 6. Customer Android App
-
-**Tech stack:** Kotlin · Jetpack Compose · MVVM + Hilt · Retrofit · Firebase Auth + RTDB + FCM · Google Maps SDK
-
-**Prompt file:** [docs/prompts/chalo-android-customer-prompt.md](../prompts/chalo-android-customer-prompt.md)
-
-### Sprint order
-
-| Sprint | Screens | Backend endpoints used | Time |
-|---|---|---|---|
-| 1 — Auth | Splash, phone entry, OTP, complete profile | `POST /auth/otp/send`, `POST /auth/otp/verify`, `PUT /auth/profile` | 1 week |
-| 2 — Home + booking | Map, destination search, fare estimate, book ride | `POST /rides/fare-estimate`, `POST /rides` | 1–2 weeks |
-| 3 — Active ride | Driver location on map, status updates, cancel, SOS, share ride | RTDB listener, `POST /rides/:rideId/cancel`, `POST /rides/:rideId/sos`, `POST /rides/:rideId/share` | 1 week |
-| 4 — Post-ride | Payment screen, rating, receipt | `POST /rides/:rideId/rate`, `POST /rides/:rideId/skip-rating`, `GET /rides/:rideId/receipt` | 3–4 days |
-| 5 — History + profile | Past rides, profile, emergency contact | `GET /rides/history`, `PUT /auth/emergency-contact` | 3–4 days |
-| 6 — Scheduled rides | Date/time picker, scheduled list | `POST /rides/schedule`, `GET /rides/scheduled` | 2–3 days |
-| 7 — Notifications | FCM foreground/background, notification list | `GET /notifications`, `PUT /notifications/:id/read` | 2 days |
-| 8 — Polish | Hindi strings, offline state, loading states, retry | n/a | 1 week |
-
-### Key Android implementation notes
-
-```
-RTDB listener for live ride status:
-  db.getReference("rides/{rideId}").addValueEventListener(...)
-  → Listen for status, driverLat, driverLng changes
-
-RTDB fallback (on 2G/3G connection loss):
-  Start polling GET /rides/:rideId/location every 5s
-  in onCancelled callback of the ValueEventListener
-
-OTP display (after driver accepts):
-  FCM notification data payload includes "otp" field
-  → Show it prominently on the active ride screen
-  → Customer reads OTP to driver when they arrive
-
-SOS button:
-  Press-and-hold 2 seconds → confirm dialog → POST /rides/:rideId/sos
-  SOS_HOLD_DURATION_MS = 2000 (from constants)
-
-Share ride flow:
-  Tap "Share Ride" → POST /rides/:rideId/share
-  Backend returns full public URL: /api/v1/track/:token
-  Share via WhatsApp or SMS — recipient opens the public link, no auth needed
-
-Rating skip flow:
-  After ride: show rate bottom sheet + "Rate Later" button
-  "Rate Later" → store rideId in SharedPreferences
-  Next app open (within 48h): show once more with "Skip" button
-  "Skip" → POST /rides/:rideId/skip-rating → clear SharedPreferences
-  After 48h: auto-clear SharedPreferences, no API call needed
-```
-
----
-
-## 7. Driver Android App
-
-**Package name:** `com.chalo.driver` · Min SDK: API 28
-
-### Sprint order
-
-| Sprint | Screens | Backend endpoints used | Time |
-|---|---|---|---|
-| 1 — Auth + KYC | Phone OTP, registration form, document upload, pending screen | `POST /auth/register-driver`, `POST /driver/documents` | 1 week |
-| 2 — Home + toggle | Earnings summary card, go online/offline, GPS foreground service | `POST /driver/go-online`, `POST /driver/go-offline`, `POST /driver/location` | 1 week |
-| 3 — Ride request | Incoming ride card (60s countdown), accept/decline, navigate to pickup, arrived | `GET /driver/rides/incoming`, `POST /driver/rides/:id/accept`, `POST /driver/rides/:id/arrived` | 1 week |
-| 4 — Ride in progress | OTP entry to start, navigation to drop, end ride, rate customer | `POST /driver/rides/:id/start`, `POST /driver/rides/:id/complete`, `POST /driver/rides/:id/rate-customer` | 3–4 days |
-| 5 — Earnings | Earnings summary, trip history, withdrawal request | `GET /driver/earnings/summary`, `GET /driver/earnings`, `POST /driver/withdrawals` | 3–4 days |
-| 6 — Profile + history | Document management, trip history, SOS | `GET /driver/trips`, `GET /driver/status` | 2–3 days |
-
-### Key Android implementation notes
-
-```
-Location foreground service:
-  Must run as a Foreground Service with FOREGROUND_SERVICE_LOCATION permission
-  POST /driver/location every 5 seconds while online
-  Stop when driver goes offline
-
-OTP start flow:
-  Customer reads OTP to driver → driver types it into the "Start Ride" screen
-  POST /driver/rides/:rideId/start  { otp: "1234" }
-  Backend validates and transitions DRIVER_ARRIVED → IN_PROGRESS
-
-Arrived button:
-  Only activates when driver is within 200m of pickup coordinates
-  Use Haversine formula in the Android app to check distance
-  DRIVER_ARRIVED_RADIUS_METERS = 200 (from constants)
-
-Incoming ride timeout:
-  Driver has 60 seconds to accept (RIDE_ACCEPT_WINDOW_SECS)
-  Show countdown timer on the incoming ride card
-  On timeout: card disappears, backend auto-reassigns
-```
-
----
-
-## 8. Deployment
-
-### Recommended: Railway (simplest for V1)
-
-```
-1. Go to https://railway.app → New Project → Deploy from GitHub
-2. Select the repo → set root directory to chalo-backend/
-3. Add a PostgreSQL plugin (auto-provides DATABASE_URL with PostGIS support)
-4. Add a Redis plugin (auto-provides REDIS_URL)
-5. Set all environment variables in Railway dashboard (copy from .env)
-6. Railway auto-detects Node.js, runs npm start
-7. Custom domain available for free
-
-Build command (Railway):  npm install && npm run build
-Start command:            npm start
-Post-deploy:              npx prisma migrate deploy (set as release command)
-```
-
-### Alternative: Render
-
-```
-1. https://render.com → New Web Service → connect GitHub repo
-2. Root directory: chalo-backend
-3. Build: npm install && npm run build && npx prisma migrate deploy
-4. Start: npm start
-5. Add Render PostgreSQL (paid tier has PostGIS)
-6. Add Render Redis
-```
-
-### Pre-launch production checklist
-
-```
-Environment:
-[ ] NODE_ENV=production
-[ ] DATABASE_URL → production DB (Railway/Supabase/Neon)
-[ ] REDIS_URL → production Redis
-[ ] INTERNAL_API_KEY → change from dev value to a strong secret
-
-Firebase:
-[ ] Use production Firebase project (not dev)
-[ ] Firebase service account JSON for production project
-[ ] FIREBASE_DATABASE_URL → production RTDB URL
-
-Payments:
-[ ] RAZORPAY_KEY_ID → rzp_live_ key (not rzp_test_)
-[ ] RAZORPAY_KEY_SECRET → live secret
-[ ] RAZORPAY_WEBHOOK_SECRET → set in Razorpay dashboard with production URL
-[ ] Webhook URL registered: https://your-domain/api/v1/payments/webhook
-
-Maps & SMS:
-[ ] GOOGLE_MAPS_API_KEY → restricted to your server IP
-[ ] MSG91_API_KEY → production account with approved templates
-
-Database:
-[ ] npx prisma migrate deploy (run once on production DB)
-[ ] npm run db:seed (seed platform config)
-[ ] POST /admin/promote (promote first admin user)
-[ ] CREATE EXTENSION IF NOT EXISTS postgis; (if hosting on non-Railway Postgres)
-
-Security:
-[ ] Verify CORS origins are production domains only
-[ ] Verify rate limiter is active (already configured)
-[ ] Run npm audit → fix any high-severity vulnerabilities
-```
-
----
-
-## 9. Post-Launch (P2 / P3)
-
-Build these after V1 is live and generating real rides. Priority based on user feedback.
-
-### P2 — Growth (first 3 months post-launch)
-
-| Feature | Why | Effort |
-|---|---|---|
-| Exotel masked calling | Privacy — driver and customer can call each other without real numbers | Medium |
-| Promo codes | New user acquisition — first ride discount | Large |
-| Referral system | Low-cost growth — "share with friend, both get ₹50" | Medium |
-| Surge automation | Revenue optimization — auto-price during peak demand | Medium |
-| Customer wallet | Reduces payment friction for repeat users | Large |
-| Driver incentive bonuses | Improve driver supply during peak hours | Large |
-| Subscription renewal automation | Remove manual billing, reduce churn | Medium |
-
-### P3 — Operational (when you have 100+ drivers)
-
-| Feature | Why |
-|---|---|
-| Admin analytics dashboard | Understand where rides fail, where drivers are sparse |
-| Driver suspension system | Handle bad drivers without manual DB edits |
-| Dispute resolution | Handle fare disputes, wrong routes, lost items |
-| Document expiry alerts | Legally required to ensure valid driver licenses |
-| Auto-settlement (T+2) | Remove manual payout processing |
-| Driver bank verification | Reduce failed payouts before they happen |
-
-### Post-Launch Tech Debt to Clear
-
-| Item | When |
-|---|---|
-| Replace hardcoded `idleTimeScore = 0.5` with real idle time calc | After 1 month of data |
-| Roll up `driverRating` on ride → `CustomerProfile.ratingAvg` | Before driver incentives feature |
-| GST invoice generation (PDF) | Before filing GST returns |
-| iOS app | Low priority — Faridabad is Android-dominant |
-| Web booking page | After Android app is stable |
-
----
-
-## 10. Post-Production Decisions (Policy + Architecture)
-
-These items have been implemented in code. The decisions below document the exact policy choices made and the rationale behind them — for the team's reference when revisiting.
-
-### Driver cancellation fee (mirror of customer fee)
-
-**Decided:** Not for V1. Track and warn only.
-- `driverCancellationCount` + `driverCancellationCountDaily` are tracked on `DriverProfile`
-- Admin is alerted (in-app notification) when a driver hits 3 cancellations in a day
-- Actual suspension + penalty policy is a P2 ops decision — requires legal/ops review of Haryana auto-driver regulations
-- Automatic suspension endpoint: `POST /admin/drivers/:id/suspend` — scheduled for P3
-
-### Serial canceller policy
-
-**Implemented.** Two-layer protection:
-- **Hourly layer:** ≥ 3 cancellations within 60 minutes → 15-minute booking cooldown (`cancel:cooldown:{customerId}` Redis key, TTL = 900s)
-- **Lifetime warning:** ≥ 5 lifetime cancellations → `cancellationWarning: true` in cancel response (Android shows a soft warning)
-- Config: `SERIAL_CANCEL_THRESHOLD_HOURLY = 3`, `SERIAL_CANCEL_COOLDOWN_MINS = 15`, `SERIAL_CANCEL_WARNING_COUNT = 5`
-- Hourly bucket uses `cancel:hourly:{customerId}:{bucketMinute}` Redis keys (expire in 65 minutes)
-- **What we chose not to do (V1):** permanent ban, fare surcharge for serial cancellers, hard block after lifetime count
-
-### Scheduled ride dispatch
-
-**Implemented.** BullMQ repeating job (`scheduled-ride-dispatch`) runs every 1 minute.
-- Finds `SCHEDULED` rides with `scheduledAt ≤ now + 15 min`
-- Transitions to `REQUESTED` and triggers full driver search pipeline
-- Config: `SCHEDULED_RIDE_DISPATCH_MINS_BEFORE = 15` in constants
-- No app-open required — fully server-driven
-
-### New driver showing 0.0 rating
-
-**Implemented.** Neutral rating (3.5/5) used in matching score for new drivers.
-- Drivers with `ratingCount < 10` use `NEW_DRIVER_NEUTRAL_RATING = 3.5` in `scoreAndSort()`
-- Prevents new drivers from always ranking last in driver matching
-- After 10 rides, their real average takes over
-- **What we chose:** neutral 3.5 (middle of scale). Alternative was 4.0 (slight advantage for new drivers) — chose 3.5 as fairer to experienced drivers
-
-### Phantom driver (app crash / phone died)
-
-**Implemented.** `driver-offline-check` BullMQ job runs every 2 minutes.
-- Finds drivers with `isOnline=true` but `lastLocationUpdate < now - 3 min`
-- Bulk marks them offline in DB + syncs `isOnline: false` to RTDB
-- Config: `DRIVER_OFFLINE_TIMEOUT_MINS = 3` in constants
-- **Tuning note:** 3 minutes chosen to handle Indian 4G dropouts (reconnect usually within 60–90 seconds). If too aggressive, increase to 5 minutes.
-
-### UPI payment failure recovery
-
-**Not implemented (V1 decision).** Handled operationally:
-- Failed UPI payments: ride is logged with `paymentStatus = FAILED`
-- Admin uses `GET /admin/rides?paymentStatus=FAILED` to pull failed-payment rides daily
-- Operations team follows up manually (call customer, collect cash as fallback)
-- **Why not auto-retry:** RBI regulations require explicit user action per debit. Auto-retry without user consent is non-compliant. V2 option: add "Retry Payment" button in app.
-- Admin endpoint added: `GET /admin/rides?paymentStatus=FAILED&status=COMPLETED`
-
-### FCM retry / reliability
-
-**Not implemented (V1 decision).** Current behaviour:
-- FCM failure is logged as a warning, not retried
-- Stale FCM tokens auto-cleared when Firebase returns `messaging/registration-token-not-registered`
-- Duplicate notification protection: offer keys in Redis serve as deduplication (if Redis has no offer key, no notification sent)
-- **V2 option:** Add BullMQ retry job for critical notifications (driver found, ride started) with 3 retries at 5s intervals
-
-### Driver accept/decline ratio
-
-**Implemented (tracking only).** No enforcement in V1.
-- `driverAcceptCount` and `driverDeclineCount` tracked on `DriverProfile` (incremented on each action)
-- Acceptance rate derivable: `driverAcceptCount / (driverAcceptCount + driverDeclineCount)`
-- **Enforcement (V2):** Driver with acceptance rate < 50% over 30 days → warning notification. < 30% → temporary downrank in matching score. Requires ops review first.
-- Not included in current matching `scoreAndSort()` (would need 30-day rolling window query — use Redis sorted set in V2)
-
-### Minimum fare transparency
-
-**Implemented.** Fare estimate response now includes:
-- `minimumFareApplied: boolean` — true if the minimum fare floor was applied
-- `minimumFare: number` — the minimum fare value in ₹
-- Android shows a "Minimum fare applies" label when `minimumFareApplied = true`
-- `min_fare` is now config-driven (was hardcoded): `GET /admin/config` → `min_fare = 30`
-
-### Driver rating window (matching score for new drivers)
-
-**Implemented.** See "New driver showing 0.0 rating" above.
-
-### Radius expansion strategy
-
-**Implemented.** Two-pass Punjab-tuned search:
-- Pass 1: 5km radius (`DRIVER_SEARCH_RADIUS_KM = 5`)
-- Pass 2: 12km radius if Pass 1 finds 0 candidates or all candidates exhaust (`driver_search_radius_km_expanded = 12` in platform_config)
-- 12km chosen for Faridabad/Punjab city sizes (Faridabad ~220 km², Amritsar ~135 km²)
-- Config-overridable: `PUT /admin/config/driver_search_radius_km_expanded { "value": "15" }`
+| Zero Android tests | Any change can silently break the app — no automated safety net | Critical |
+| DTO contract not enforced | Backend field rename silently produces null in app | High |
+| No Android CI pipeline | Build breaks and regressions only caught locally | High |
+| network_security_config IP entries wrong | Physical device testing with wrong IP fails silently | Medium |
+| No release signing config | Can't ship to Play Store | High (before release) |
+| Postman examples missing for 4 newer endpoints | Manual testing harder for new developers | Low |
+| No incident runbook | Support team has no playbook when things go wrong | Medium |

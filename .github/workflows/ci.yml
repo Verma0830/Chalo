@@ -27,10 +27,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v4.0.4
         with:
           node-version: '20.x'
           cache: npm
@@ -93,10 +93,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v4.0.4
         with:
           node-version: '20.x'
           cache: npm
@@ -119,7 +119,7 @@ jobs:
         run: npm test -- --coverage --forceExit
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v4.5.0
         with:
           directory: chalo-backend/coverage
           flags: backend
@@ -139,10 +139,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v4.0.4
         with:
           node-version: '20.x'
           cache: npm
@@ -162,3 +162,68 @@ jobs:
 
       - name: Verify dist output exists
         run: test -f chalo-backend/dist/server.js
+
+  # ─────────────────────────────────────────────
+  # Job 4: Android — lint, unit tests, debug build
+  # Runs in parallel with backend jobs (no dependency)
+  # ─────────────────────────────────────────────
+  android:
+    name: Android
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4.2.2
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle cache
+        uses: gradle/actions/setup-gradle@v3.5.0
+        with:
+          gradle-home-cache-cleanup: true
+
+      # local.properties is not committed — create a minimal one for CI
+      # DEV_BASE_URL is not used in CI builds (no emulator), Maps key is a placeholder
+      - name: Create local.properties
+        run: |
+          cat > chalo-customer-app/local.properties << 'EOF'
+          sdk.dir=$ANDROID_SDK_ROOT
+          DEV_BASE_URL=http://10.0.2.2:3001/api/v1
+          MAPS_API_KEY=CI_PLACEHOLDER_NOT_NEEDED_FOR_UNIT_TESTS
+          EOF
+
+      - name: Run Android lint
+        working-directory: chalo-customer-app
+        run: ./gradlew lint --stacktrace
+        # Lint report available at app/build/reports/lint-results-debug.html
+
+      - name: Run Android unit tests
+        working-directory: chalo-customer-app
+        run: ./gradlew test --stacktrace
+
+      - name: Upload unit test results
+        if: always()
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: android-unit-test-results
+          path: chalo-customer-app/app/build/reports/tests/
+          retention-days: 7
+
+      - name: Upload lint report
+        if: always()
+        uses: actions/upload-artifact@v4.3.6
+        with:
+          name: android-lint-report
+          path: chalo-customer-app/app/build/reports/lint-results-*.html
+          retention-days: 7
+
+      - name: Build debug APK
+        working-directory: chalo-customer-app
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Verify APK was produced
+        run: test -f chalo-customer-app/app/build/outputs/apk/debug/app-debug.apk

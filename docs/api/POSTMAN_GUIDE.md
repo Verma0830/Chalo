@@ -1,560 +1,398 @@
-# Chalo Backend — Postman Testing Guide
-### Complete beginner guide — start here if you've never used Postman
+# Chalo API — Complete Postman Testing Guide
 
-**Status: Updated March 2026. 60 endpoints. All V1 features implemented and tested.**
+Last updated: 2026-03-21
 
----
-
-## Step 1 — Download and Install Postman
-
-1. Open your browser and go to: **https://www.postman.com/downloads/**
-2. Click **Download the App** (Windows 64-bit)
-3. Run the installer — it installs automatically
-4. Open Postman — you will see a login screen
-5. Click **Skip and go to the app** (bottom of the screen — you don't need an account)
+This guide walks through every API endpoint from scratch. Follow section order — later sections depend on tokens and IDs captured in earlier ones.
 
 ---
 
-## Step 2 — What is the Base URL?
+## 1. Setup
 
-The base URL is the address of our backend server running on your laptop.
+### 1.1 Base URL
 
-When you run `npm run dev` inside `chalo-backend`, the server starts on port `3001`.
+```
+http://localhost:3001/api/v1
+```
 
-**Base URL = `http://localhost:3001/api/v1`**
+Start the server first: `cd chalo-backend && npm run dev`
 
-- `localhost` = your own laptop
-- `3001` = the port our server runs on
-- `/api/v1` = all our API routes start with this
+### 1.2 Create a Postman Environment
 
-> If your friend is testing on his laptop, the base URL is the same — `http://localhost:3001/api/v1` — because the server is running locally on his machine too.
+Name it **Chalo Local**. Add these variables (leave values blank for now — they get filled during testing):
+
+| Variable | Initial Value | Purpose |
+|---|---|---|
+| `base_url` | `http://localhost:3001/api/v1` | Base URL for all requests |
+| `firebase_web_api_key` | *(your Firebase Web API Key)* | Token exchange |
+| `customer_token` | | Firebase ID token for customer |
+| `driver_token` | | Firebase ID token for driver |
+| `admin_token` | | Firebase ID token for admin |
+| `internal_api_key` | `chalo-internal-dev-key-change-in-prod` | Admin promote endpoint |
+| `ride_id` | | Captured after ride creation |
+| `scheduled_ride_id` | | Captured after scheduled ride creation |
+| `share_token` | | Captured after share link creation |
+| `sos_alert_id` | | Captured after SOS trigger |
+| `withdrawal_id` | | Captured after withdrawal request |
+| `notification_id` | | Captured from notifications list |
+
+### 1.3 Default Headers (Collection-level)
+
+Set these on the collection so every request inherits them:
+
+```
+Content-Type: application/json
+Authorization: Bearer {{customer_token}}
+```
+
+Override `Authorization` per-request when using driver or admin tokens.
 
 ---
 
-## Step 3 — Start the Backend Server First
+## 2. How Auth Works (Read This First)
 
-Before doing anything in Postman, the server must be running.
+The backend uses **Firebase ID tokens**, not the raw custom token from OTP verify.
 
-Open a terminal in VS Code (`Ctrl + ~`) and run:
-
-```
-cd chalo-backend
-npm run dev
-```
-
-> Docker containers (`chalo-postgres` and `chalo-redis`) start automatically when Docker Desktop opens. If they're not running, open Docker Desktop and wait a few seconds, then run `npm run dev`.
-
-You should see this in the terminal:
-```
-INFO: Server running on port 3001
-INFO: PostgreSQL connected
-INFO: Redis connected
-```
-
-**Leave this terminal open.** The server must keep running while you test.
-
-> The terminal is where you will also see OTP codes and log messages — keep an eye on it.
-
----
-
-## Step 4 — Set Up the Postman Environment
-
-An "Environment" in Postman is like a set of saved variables (like `token`, `rideId`) that you can reuse across requests instead of typing them every time.
-
-### 4a. Create the Environment
-
-1. In Postman, look at the **top-right corner** — you'll see a dropdown that says **"No Environment"**
-2. Click the **eye icon** next to that dropdown
-3. Click **"Add"** or **"Create Environment"**
-4. Name it: `Chalo Dev`
-5. Add the following rows (click "Add a new variable" for each):
-
-| Variable Name    | Initial Value                          | Current Value                          |
-|-----------------|----------------------------------------|----------------------------------------|
-| `base_url`      | `http://localhost:3001/api/v1`         | `http://localhost:3001/api/v1`         |
-| `customer_token`| *(leave empty)*                        | *(leave empty)*                        |
-| `driver_token`  | *(leave empty)*                        | *(leave empty)*                        |
-| `admin_token`   | *(leave empty)*                        | *(leave empty)*                        |
-| `ride_id`       | *(leave empty)*                        | *(leave empty)*                        |
-| `share_url`     | *(leave empty)*                        | *(leave empty)*                        |
-
-6. Click **Save**
-7. In the top-right dropdown, select **"Chalo Dev"** to activate it
-
-> **What does `{{base_url}}` mean?** — Whenever you type `{{base_url}}` in Postman, it automatically replaces it with `http://localhost:3001/api/v1`. Same for `{{customer_token}}` etc.
-
----
-
-## Step 5 — How to Make a Request in Postman
-
-Every request has 4 parts. Here's how to fill them in:
-
-### 5a. Method + URL
-
-At the top of Postman you'll see a bar with `GET` and a text field.
-
-- Click `GET` to change the method (GET, POST, PUT, DELETE)
-- In the text field, type the full URL, for example:
-  ```
-  {{base_url}}/auth/otp/send
-  ```
-
-### 5b. Headers (for authenticated requests)
-
-1. Click the **Headers** tab (below the URL bar)
-2. Add a new row:
-   - Key: `Authorization`
-   - Value: `Bearer {{customer_token}}`
-3. Add another row:
-   - Key: `Content-Type`
-   - Value: `application/json`
-
-> You only need `Authorization` on routes that require login. The first 2 requests (send OTP, verify OTP) do NOT need it.
-
-### 5c. Body (for POST requests)
-
-1. Click the **Body** tab
-2. Select **raw**
-3. In the dropdown on the right, change `Text` to **JSON**
-4. Type your JSON in the box, for example:
-   ```json
-   {
-     "phone": "+919876543210"
-   }
-   ```
-
-### 5d. Send and Read the Response
-
-- Click the blue **Send** button
-- The response appears in the bottom half of the screen
-- Look at:
-  - **Status code** (top right of response): `200 OK` = success, `400` = bad request, `401` = not logged in
-  - **Body** tab in the response: shows the actual JSON data returned
-
----
-
-## Step 6 — First Time Setup (Empty Database)
-
-The database starts completely empty — no users, no config, no data. Before running any flow, do these 3 things once.
-
-### 6a. Seed the platform config
-
-The platform config (fares, commission %) must be seeded or every fare calculation will fail.
-
-Open a **second terminal** (keep `npm run dev` running in the first one):
-
-```bash
-cd chalo-backend
-npm run db:seed
-```
-
-You should see:
-```
-Seeding platform config...
-✓ commission_percentage = 15
-✓ subscription_fee_weekly = 199
-✓ min_fare = 30
-✓ base_fare_per_km = 12
-✓ base_fare_per_min = 2
-✓ settlement_days = 2
-✓ surge_enabled = false
-✓ surge_multiplier = 1.0
-✓ free_cancel_window_secs = 120
-✓ cancel_fee_amount = 20
-✓ cancel_fee_arrived_amount = 40
-✓ gst_percentage = 5
-✓ driver_search_radius_km_expanded = 12
-Seed complete. 13 config keys upserted.
-```
-
-You only need to run this **once**. After that the data stays in the DB.
-
-### 6b. Apply the latest migration
-
-```bash
-cd chalo-backend
-npx prisma migrate deploy
-```
-
-You should see:
-```
-10 migrations found in prisma/migrations
-All migrations have been successfully applied.
-```
-
-If it says `Can't reach database server` — open Docker Desktop, wait for the `chalo-postgres` container to show as running, then try again.
-
-### 6c. What order to do everything in
-
-Because the DB is empty, follow this exact order:
+**Flow:**
 
 ```
-1. Seed + migrate (done above — once only)
-2. Register a customer  →  Flow 1
-3. Register a driver    →  Flow 4
-4. Create an admin      →  Flow 6 (do this before approving drivers)
-5. Approve the driver   →  Flow 6c (or direct DB shortcut)
-6. Run a full ride      →  Flow 5
+POST /auth/otp/send  →  OTP delivered (Firebase or console in dev)
+POST /auth/otp/verify  →  { customToken: "..." }
+POST Firebase Identity Toolkit  →  { idToken: "..." }   <-- this is your Bearer token
 ```
 
----
+**Token exchange request** (do this after every OTP verify):
 
-## Step 8 — Verify the Server is Working
-
-Before testing anything else, confirm the server is running:
-
-**Request:**
 ```
-Method: GET
-URL: http://localhost:3001/health
-```
-*(No headers, no body)*
+POST https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key={{firebase_web_api_key}}
 
-**Expected Response:**
-```json
+Body:
 {
-  "status": "ok",
-  "uptime": 12.3,
-  "database": "connected",
-  "redis": "connected"
+  "token": "<customToken from otp/verify response>",
+  "returnSecureToken": true
 }
 ```
 
-If you see `Could not get any response` — the server is not running. Go back to Step 3.
+Copy `idToken` from the response → paste into `customer_token` (or `driver_token` / `admin_token`) in your environment.
+
+ID tokens expire in ~1 hour. If you get `401`, re-do OTP verify + token exchange and update the environment variable.
 
 ---
 
-## Flow 1 — Customer Registration (Do this first)
+## 3. Health Check
 
-### Request 1 of 3 — Send OTP
+Verify the server is up before anything else.
 
 ```
-Method: POST
-URL: {{base_url}}/auth/otp/send
-Headers: Content-Type: application/json
-Body (raw JSON):
+GET http://localhost:3001/health
+```
+
+No auth required. Expected response:
+
+```json
+{ "status": "ok" }
+```
+
+---
+
+## 4. Journey 1: OTP Auth Flow (Customer)
+
+This covers the complete sign-up / sign-in flow for a customer.
+
+### Step 1 — Send OTP
+
+```
+POST {{base_url}}/auth/otp/send
+No auth required
+
+Body:
 {
   "phone": "+919876543210"
 }
 ```
 
-> Phone number rules: must start with `+91` followed by a number starting with 6, 7, 8, or 9, then 9 more digits. Example: `+919876543210`
+- Phone must match `+91[6-9]XXXXXXXXX` format.
+- Rate limited: 5 requests per 15 minutes per IP.
+- In dev mode the OTP is printed to the backend console — watch `npm run dev` output.
 
-Click **Send**.
+Expected: `200 { message: "OTP sent" }`
 
-**Expected Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "expiresAt": "2026-03-01T10:05:00.000Z"
-  }
-}
-```
-
-**Now look at the terminal** where `npm run dev` is running. You will see a line like:
-```
-INFO: OTP sent to +91987****3210 (expires: ...)
-```
-
-The actual OTP is printed in the terminal (in dev mode). It's a 4-digit number. **Write it down.**
-
----
-
-### Request 2 of 3 — Verify OTP
+### Step 2 — Verify OTP
 
 ```
-Method: POST
-URL: {{base_url}}/auth/otp/verify
-Headers: Content-Type: application/json
-Body (raw JSON):
+POST {{base_url}}/auth/otp/verify
+No auth required
+
+Body:
 {
   "phone": "+919876543210",
   "otp": "1234"
 }
 ```
 
-Replace `1234` with the actual OTP you saw in the terminal.
+- Use the 4-digit OTP from the console.
+- OTP is exactly 4 digits, numeric only.
 
-Click **Send**.
+Expected response:
 
-**Expected Response (200 OK):**
 ```json
 {
-  "success": true,
-  "data": {
-    "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "isNewUser": true,
-    "user": {
-      "id": "clxxx...",
-      "phone": "+919876543210",
-      "role": "CUSTOMER"
-    }
-  }
+  "customToken": "eyJhbGci...",
+  "isNewUser": true,
+  "role": "CUSTOMER"
 }
 ```
 
-**Save the token:**
-1. Copy the entire value of `"token"` (the long string starting with `eyJ`)
-2. In Postman, click the **eye icon** (top right, Environment)
-3. Click **Edit** next to `Chalo Dev`
-4. Find the `customer_token` row
-5. Paste the token into the **Current Value** column
-6. Click **Save**
+Copy `customToken`.
 
-Now `{{customer_token}}` will automatically send this token in all future requests.
+### Step 3 — Exchange for Firebase ID Token
+
+```
+POST https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key={{firebase_web_api_key}}
+
+Body:
+{
+  "token": "<paste customToken here>",
+  "returnSecureToken": true
+}
+```
+
+Copy `idToken` from response → set as `customer_token` in environment.
+
+### Step 4 — Complete Profile (first-time user only)
+
+```
+PUT {{base_url}}/auth/profile
+Authorization: Bearer {{customer_token}}
+
+Body:
+{
+  "name": "Rahul Sharma",
+  "email": "rahul@example.com",
+  "languagePref": "hi"
+}
+```
+
+- `email` is optional.
+- `languagePref`: `"pa"` (Punjabi) or `"en"` (English). Default: `"pa"`.
+
+Expected: `200 { user: { ... } }`
+
+### Step 5 — Get Profile
+
+```
+GET {{base_url}}/auth/profile
+Authorization: Bearer {{customer_token}}
+```
+
+Verify name, phone, role, profile completion status.
+
+### Step 6 — Update Emergency Contact
+
+```
+PUT {{base_url}}/auth/emergency-contact
+Authorization: Bearer {{customer_token}}
+
+Body:
+{
+  "emergencyContactName": "Priya Sharma",
+  "emergencyContactPhone": "+919876543211"
+}
+```
+
+### Step 7 — Save Home / Work Location
+
+```
+PUT {{base_url}}/auth/saved-location
+Authorization: Bearer {{customer_token}}
+
+Body:
+{
+  "type": "home",
+  "lat": 28.4089,
+  "lng": 77.3178,
+  "address": "Sector 14, Faridabad"
+}
+```
+
+- `type`: `"home"` or `"work"`.
+
+### Step 8 — Register FCM Device Token
+
+```
+PUT {{base_url}}/auth/device-token
+Authorization: Bearer {{customer_token}}
+
+Body:
+{
+  "fcmToken": "fake-fcm-token-for-testing-1234567890abcdef"
+}
+```
+
+Used for push notifications. In testing use any non-empty string up to 512 chars.
+
+**What to verify in this journey:**
+- New user gets `isNewUser: true` on first verify, `false` on subsequent.
+- `401` if Bearer token is missing or expired.
+- `422` if phone format is wrong (e.g. `9876543210` without `+91`).
+- `422` if OTP length is not exactly 4 digits.
+- Rate limiter returns `429` after 5 OTP sends in 15 minutes.
 
 ---
 
-### Request 3 of 3 — Complete Profile
+## 5. Journey 2: Book a Ride (On-Demand)
 
-This is only required for new users (`isNewUser: true` in the previous response).
+Covers fare estimate → book → driver side acceptance → ride start → complete → rate.
 
-```
-Method: PUT
-URL: {{base_url}}/auth/profile
-Headers:
-  Content-Type: application/json
-  Authorization: Bearer {{customer_token}}
-Body (raw JSON):
-{
-  "name": "Rahul Kumar",
-  "email": "rahul@example.com"
-}
-```
-
-**Expected Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "clxxx...",
-    "name": "Rahul Kumar",
-    "phone": "+919876543210"
-  }
-}
-```
-
-Customer registration is done.
-
----
-
-## Flow 2 — Fare Estimate
+### Step 1 — Fare Estimate
 
 ```
-Method: POST
-URL: {{base_url}}/rides/fare-estimate
-Headers:
-  Content-Type: application/json
-  Authorization: Bearer {{customer_token}}
-Body (raw JSON):
+POST {{base_url}}/rides/fare-estimate
+Authorization: Bearer {{customer_token}}
+
+Body:
 {
   "pickup": {
     "lat": 28.4089,
     "lng": 77.3178,
-    "address": "Sector 15, Faridabad"
+    "address": "Sector 14, Faridabad"
   },
   "drop": {
-    "lat": 28.4595,
-    "lng": 77.3023,
+    "lat": 28.3852,
+    "lng": 77.3126,
     "address": "NIT Faridabad"
   }
 }
 ```
 
-**Expected Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "estimatedFare": 85,
-    "distanceKm": 6.2,
-    "estimatedMins": 18,
-    "breakdown": {
-      "distanceFare": 74,
-      "timeFare": 36,
-      "bookingFee": 5,
-      "surgeMultiplier": 1
-    }
-  }
-}
-```
+Expected response includes `fare`, `distance`, `duration`, `minimumFare`, `breakdown` (base + GST).
 
-> If Google Maps API key is not set, the server uses Haversine distance (straight-line approximation). The fare will still be calculated — just slightly less accurate. This is fine for testing.
-
----
-
-## Flow 3 — Book a Ride
-
-### Request 1 of 2 — Create Ride
+### Step 2 — Create Ride
 
 ```
-Method: POST
-URL: {{base_url}}/rides
-Headers:
-  Content-Type: application/json
-  Authorization: Bearer {{customer_token}}
-Body (raw JSON):
+POST {{base_url}}/rides
+Authorization: Bearer {{customer_token}}
+Idempotency-Key: <generate a UUID, e.g. 550e8400-e29b-41d4-a716-446655440000>
+
+Body:
 {
   "pickup": {
     "lat": 28.4089,
     "lng": 77.3178,
-    "address": "Sector 15, Faridabad"
+    "address": "Sector 14, Faridabad"
   },
   "drop": {
-    "lat": 28.4595,
-    "lng": 77.3023,
+    "lat": 28.3852,
+    "lng": 77.3126,
     "address": "NIT Faridabad"
   },
   "paymentMethod": "CASH"
 }
 ```
 
-**Expected Response (201 Created):**
-```json
+- `paymentMethod`: `"CASH"` or `"UPI"`.
+- `Idempotency-Key` header is required. Use a fresh UUID per booking attempt. Retrying with the same key returns the original ride instead of creating a duplicate.
+- Role must be `CUSTOMER` — driver token returns `403`.
+
+Expected response: `201 { ride: { id: "clxxx...", status: "REQUESTED", ... } }`
+
+**Save `ride.id` as `ride_id` in your environment.**
+
+### Step 3 — Get Ride Details
+
+```
+GET {{base_url}}/rides/{{ride_id}}
+Authorization: Bearer {{customer_token}}
+```
+
+Check status is `REQUESTED`, then `DRIVER_ASSIGNED` once a driver accepts.
+
+### Step 4 — Register Driver (separate user)
+
+To test the driver side, use a different phone number.
+
+4a. Send OTP for driver phone:
+```
+POST {{base_url}}/auth/otp/send
+Body: { "phone": "+919999999999" }
+```
+
+4b. Register as driver (OTP + name in one call):
+```
+POST {{base_url}}/auth/register-driver
+Body:
 {
-  "success": true,
-  "data": {
-    "rideId": "clyyy...",
-    "status": "REQUESTED",
-    "estimatedFare": 85
-  }
+  "phone": "+919999999999",
+  "otp": "1234",
+  "name": "Ravi Kumar"
 }
 ```
 
-**Save the ride ID:**
-1. Copy the value of `"rideId"`
-2. Open Environment → Edit → find `ride_id` row
-3. Paste into **Current Value** → Save
+Expected: `{ customToken: "...", role: "DRIVER" }`
 
-### Request 2 of 2 — Get Ride Details
+4c. Exchange custom token → set as `driver_token` in environment.
 
-```
-Method: GET
-URL: {{base_url}}/rides/{{ride_id}}
-Headers:
-  Authorization: Bearer {{customer_token}}
-```
-
-**Expected Response:** Full ride object with `status: "REQUESTED"` (if no driver found yet) or `status: "DRIVER_ASSIGNED"` (if a driver accepted).
-
-When status is `DRIVER_ASSIGNED` or `DRIVER_ARRIVED`, response also includes:
-```json
-"rideStartOtp": "4821"
-```
-
-Use this field as the source of truth in customer UI. FCM notification is additive, not the only OTP delivery path.
-
----
-
-## Flow 4 — Driver Registration
-
-Use a **different phone number** than the customer. Open a new tab in Postman.
-
-### Step 1 — Send OTP (Driver)
+### Step 5 — Driver: Submit KYC Documents
 
 ```
-Method: POST
-URL: {{base_url}}/auth/otp/send
-Headers: Content-Type: application/json
+POST {{base_url}}/driver/documents
+Authorization: Bearer {{driver_token}}
+
 Body:
 {
-  "phone": "+919999988888"
-}
-```
-
-Check terminal for the OTP.
-
-### Step 2 — Verify OTP (Driver)
-
-```
-Method: POST
-URL: {{base_url}}/auth/otp/verify
-Headers: Content-Type: application/json
-Body:
-{
-  "phone": "+919999988888",
-  "otp": "XXXX"
-}
-```
-
-Copy the token → save it in the `driver_token` environment variable.
-
-### Step 3 — Complete Profile (Driver)
-
-```
-Method: PUT
-URL: {{base_url}}/auth/profile
-Headers:
-  Content-Type: application/json
-  Authorization: Bearer {{driver_token}}
-Body:
-{
-  "name": "Suresh Singh"
-}
-```
-
-### Step 4 — Submit Documents
-
-```
-Method: POST
-URL: {{base_url}}/driver/documents
-Headers:
-  Content-Type: application/json
-  Authorization: Bearer {{driver_token}}
-Body:
-{
-  "licenseNumber": "HR1120230012345",
+  "licenseNumber": "HR-0120110012345",
   "licenseUrl": "https://example.com/license.jpg",
-  "rcNumber": "HR11AB1234",
+  "rcNumber": "HR01AB1234",
   "rcUrl": "https://example.com/rc.jpg",
-  "aadharNumber": "123412341234",
+  "aadharNumber": "123456789012",
   "aadharUrl": "https://example.com/aadhar.jpg",
-  "vehicleNumber": "HR 11 AB 1234",
+  "vehicleNumber": "HR01AB1234",
   "vehicleModel": "Honda Activa 6G",
   "bikePhotoUrl": "https://example.com/bike.jpg"
 }
 ```
 
-> For testing you can use fake URLs — the server saves the URL string, it doesn't download the image.
+- `aadharNumber` must be exactly 12 digits.
+- All `*Url` fields must be valid URLs.
+- `bikePhotoUrl` is optional.
 
-### Step 5 — Approve the Driver (via Admin or direct DB)
+After this the driver status is `PENDING_VERIFICATION`.
 
-The driver cannot go online until their status is `VERIFIED`.
+### Step 6 — Admin: Approve Driver
 
-**Option A — via Admin (proper way, see Flow 6c below)**
-
-**Option B — directly in DB (quick way for testing):**
-
-Open a terminal and run:
-```bash
-docker exec -it chalo-postgres psql -U postgres -d chalo_db
-```
-
-Then run this SQL (replace `<driver-user-id>` with the `id` you got from the verify OTP response):
-```sql
-UPDATE driver_profiles
-SET "verificationStatus" = 'VERIFIED', "verifiedAt" = NOW()
-WHERE "userId" = '<driver-user-id>';
-
--- Press Enter, then type:
-\q
-```
-
----
-
-## Flow 5 — Complete Ride (End to End)
-
-You need both the customer and driver registered and the driver approved. Keep two Postman tabs open.
-
-### Step 1 — Driver Goes Online
+First you need an admin user. If no admin exists yet:
 
 ```
-Method: POST
-URL: {{base_url}}/driver/go-online
-Headers:
-  Content-Type: application/json
-  Authorization: Bearer {{driver_token}}
+POST {{base_url}}/admin/promote
+x-internal-api-key: {{internal_api_key}}
+
+Body:
+{
+  "phone": "+918888888888"
+}
+```
+
+That phone number must have already done OTP verify (have a user account). After promoting, do OTP verify + token exchange for that phone → set as `admin_token`.
+
+Approve the driver:
+
+```
+POST {{base_url}}/admin/drivers/{{driver_user_id}}/approve
+Authorization: Bearer {{admin_token}}
+
+Body:
+{
+  "note": "Documents verified manually"
+}
+```
+
+Get `driver_user_id` from `GET /admin/drivers/pending`.
+
+### Step 7 — Driver: Go Online
+
+```
+POST {{base_url}}/driver/go-online
+Authorization: Bearer {{driver_token}}
+
 Body:
 {
   "lat": 28.4089,
@@ -562,73 +400,239 @@ Body:
 }
 ```
 
-The driver must be near the pickup location (within 5km). Use the same coordinates as the customer's pickup.
+Driver must be approved before going online (otherwise `403`).
 
-### Step 2 — Customer Creates a Ride
+Expected: `200 { status: "ONLINE" }`
 
-See Flow 3, Request 1. Save the `rideId`.
-
-Look at the terminal — you'll see:
-```
-INFO: Broadcast driver search initiated { rideId: "...", totalCandidates: 1, firstBatchSize: 1 }
-INFO: Batch dispatched { rideId: "...", driverCount: 1 }
-```
-
-### Step 3 — Driver Checks for Incoming Ride
+### Step 8 — Driver: Check Incoming Ride
 
 ```
-Method: GET
-URL: {{base_url}}/driver/rides/incoming
-Headers:
-  Authorization: Bearer {{driver_token}}
+GET {{base_url}}/driver/rides/incoming
+Authorization: Bearer {{driver_token}}
 ```
 
-**Expected Response (200 OK):**
-```json
+This returns the pending ride offer if the driver is within search radius of the pickup. If empty, the broadcast may have expired (30s window) — cancel and create a new ride.
+
+### Step 9 — Driver: Accept Ride
+
+```
+POST {{base_url}}/driver/rides/{{ride_id}}/accept
+Authorization: Bearer {{driver_token}}
+```
+
+No body needed. Expected: `200 { ride: { status: "DRIVER_ASSIGNED", ... } }`
+
+### Step 10 — Customer: Verify Assignment
+
+```
+GET {{base_url}}/rides/{{ride_id}}
+Authorization: Bearer {{customer_token}}
+```
+
+Status should now be `DRIVER_ASSIGNED`. Response includes driver name, vehicle info, ETA.
+
+### Step 11 — Driver: Update Location
+
+```
+POST {{base_url}}/driver/location
+Authorization: Bearer {{driver_token}}
+
+Body:
 {
-  "data": {
-    "rideId": "clyyy...",
-    "pickup": { "address": "Sector 15, Faridabad", "lat": 28.4089, "lng": 77.3178 },
-    "drop": { "address": "NIT Faridabad" },
-    "fare": 85,
-    "distanceKm": 6.2
-  }
+  "lat": 28.4100,
+  "lng": 77.3180
 }
 ```
 
-If it returns `null` — the ride offer has expired (65 second window). Create a new ride and check faster.
+Send periodically to simulate driver moving. Customer can poll `GET /rides/:rideId/location` to see this.
 
-### Step 4 — Driver Accepts the Ride
-
-```
-Method: POST
-URL: {{base_url}}/driver/rides/{{ride_id}}/accept
-Headers:
-  Authorization: Bearer {{driver_token}}
-```
-
-**Expected Response (200 OK):** status becomes `DRIVER_ASSIGNED`
-
-### Step 4.5 — Customer Fetches Ride OTP (source of truth)
+### Step 12 — Customer: Poll Driver Location
 
 ```
-Method: GET
-URL: {{base_url}}/rides/{{ride_id}}
-Headers:
-  Authorization: Bearer {{customer_token}}
+GET {{base_url}}/rides/{{ride_id}}/location
+Authorization: Bearer {{customer_token}}
 ```
 
-When status is `DRIVER_ASSIGNED` or `DRIVER_ARRIVED`, copy `data.rideStartOtp`.
-Use this OTP value in Step 6.
+Returns current driver lat/lng from Firebase RTDB.
 
-### Step 5 — Driver Arrives at Pickup
+### Step 13 — Driver: Arrived at Pickup
 
 ```
-Method: POST
-URL: {{base_url}}/driver/rides/{{ride_id}}/arrived
-Headers:
-  Content-Type: application/json
-  Authorization: Bearer {{driver_token}}
+POST {{base_url}}/driver/rides/{{ride_id}}/arrived
+Authorization: Bearer {{driver_token}}
+```
+
+No body. Status transitions to `DRIVER_ARRIVED`.
+
+### Step 14 — Driver: Start Ride (OTP verification)
+
+Customer sees a 4-digit OTP in the app (also in ride details response). Driver enters it to start.
+
+```
+POST {{base_url}}/driver/rides/{{ride_id}}/start
+Authorization: Bearer {{driver_token}}
+
+Body:
+{
+  "otp": "5678"
+}
+```
+
+- OTP must match what the backend generated for this ride.
+- Wrong OTP returns `400`.
+
+Status transitions to `IN_PROGRESS`.
+
+### Step 15 — Driver: Complete Ride
+
+```
+POST {{base_url}}/driver/rides/{{ride_id}}/complete
+Authorization: Bearer {{driver_token}}
+
+Body:
+{
+  "note": "Smooth ride"
+}
+```
+
+- `note` is optional.
+
+Status transitions to `COMPLETED`.
+
+**What to verify in this journey:**
+- Duplicate ride creation with same `Idempotency-Key` returns the original ride (not a new one).
+- `GET /rides/:rideId` status progresses: `REQUESTED` → `DRIVER_ASSIGNED` → `DRIVER_ARRIVED` → `IN_PROGRESS` → `COMPLETED`.
+- Driver token cannot access customer-only routes and vice versa.
+- Invalid OTP on start returns `400`.
+
+---
+
+## 6. Journey 3: Post-Ride — Payment and Rating
+
+### Step 1 — Get Ride Receipt
+
+```
+GET {{base_url}}/rides/{{ride_id}}/receipt
+Authorization: Bearer {{customer_token}}
+```
+
+Only available for `COMPLETED` rides. Returns fare breakdown, GST, distance, payment status.
+
+### Step 2a — Cash Payment (no action needed)
+
+For `CASH` rides, payment is considered settled after ride completion. The receipt will show `paymentStatus: PAID`.
+
+### Step 2b — UPI Payment Flow
+
+If ride was booked with `"paymentMethod": "UPI"`:
+
+**Create Razorpay order:**
+```
+POST {{base_url}}/payments/order
+Authorization: Bearer {{customer_token}}
+
+Body:
+{
+  "rideId": "{{ride_id}}"
+}
+```
+
+Returns Razorpay `orderId`, `amount` (in paise), `currency`.
+
+**Verify payment (after Razorpay checkout completes):**
+```
+POST {{base_url}}/payments/verify
+Authorization: Bearer {{customer_token}}
+
+Body:
+{
+  "razorpayPaymentId": "pay_xxxxxxxxxxxxx",
+  "razorpayOrderId": "order_xxxxxxxxxxxxx",
+  "razorpaySignature": "computed_hmac_sha256_signature",
+  "rideId": "{{ride_id}}"
+}
+```
+
+In testing without a real Razorpay transaction, this will fail signature validation — that is expected. To test the full UPI flow you need a Razorpay test mode key and to complete a test checkout.
+
+### Step 3 — Customer Rates Driver
+
+```
+POST {{base_url}}/rides/{{ride_id}}/rate
+Authorization: Bearer {{customer_token}}
+
+Body:
+{
+  "rating": 5,
+  "comment": "Very punctual and polite"
+}
+```
+
+- `rating`: integer 1–5.
+- `comment`: optional, max 500 chars.
+- Can only rate a `COMPLETED` ride. Returns `409` if already rated.
+
+### Step 4 — Customer Skips Rating
+
+Alternative to rating — marks as permanently skipped for this ride:
+
+```
+POST {{base_url}}/rides/{{ride_id}}/skip-rating
+Authorization: Bearer {{customer_token}}
+```
+
+### Step 5 — Driver Rates Customer
+
+```
+POST {{base_url}}/driver/rides/{{ride_id}}/rate-customer
+Authorization: Bearer {{driver_token}}
+
+Body:
+{
+  "rating": 4,
+  "comment": "Good passenger"
+}
+```
+
+**What to verify:**
+- Receipt returns `404` for non-existent ride ID.
+- Receipt returns `403` if requested by a non-customer or wrong customer.
+- Duplicate rating returns `409`.
+- Rating on non-completed ride returns `400` or `409`.
+
+---
+
+## 7. Journey 4: Active Ride Status Updates
+
+This covers real-time status polling, share link, and SOS.
+
+### Step 1 — Create Share Link
+
+While ride is active (`IN_PROGRESS`):
+
+```
+POST {{base_url}}/rides/{{ride_id}}/share
+Authorization: Bearer {{customer_token}}
+```
+
+Returns `{ token: "abc123..." }`. Save as `share_token`.
+
+### Step 2 — Public Tracking (no auth)
+
+Anyone with the token can poll:
+
+```
+GET {{base_url}}/track/{{share_token}}
+```
+
+No `Authorization` header needed. Returns pickup, drop, driver location, ride status.
+
+### Step 3 — Trigger SOS
+
+```
+POST {{base_url}}/rides/{{ride_id}}/sos
+Authorization: Bearer {{customer_token}}
+
 Body:
 {
   "lat": 28.4089,
@@ -636,834 +640,480 @@ Body:
 }
 ```
 
-The driver must be within 200 meters of the pickup. Use the exact same coordinates.
+Returns `{ sosAlertId: "clxxx..." }`. Save as `sos_alert_id`.
 
-### Step 6 — Driver Starts the Ride
-
-```
-Method: POST
-URL: {{base_url}}/driver/rides/{{ride_id}}/start
-Headers:
-  Content-Type: application/json
-  Authorization: Bearer {{driver_token}}
-Body:
-{
-  "otp": "4821"
-}
-```
-
-### Step 7 — Driver Completes the Ride
+### Step 4 — Resolve SOS
 
 ```
-Method: POST
-URL: {{base_url}}/driver/rides/{{ride_id}}/complete
-Headers:
-  Content-Type: application/json
-  Authorization: Bearer {{driver_token}}
-Body:
-{
-  "note": "Smooth ride, no issues"
-}
+POST {{base_url}}/rides/sos/{{sos_alert_id}}/resolve
+Authorization: Bearer {{customer_token}}
 ```
 
-**Expected Response (200 OK):** status becomes `COMPLETED`
-
-### Step 8 — Customer Rates the Ride
-
-```
-Method: POST
-URL: {{base_url}}/rides/{{ride_id}}/rate
-Headers:
-  Content-Type: application/json
-  Authorization: Bearer {{customer_token}}
-Body:
-{
-  "rating": 5,
-  "comment": "Very smooth ride!"
-}
-```
+**What to verify:**
+- Public track endpoint returns data without any `Authorization` header.
+- Share token from a different ride's ID is rejected.
+- SOS on a completed ride returns an error.
 
 ---
 
-## Flow 6 — Admin Panel
+## 8. Journey 5: Cancel Ride
 
-### How to Create an Admin User (Step by Step)
-
-The database starts with no users at all. You need to create one via Postman, then promote it to ADMIN via the database, then log in again to get an admin token.
-
----
-
-#### Step 1 — Register a new user (your admin account)
-
-Use a phone number you control. This will become your admin account.
+### Cancel Before Driver Assigned (no fee)
 
 ```
-Method: POST
-URL: {{base_url}}/auth/otp/send
-Headers: Content-Type: application/json
+POST {{base_url}}/rides/{{ride_id}}/cancel
+Authorization: Bearer {{customer_token}}
+
 Body:
 {
-  "phone": "+918800000001"
+  "reasonCode": "BOOKED_BY_MISTAKE"
 }
 ```
 
-Check the terminal for the OTP code. It will print something like:
-```
-INFO: OTP sent to +91880****0001 (expires: ...)
-```
-
----
-
-#### Step 2 — Verify the OTP
+### Cancel After Driver Arrived (cancellation fee applies)
 
 ```
-Method: POST
-URL: {{base_url}}/auth/otp/verify
-Headers: Content-Type: application/json
+POST {{base_url}}/rides/{{ride_id}}/cancel
+Authorization: Bearer {{customer_token}}
+
 Body:
 {
-  "phone": "+918800000001",
-  "otp": "XXXX"
+  "reasonCode": "CHANGED_MIND",
+  "note": "Changed my mind about the destination"
 }
 ```
 
-Replace `XXXX` with the 4-digit code from the terminal.
+- `note` is optional, max 500 chars.
+- Fee of ₹40 applies when status is `DRIVER_ARRIVED` or later.
 
-**Expected Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "token": "eyJhbGci...",
-    "isNewUser": true,
-    "user": {
-      "id": "clabcdef1234567890",
-      "phone": "+918800000001",
-      "role": "CUSTOMER"
-    }
-  }
-}
-```
+**Valid `reasonCode` values:**
 
-**Write down the phone number you used.** You will need it in Step 4.
+| Code | Description | Fee |
+|---|---|---|
+| `DRIVER_ASKED_TO_CANCEL` | Driver fault | Waived |
+| `DRIVER_NOT_MOVING` | Driver fault | Waived |
+| `DRIVER_WRONG_VEHICLE` | Driver fault | Waived |
+| `DRIVER_BEHAVIOUR` | Driver fault | Waived |
+| `CHANGED_MIND` | Customer fault | Applied if arrived |
+| `BOOKED_BY_MISTAKE` | Customer fault | Applied if arrived |
+| `OTHER` | Generic | Applied if arrived |
 
----
-
-#### Step 3 — Complete the profile
+### Driver Declines Ride
 
 ```
-Method: PUT
-URL: {{base_url}}/auth/profile
-Headers:
-  Content-Type: application/json
-  Authorization: Bearer (paste the token from Step 2 directly here)
+POST {{base_url}}/driver/rides/{{ride_id}}/decline
+Authorization: Bearer {{driver_token}}
+
 Body:
 {
-  "name": "Admin User"
+  "reason": "Going in opposite direction"
 }
 ```
 
----
+`reason` is optional.
 
-#### Step 4 — Promote this user to ADMIN via API
-
-No SQL or database access needed. Call the bootstrap endpoint directly in Postman:
+### Driver Cancels Active Ride
 
 ```
-Method: POST
-URL: {{base_url}}/admin/promote
-Headers:
-  Content-Type: application/json
-  x-internal-api-key: chalo-internal-dev-key-change-in-prod
+POST {{base_url}}/driver/rides/{{ride_id}}/cancel
+Authorization: Bearer {{driver_token}}
+
 Body:
 {
-  "phone": "+918800000001"
+  "reason": "Vehicle breakdown"
 }
 ```
 
-**Expected Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "User promoted to ADMIN",
-  "data": {
-    "id": "clabcdef1234567890",
-    "phone": "+918800000001",
-    "role": "ADMIN"
-  }
-}
-```
-
-> **Why can't I just use the token I already have?**
-> The token is created at login time and the role is baked into it. Since you were `CUSTOMER` when you logged in, that token has `CUSTOMER` role. After promoting to ADMIN, you must log in again to get a new token that has `ADMIN` role.
+**What to verify:**
+- Invalid `reasonCode` returns `422`.
+- Cancelling an already-completed ride returns `409` or `400`.
+- Serial cancellers get blocked after threshold (Redis-based — hard to test manually but the policy is active).
 
 ---
 
-#### Step 5 — Log in again to get your ADMIN token
+## 9. Journey 6: Scheduled Ride
 
-Send OTP again with the same phone:
+### Step 1 — Create Scheduled Ride
 
 ```
-Method: POST
-URL: {{base_url}}/auth/otp/send
-Headers: Content-Type: application/json
+POST {{base_url}}/rides/schedule
+Authorization: Bearer {{customer_token}}
+Idempotency-Key: <new UUID>
+
 Body:
 {
-  "phone": "+918800000001"
+  "pickup": {
+    "lat": 28.4089,
+    "lng": 77.3178,
+    "address": "Sector 14, Faridabad"
+  },
+  "drop": {
+    "lat": 28.3852,
+    "lng": 77.3126,
+    "address": "NIT Faridabad"
+  },
+  "paymentMethod": "CASH",
+  "scheduledAt": "2026-03-22T08:00:00.000Z"
 }
 ```
 
-Check terminal for the new OTP code.
+- `scheduledAt` must be a future ISO 8601 datetime.
+- Cannot schedule more than 7 days ahead.
+- Returns `201 { ride: { status: "SCHEDULED", scheduledAt: "..." } }`
 
-Then verify it:
+Save `ride.id` as `scheduled_ride_id`.
 
-```
-Method: POST
-URL: {{base_url}}/auth/otp/verify
-Headers: Content-Type: application/json
-Body:
-{
-  "phone": "+918800000001",
-  "otp": "XXXX"
-}
-```
-
-**Expected Response:**
-```json
-{
-  "data": {
-    "token": "eyJhbGci...",
-    "user": {
-      "role": "ADMIN"
-    }
-  }
-}
-```
-
-Check that `role` says `"ADMIN"` this time. If it still says `CUSTOMER` — the SQL update didn't work, go back to Step 4.
-
-**Save the token:**
-1. Copy the `token` value
-2. Open Environment (eye icon top right) → Edit → find `admin_token`
-3. Paste into **Current Value** → Save
-
-You now have a working admin token. Use `{{admin_token}}` in all admin requests below.
-
----
-
-### 6a. List Pending Drivers
+### Step 2 — Get Scheduled Rides List
 
 ```
-Method: GET
-URL: {{base_url}}/admin/drivers/pending
-Headers:
-  Authorization: Bearer {{admin_token}}
+GET {{base_url}}/rides/scheduled
+Authorization: Bearer {{customer_token}}
 ```
 
-Query params (optional — click **Params** tab in Postman):
+Returns all upcoming scheduled rides for this customer.
 
-| Key   | Value |
-|-------|-------|
-| page  | 1     |
-| limit | 20    |
-
-### 6b. Get Full Driver Detail
-
-First you need the driver's user ID. Get it from the list above (it's the `userId` field in each result).
+### Step 3 — Cancel Scheduled Ride
 
 ```
-Method: GET
-URL: {{base_url}}/admin/drivers/PASTE_DRIVER_USER_ID_HERE
-Headers:
-  Authorization: Bearer {{admin_token}}
-```
+POST {{base_url}}/rides/{{scheduled_ride_id}}/cancel
+Authorization: Bearer {{customer_token}}
 
-### 6c. Approve a Driver
-
-```
-Method: POST
-URL: {{base_url}}/admin/drivers/PASTE_DRIVER_USER_ID_HERE/approve
-Headers:
-  Content-Type: application/json
-  Authorization: Bearer {{admin_token}}
-Body:
-{
-  "note": "All documents verified manually"
-}
-```
-
-### 6d. Reject a Driver
-
-```
-Method: POST
-URL: {{base_url}}/admin/drivers/PASTE_DRIVER_USER_ID_HERE/reject
-Headers:
-  Content-Type: application/json
-  Authorization: Bearer {{admin_token}}
-Body:
-{
-  "reason": "License image is blurry. Please resubmit a clearer photo."
-}
-```
-
-### 6e. View Live Rides
-
-```
-Method: GET
-URL: {{base_url}}/admin/rides/live
-Headers:
-  Authorization: Bearer {{admin_token}}
-```
-
-### 6f. View Platform Config
-
-```
-Method: GET
-URL: {{base_url}}/admin/config
-Headers:
-  Authorization: Bearer {{admin_token}}
-```
-
-Expected: list of all config keys like `commission_percentage`, `min_fare`, etc.
-
-### 6g. Update Platform Config
-
-```
-Method: PUT
-URL: {{base_url}}/admin/config/commission_percentage
-Headers:
-  Content-Type: application/json
-  Authorization: Bearer {{admin_token}}
-Body:
-{
-  "value": "18"
-}
-```
-
-Valid keys you can update:
-
-| Key                                | What it controls                                | Default |
-|------------------------------------|------------------------------------------------|---------|
-| `commission_percentage`            | Platform cut per ride (%)                       | 15      |
-| `subscription_fee_weekly`          | Driver weekly plan (₹)                          | 199     |
-| `min_fare`                         | Minimum ride fare (₹)                           | 30      |
-| `base_fare_per_km`                 | Rate per kilometer (₹)                          | 12      |
-| `base_fare_per_min`                | Rate per minute (₹)                             | 2       |
-| `surge_enabled`                    | Turn surge pricing on/off                       | false   |
-| `surge_multiplier`                 | Surge multiplier (1.0–2.0)                      | 1.0     |
-| `settlement_days`                  | Payout delay (T+N days)                         | 2       |
-| `free_cancel_window_secs`          | Seconds before cancellation fee kicks in        | 120     |
-| `cancel_fee_amount`                | Cancellation fee in ₹ (driver en route)         | 20      |
-| `cancel_fee_arrived_amount`        | Cancellation fee in ₹ (driver at pickup)        | 40      |
-| `gst_percentage`                   | GST % baked into fare (internal accounting)     | 5       |
-| `driver_search_radius_km_expanded` | Radius (km) for Pass 2 driver search            | 12      |
-
----
-
----
-
-## Flow 7 — Driver Registration (New — Replaces Manual SQL)
-
-Drivers now register via a single API call that verifies OTP and creates their account atomically.
-
-### Step 1 — Send OTP (same as customer)
-
-```
-Method: POST
-URL: {{base_url}}/auth/otp/send
-Headers: Content-Type: application/json
-Body:
-{
-  "phone": "+918800000002"
-}
-```
-
-Check terminal for the OTP code.
-
-### Step 2 — Register as Driver
-
-```
-Method: POST
-URL: {{base_url}}/auth/register-driver
-Headers: Content-Type: application/json
-Body:
-{
-  "phone": "+918800000002",
-  "otp": "XXXX",
-  "name": "Ravi Kumar"
-}
-```
-
-**Expected Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Driver registered successfully",
-  "data": {
-    "isNewUser": true,
-    "token": "<firebase-custom-token>",
-    "user": {
-      "id": "...",
-      "phone": "+918800000002",
-      "name": "Ravi Kumar",
-      "role": "DRIVER"
-    }
-  }
-}
-```
-
-Copy the `token` value from the response, exchange it for a Firebase ID token using the steps in [docs/api/token-exchange-guide.md](docs/api/token-exchange-guide.md), then save that ID token as `driver_token` in your Postman environment. The user is created with `DRIVER` role and a `DriverProfile` is automatically created — no manual SQL needed.
-
----
-
-## Flow 8 — OTP Ride Start
-
-The ride start flow now requires a 4-digit OTP that the customer receives when a driver is assigned.
-
-### What happens automatically
-
-1. Driver calls `POST /driver/rides/:rideId/accept` → backend atomically assigns the ride and persists `rideStartOtp` in the same write
-2. Backend sends FCM `"Ride OTP: 4821"` (best effort)
-3. If a legacy/inconsistent row is ever found without OTP on idempotent re-accept, backend backfills `rideStartOtp`
-4. Customer app reads OTP from `GET /rides/:rideId` (`rideStartOtp`) and shows it on the ride screen
-5. Driver enters OTP when starting the ride
-
-### Start Ride with OTP
-
-```
-Method: POST
-URL: {{base_url}}/driver/rides/{{ride_id}}/start
-Headers:
-  Content-Type: application/json
-  Authorization: Bearer {{driver_token}}
-Body:
-{
-  "otp": "4821"
-}
-```
-
-**Expected Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Ride started",
-  "data": {
-    "rideId": "...",
-    "status": "IN_PROGRESS",
-    "startedAt": "2026-03-08T10:30:00.000Z"
-  }
-}
-```
-
-If the OTP is wrong:
-```json
-{ "success": false, "message": "Invalid OTP. Ask the customer to share their ride OTP.", "code": "INVALID_OTP" }
-```
-
----
-
-## Flow 9 — Driver Rates Customer
-
-After ride completion, the driver can rate the customer (separate from customer rating the driver).
-
-```
-Method: POST
-URL: {{base_url}}/driver/rides/{{ride_id}}/rate-customer
-Headers:
-  Content-Type: application/json
-  Authorization: Bearer {{driver_token}}
-Body:
-{
-  "rating": 5,
-  "comment": "Very polite, on time at pickup"
-}
-```
-
-**Expected Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Customer rated successfully",
-  "data": {
-    "rideId": "...",
-    "rating": 5,
-    "comment": "Very polite, on time at pickup"
-  }
-}
-```
-
-- `rating`: 1–5 (required)
-- `comment`: optional, max 300 characters
-- Can only be called once per ride (returns 409 if already rated)
-
----
-
-## Flow 10 — Ride Receipt
-
-Get the full fare breakdown for a completed ride.
-
-```
-Method: GET
-URL: {{base_url}}/rides/{{ride_id}}/receipt
-Headers:
-  Authorization: Bearer {{customer_token}}
-```
-
-**Expected Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "rideId": "...",
-    "route": {
-      "pickup": "Sector 16A, Faridabad",
-      "drop": "BPTP Park Centra, Faridabad",
-      "distanceKm": 4.2,
-      "durationMins": 18
-    },
-    "fare": {
-      "baseFare": 55.40,
-      "surgeMultiplier": 1.0,
-      "surgeCharge": 0,
-      "totalFare": 55.40
-    },
-    "payment": {
-      "method": "CASH",
-      "status": "PENDING",
-      "amountPaid": 55.40
-    },
-    "driver": {
-      "name": "Ravi Kumar",
-      "vehicleNumber": "HR 51 AB 1234",
-      "vehicleModel": "Honda Activa 6G",
-      "rating": 4.7
-    },
-    "customerRating": 5
-  }
-}
-```
-
-Only works for `COMPLETED` rides owned by the authenticated customer.
-
----
-
-## Flow 11 — Driver Earnings Summary
-
-Get a lightweight summary for the driver dashboard card.
-
-```
-Method: GET
-URL: {{base_url}}/driver/earnings/summary?period=week
-Headers:
-  Authorization: Bearer {{driver_token}}
-```
-
-Query params:
-- `period`: `week` (last 7 days) or `month` (last 30 days)
-
-**Expected Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "period": "week",
-    "rides": 23,
-    "grossEarnings": 3450.00,
-    "commission": 517.50,
-    "netEarnings": 2932.50,
-    "avgPerRide": 127.50,
-    "allTimeRides": 142,
-    "allTimeEarnings": 18600.00,
-    "ratingAvg": 4.6
-  }
-}
-```
-
----
-
-## Flow 12 — Cancellation Fee
-
-If a customer cancels after a driver is assigned and the 2-minute free window has passed, a cancellation fee is returned.
-
-### Cancel a ride with a driver assigned (after 2 minutes)
-
-```
-Method: POST
-URL: {{base_url}}/rides/{{ride_id}}/cancel
-Headers:
-  Content-Type: application/json
-  Authorization: Bearer {{customer_token}}
-Body:
-{
-  "reason": "Changed plans"
-}
-```
-
-**Response within 2-minute window (no fee):**
-```json
-{
-  "data": { "rideId": "...", "status": "CANCELLED", "cancellationFee": 0 }
-}
-```
-
-**Response after 2-minute window (fee applies):**
-```json
-{
-  "data": { "rideId": "...", "status": "CANCELLED", "cancellationFee": 20 }
-}
-```
-
-The fee amount is configurable via `PUT /admin/config/cancel_fee_amount`. The window is configurable via `PUT /admin/config/free_cancel_window_secs`.
-
----
-
-## Flow 13 — Trip Share / Public Tracking Link
-
-Create a shareable link for an active ride, then open the public tracking endpoint without any token.
-
-### Request 1 of 2 — Create the tracking link
-
-```
-Method: POST
-URL: {{base_url}}/rides/{{ride_id}}/share
-Headers:
-  Authorization: Bearer {{customer_token}}
-```
-
-**Expected Response (201 Created):**
-```json
-{
-  "success": true,
-  "message": "Tracking link created",
-  "data": {
-    "rideId": "...",
-    "shareUrl": "http://localhost:3001/api/v1/track/abcDEF123...",
-    "expiresAt": "2026-03-10T17:35:00.000Z"
-  }
-}
-```
-
-Copy the full `shareUrl` into the Postman environment as `share_url`.
-
-### Request 2 of 2 — Open the public tracking link
-
-```
-Method: GET
-URL: {{share_url}}
-Headers: none
-```
-
-**Expected Response (200 OK):**
-```json
-{
-  "success": true,
-  "data": {
-    "rideId": "...",
-    "status": "IN_PROGRESS",
-    "isTrackingActive": true,
-    "pickup": {
-      "lat": 28.4089,
-      "lng": 77.3178,
-      "address": "Sector 15, Faridabad"
-    },
-    "drop": {
-      "lat": 28.4595,
-      "lng": 77.3023,
-      "address": "NIT Faridabad"
-    },
-    "driver": {
-      "name": "Ravi Kumar",
-      "vehicleNumber": "HR26AB1234",
-      "vehicleModel": "Honda Activa"
-    },
-    "location": {
-      "lat": 28.421,
-      "lng": 77.331,
-      "updatedAt": "2026-03-09T17:36:00.000Z"
-    }
-  }
-}
-```
-
-Notes:
-- This endpoint is public by design. Do **not** send `Authorization`.
-- The link only works while it is unexpired and not revoked.
-- Once the ride is completed or cancelled, the same link still returns final status, but `location` becomes `null`.
-
----
-
-## Flow 14 — Driver Cancellation Tracking Threshold
-
-Verify that driver-side cancellation returns tracking stats and triggers the threshold flag when the driver cancels too many rides in a day.
-
-```
-Method: POST
-URL: {{base_url}}/driver/rides/{{ride_id}}/cancel
-Headers:
-  Content-Type: application/json
-  Authorization: Bearer {{driver_token}}
-Body:
-{
-  "reason": "Bike issue"
-}
-```
-
-**Expected Response (200 OK):**
-```json
-{
-  "success": true,
-  "message": "Ride cancelled",
-  "data": {
-    "rideId": "...",
-    "status": "CANCELLED",
-    "cancellationStats": {
-      "total": 3,
-      "today": 3,
-      "alertThreshold": 3,
-      "alertTriggered": true
-    }
-  }
-}
-```
-
-What to verify:
-- `today` increments on every driver-side cancel in the same IST day.
-- `alertTriggered` flips to `true` when `today === 3`.
-- Admin users get an in-app SYSTEM notification when the threshold is hit.
-
----
-
-## Flow 15 — Cancellation with Reason Code (3-tier fee)
-
-The cancel endpoint now requires a `reasonCode`. Driver-fault reasons waive the fee and penalise the driver.
-
-```
-Method: POST
-URL: {{base_url}}/rides/{{ride_id}}/cancel
-Headers:
-  Content-Type: application/json
-  Authorization: Bearer {{customer_token}}
 Body:
 {
   "reasonCode": "CHANGED_MIND"
 }
 ```
 
-**Reason codes:**
+**What to verify:**
+- Past `scheduledAt` time returns `422`.
+- More than 7 days ahead returns `422`.
+- Scheduled ride appears in `GET /rides/scheduled` and not in active rides.
 
-| Code | Fee | Effect |
-|------|-----|--------|
-| `CHANGED_MIND` | 3-tier (see below) | Customer fault |
-| `BOOKED_BY_MISTAKE` | 3-tier | Customer fault |
-| `OTHER` | 3-tier | Customer fault, optional `note` field |
-| `DRIVER_ASKED_TO_CANCEL` | ₹0 | Driver's cancel count incremented |
-| `DRIVER_NOT_MOVING` | ₹0 | Driver fault |
-| `DRIVER_WRONG_VEHICLE` | ₹0 | Driver fault |
-| `DRIVER_BEHAVIOUR` | ₹0 | Driver fault |
+---
 
-**3-tier fee (customer fault codes only):**
-- Status `REQUESTED` (no driver yet) → ₹0
-- Status `DRIVER_ASSIGNED`, elapsed ≤ 120s → ₹0 (free window)
-- Status `DRIVER_ASSIGNED`, elapsed > 120s → ₹20
-- Status `DRIVER_ARRIVED` → ₹40
+## 10. Journey 7: Notifications
 
-**Expected Response:**
-```json
+### Get Notifications (paginated)
+
+```
+GET {{base_url}}/notifications?page=1&limit=20
+Authorization: Bearer {{customer_token}}
+```
+
+Returns list of notifications. Save a `notificationId` from the response.
+
+### Get Unread Count
+
+```
+GET {{base_url}}/notifications/unread-count
+Authorization: Bearer {{customer_token}}
+```
+
+### Mark One as Read
+
+```
+PATCH {{base_url}}/notifications/{{notification_id}}/read
+Authorization: Bearer {{customer_token}}
+```
+
+### Mark All as Read
+
+```
+PATCH {{base_url}}/notifications/read-all
+Authorization: Bearer {{customer_token}}
+```
+
+**What to verify:**
+- Unread count decreases after marking as read.
+- Notifications from other users are not visible.
+
+---
+
+## 11. Journey 8: Driver Earnings and Withdrawals
+
+### Get Driver Status
+
+```
+GET {{base_url}}/driver/status
+Authorization: Bearer {{driver_token}}
+```
+
+Returns `ONLINE`/`OFFLINE`, current location, active ride if any.
+
+### Go Offline
+
+```
+POST {{base_url}}/driver/go-offline
+Authorization: Bearer {{driver_token}}
+```
+
+### Get Earnings (today/week/month)
+
+```
+GET {{base_url}}/driver/earnings?period=today&page=1&limit=20
+Authorization: Bearer {{driver_token}}
+```
+
+`period`: `today`, `week`, or `month`.
+
+### Get Earnings Summary
+
+```
+GET {{base_url}}/driver/earnings/summary?period=week
+Authorization: Bearer {{driver_token}}
+```
+
+`period`: `week` or `month`. Returns total earnings, trip count, average per trip.
+
+### Get Settlement Summary
+
+```
+GET {{base_url}}/driver/earnings/settlement
+Authorization: Bearer {{driver_token}}
+```
+
+Returns settled vs unsettled balance.
+
+### Get Trip History
+
+```
+GET {{base_url}}/driver/trips?page=1&limit=20
+Authorization: Bearer {{driver_token}}
+```
+
+### Request Withdrawal — UPI
+
+```
+POST {{base_url}}/driver/withdrawals
+Authorization: Bearer {{driver_token}}
+
+Body:
 {
-  "data": {
-    "rideId": "...",
-    "status": "CANCELLED",
-    "cancellationFee": 20,
-    "reasonCode": "CHANGED_MIND"
-  }
+  "amount": 500,
+  "method": "BANK_TRANSFER",
+  "upiId": "ravi@upi"
 }
 ```
 
----
-
-## Flow 16 — Admin Ride Filter (Failed Payments)
-
-Find rides where UPI payment failed so operations can follow up manually.
+### Request Withdrawal — Bank Account
 
 ```
-Method: GET
-URL: {{base_url}}/admin/rides?paymentStatus=FAILED&status=COMPLETED
-Headers:
-  Authorization: Bearer {{admin_token}}
-```
+POST {{base_url}}/driver/withdrawals
+Authorization: Bearer {{driver_token}}
 
-Query params (all optional):
-- `paymentStatus`: `PENDING | COMPLETED | FAILED | REFUNDED`
-- `status`: `REQUESTED | DRIVER_ASSIGNED | DRIVER_ARRIVED | IN_PROGRESS | COMPLETED | CANCELLED | NO_DRIVER | SCHEDULED`
-- `page`: page number (default 1)
-- `limit`: results per page (default 20)
-
-**Expected Response (200 OK):**
-```json
+Body:
 {
-  "success": true,
-  "data": [
-    {
-      "id": "...",
-      "status": "COMPLETED",
-      "paymentStatus": "FAILED",
-      "finalFare": 85,
-      "paymentMethod": "UPI",
-      "customer": { "name": "Rahul Kumar", "phone": "+919876543210" },
-      "driver": { "name": "Ravi Kumar", "vehicleNumber": "HR 51 AB 1234" },
-      "completedAt": "2026-03-10T14:30:00.000Z"
-    }
-  ],
-  "meta": { "page": 1, "limit": 20, "total": 3, "totalPages": 1 }
+  "amount": 500,
+  "method": "BANK_TRANSFER",
+  "bankAccountNumber": "12345678901",
+  "bankIfsc": "HDFC0001234"
 }
 ```
 
+- `BANK_TRANSFER` requires either `upiId` OR both `bankAccountNumber` + `bankIfsc`.
+- `CASH_AGENT` requires neither.
+- Max single withdrawal: ₹50,000.
+
+Save `withdrawalId` from response as `withdrawal_id`.
+
+### Check Withdrawal Status
+
+```
+GET {{base_url}}/driver/withdrawals/{{withdrawal_id}}
+Authorization: Bearer {{driver_token}}
+```
+
+**What to verify:**
+- `BANK_TRANSFER` without UPI ID and without bank details returns `422`.
+- IFSC must match format `HDFC0001234` (4 alpha + 0 + 6 alphanumeric).
+- Amount over 50000 returns `422`.
+
 ---
 
-## Common Errors and What They Mean
+## 12. Journey 9: Ride History
 
-| Status Code | Error Code            | What went wrong | How to fix |
-|------------|----------------------|-----------------|------------|
-| `400`      | `VALIDATION_ERROR`   | Wrong field name, wrong type, missing required field | Check the Body JSON — look at the `data` array in the response for which field failed |
-| `401`      | `UNAUTHORIZED`       | Token is missing or expired | Add `Authorization: Bearer {{customer_token}}` header, or re-login and get a fresh token |
-| `403`      | `FORBIDDEN`          | You are logged in but don't have permission | Customer trying a driver endpoint, or driver trying admin endpoint |
-| `404`      | `RIDE_NOT_FOUND`     | Wrong `rideId` | Check the `ride_id` environment variable has been set |
-| `409`      | `RIDE_ALREADY_ACTIVE`| Customer already has an ongoing ride | Cancel the existing ride first |
-| `429`      | `TOO_MANY_REQUESTS`  | OTP rate limit — too many OTP requests | Wait 5 minutes |
+### Customer Ride History
+
+```
+GET {{base_url}}/rides/history?page=1&limit=10&status=ALL
+Authorization: Bearer {{customer_token}}
+```
+
+`status` filter: `COMPLETED`, `CANCELLED`, or `ALL` (default).
 
 ---
 
-## Checklist — Ready for Customer App?
+## 13. Journey 10: Admin Panel
 
-Go through these in order. Put a tick next to each when it passes.
+All admin routes require `Authorization: Bearer {{admin_token}}` except `/promote`.
 
-**One-time setup:**
-- [ ] Docker Desktop open, `chalo-postgres` and `chalo-redis` containers running
-- [ ] `npx prisma migrate deploy` → "10 migrations found... All migrations have been successfully applied"
-- [ ] `npm run db:seed` → shows all 13 config keys seeded
-- [ ] `GET http://localhost:3001/health` → returns `status: ok, database: connected`
+### Promote a User to Admin
 
-**Create test data:**
-- [ ] Flow 1 passed — customer OTP → token → profile complete
-- [ ] Flow 6 (Admin creation) — promoted a user to ADMIN, got admin token with `role: ADMIN`
-- [ ] Flow 7 passed — driver registered via API (no SQL needed)
-- [ ] Flow 4 (Step 4) passed — driver documents submitted
-- [ ] Flow 6c passed — admin approved the driver via API
+```
+POST {{base_url}}/admin/promote
+x-internal-api-key: {{internal_api_key}}
 
-**Verify ride lifecycle:**
-- [ ] Flow 2 passed — fare estimate returns a number (check `minimumFareApplied` field present)
-- [ ] Flow 3 passed — ride created with `status: REQUESTED`
-- [ ] Flow 5 passed — full ride completed end-to-end (online → accept → arrive → start with OTP → complete → rate)
-- [ ] Flow 8 passed — ride start requires and validates OTP (wrong OTP returns 400)
-- [ ] Flow 9 passed — driver rated customer after completion
-- [ ] Flow 10 passed — ride receipt returns fare breakdown
-- [ ] Flow 13 passed — trip share link opens public tracking data
-- [ ] Flow 14 passed — driver cancellation stats increment and threshold triggers
+Body:
+{
+  "phone": "+918888888888"
+}
+```
 
-**Verify new features:**
-- [ ] Flow 11 passed — driver earnings summary returns totals
-- [ ] Flow 12 tested — cancellation fee returned correctly (₹0/₹20/₹40 per tier)
-- [ ] Flow 15 tested — cancel with reason code (DRIVER_ASKED_TO_CANCEL → ₹0, CHANGED_MIND → fee)
-- [ ] Flow 16 tested — admin ride filter returns rides filtered by paymentStatus
+No `Authorization` header — uses `x-internal-api-key` header instead.
 
-**All 20 checked = backend is ready. Start the customer app.**
+### List Pending Drivers
+
+```
+GET {{base_url}}/admin/drivers/pending?page=1&limit=20
+Authorization: Bearer {{admin_token}}
+```
+
+### Get Driver Detail
+
+```
+GET {{base_url}}/admin/drivers/{{driver_user_id}}
+Authorization: Bearer {{admin_token}}
+```
+
+### Approve Driver
+
+```
+POST {{base_url}}/admin/drivers/{{driver_user_id}}/approve
+Authorization: Bearer {{admin_token}}
+
+Body:
+{
+  "note": "All documents verified"
+}
+```
+
+`note` is optional.
+
+### Reject Driver
+
+```
+POST {{base_url}}/admin/drivers/{{driver_user_id}}/reject
+Authorization: Bearer {{admin_token}}
+
+Body:
+{
+  "reason": "License number does not match records"
+}
+```
+
+`reason` is required, min 5 chars.
+
+### Auto-Verify Driver (KYC provider)
+
+```
+POST {{base_url}}/admin/drivers/{{driver_user_id}}/auto-verify
+Authorization: Bearer {{admin_token}}
+```
+
+Triggers KYC provider verification. With `ManualKYCProvider` (default) this is a no-op. With `SurepassKYCProvider` (when `SUREPASS_API_KEY` is set) this calls the external API.
+
+### Get Live Rides
+
+```
+GET {{base_url}}/admin/rides/live?page=1&limit=20
+Authorization: Bearer {{admin_token}}
+```
+
+Returns all rides currently in `DRIVER_ASSIGNED`, `DRIVER_ARRIVED`, or `IN_PROGRESS` status.
+
+### Get All Rides (filtered)
+
+```
+GET {{base_url}}/admin/rides?status=COMPLETED&paymentStatus=FAILED&page=1&limit=20
+Authorization: Bearer {{admin_token}}
+```
+
+Both filters are optional. Valid `status` values:
+`REQUESTED`, `DRIVER_ASSIGNED`, `DRIVER_ARRIVED`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED`, `NO_DRIVER`, `SCHEDULED`
+
+Valid `paymentStatus` values: `PENDING`, `COMPLETED`, `FAILED`, `REFUNDED`
+
+### Get Platform Config
+
+```
+GET {{base_url}}/admin/config
+Authorization: Bearer {{admin_token}}
+```
+
+Returns all 13 platform config keys (fares, GST, radius, policies, etc.).
+
+### Update Platform Config
+
+```
+PUT {{base_url}}/admin/config/cancel_fee_arrived_amount
+Authorization: Bearer {{admin_token}}
+
+Body:
+{
+  "value": "40"
+}
+```
+
+`value` is always a string. Known config keys:
+
+| Key | Default | Meaning |
+|---|---|---|
+| `cancel_fee_arrived_amount` | `40` | Cancellation fee (₹) after driver arrived |
+| `gst_percentage` | `5` | GST on fare |
+| `driver_search_radius_km_expanded` | `12` | Expanded radius after first pass |
+
+**What to verify:**
+- Customer or driver token on admin routes returns `403`.
+- Wrong `x-internal-api-key` on `/admin/promote` returns `403`.
+- Approving an already-approved driver — check idempotency behavior.
+
+---
+
+## 14. Error Reference
+
+| HTTP Code | Cause | Fix |
+|---|---|---|
+| `400` | Business rule violation (wrong OTP, wrong state) | Check ride status, OTP value |
+| `401` | Missing or expired Firebase ID token | Re-do OTP verify + token exchange |
+| `403` | Wrong role or missing internal key | Use correct token for the route |
+| `404` | Resource not found | Check IDs in environment |
+| `409` | Conflict (duplicate rating, already cancelled) | State already set |
+| `422` | Validation failed (bad field format/value) | Check request body against schema |
+| `429` | Rate limit hit | Wait or use a different IP |
+| `500` | Server error | Check backend console for stack trace |
+
+---
+
+## 15. Recommended Test Order (Quick Smoke Run)
+
+Run these in order to confirm the whole system works end to end:
+
+1. `GET /health` — server alive
+2. `POST /auth/otp/send` — OTP delivered
+3. `POST /auth/otp/verify` + token exchange — customer token obtained
+4. `PUT /auth/profile` — profile complete
+5. `POST /rides/fare-estimate` — pricing works
+6. `POST /rides` (with Idempotency-Key) — ride created, save `ride_id`
+7. Register + approve driver (steps 4–6 in Journey 2)
+8. `POST /driver/go-online` — driver online
+9. `GET /driver/rides/incoming` — ride offer visible
+10. `POST /driver/rides/:rideId/accept` — ride assigned
+11. `GET /rides/:rideId` — status = `DRIVER_ASSIGNED`
+12. `POST /driver/rides/:rideId/arrived` — status = `DRIVER_ARRIVED`
+13. `POST /driver/rides/:rideId/start` (with OTP) — status = `IN_PROGRESS`
+14. `POST /driver/rides/:rideId/complete` — status = `COMPLETED`
+15. `GET /rides/:rideId/receipt` — receipt returned
+16. `POST /rides/:rideId/rate` — rating submitted
+17. `GET /notifications` — notification for completed ride present
+
+Total: ~17 requests. All critical paths covered.
+
+---
+
+## 16. Tips
+
+- **Always use a fresh UUID** for `Idempotency-Key` when creating a new ride. Copy from `uuidgenerator.net` or use Postman's `{{$guid}}` variable.
+- **Driver must be APPROVED** before going online. If `driver/go-online` returns `403`, check KYC status via admin panel.
+- **OTP in dev** always prints to the backend console (`npm run dev` terminal). Watch that window.
+- **Token expiry**: Firebase ID tokens last ~1 hour. If you start getting `401` mid-session, redo Steps 2–3 of Journey 1 and update the environment variable.
+- **Postman Tests tab**: Add `pm.environment.set("ride_id", pm.response.json().ride.id)` in the Tests tab of the create-ride request to auto-capture `ride_id`.

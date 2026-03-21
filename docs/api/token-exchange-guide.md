@@ -1,57 +1,44 @@
 # Firebase Token Exchange Guide
 
-## Why This Step Is Needed
+Last updated: 2026-03-21
 
-Every time you complete OTP authentication, the backend returns a **custom token**. This happens for both `/auth/otp/verify` and `/auth/register-driver`. This custom token **cannot** be used directly in API requests.
+## Why this step exists
 
-You must exchange it for a **Firebase ID token** using the step below. The ID token is what you save in Postman as `customer_token` or `driver_token`.
+For protected backend routes, you must send a Firebase ID token in Authorization header.
 
-> ⚠️ Do this every time you verify an OTP — for both customers and drivers.
+If your auth flow returns a custom token, exchange it with Firebase Identity Toolkit first.
 
----
+## Exchange flow
 
-## Steps to Exchange Token
+1. Complete OTP endpoint flow.
+2. Copy custom token from response payload.
+3. Call Identity Toolkit:
 
-### 1. Copy the custom token
-After calling `/auth/otp/verify` or `/auth/register-driver`, copy the value of `"token"` from the response.
+POST https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=<WEB_API_KEY>
 
-### 2. Create a new request in Postman
-
-- **Method:** `POST`
-- **URL:**
-```
-https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken?key=XXXXX-Your_API_KEY
-```
-- **Body:** raw → JSON
-```json
+Body:
 {
-  "token": "paste your custom token here",
+  "token": "<CUSTOM_TOKEN>",
   "returnSecureToken": true
 }
-```
 
-### 3. Send the request
+4. Read idToken from response.
+5. Store idToken in Postman environment variable:
+   - customer_token or driver_token or admin_token
 
-You will get a `200 OK` response with an `idToken` field — this is your real Firebase ID token.
+## Use token in requests
 
-### 4. Save the ID token in Postman
+Authorization: Bearer <idToken>
 
-- Click the **eye icon** (top right, next to environment dropdown)
-- Click **Edit** next to `Chalo Dev`
-- Paste the `idToken` value into:
-  - `customer_token` — if this was a customer OTP
-  - `driver_token` — if this was a driver OTP
-- Click **Save**
+## Expiry handling
 
----
+ID tokens expire. If protected APIs return 401:
 
-## Summary Flow
+1. refresh or re-authenticate in client flow
+2. update token in Postman
+3. retry request
 
-```
-Send OTP → Verify OTP or Register Driver → Get custom token
-→ Exchange at identitytoolkit.googleapis.com
-→ Get idToken
-→ Save as customer_token or driver_token in Postman
-```
+## Important
 
-> ⏱️ ID tokens expire after **1 hour**. If you get a `401 Unauthorized` error, repeat this flow to get a fresh token.
+- Do not send raw custom token directly to protected backend routes.
+- Do not commit any API keys or tokens to repository files.

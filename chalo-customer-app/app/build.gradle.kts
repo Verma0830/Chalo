@@ -31,8 +31,10 @@ android {
         buildConfigField("String", "BASE_URL", "\"${localProps["DEV_BASE_URL"] ?: "http://10.0.2.2:3001/api/v1"}\"")
         buildConfigField("String", "FIREBASE_DATABASE_URL", "\"https://chalo-dev-default-rtdb.asia-southeast1.firebasedatabase.app\"")
 
-        // Maps API key goes in manifest placeholder (read by Maps SDK)
-        manifestPlaceholders["MAPS_API_KEY"] = localProps["MAPS_API_KEY"] ?: "YOUR_MAPS_API_KEY"
+        // Maps API key — manifest placeholder for Maps SDK, BuildConfig for Places SDK
+        val mapsKey = localProps["MAPS_API_KEY"] as String? ?: "YOUR_MAPS_API_KEY"
+        manifestPlaceholders["MAPS_API_KEY"] = mapsKey
+        buildConfigField("String", "MAPS_API_KEY", "\"$mapsKey\"")
     }
 
     buildTypes {
@@ -119,6 +121,12 @@ dependencies {
     implementation(libs.play.services.maps)
     implementation(libs.play.services.location)
 
+    // Places Autocomplete
+    implementation(libs.places)
+
+    // SMS Retriever — auto-read OTP without READ_SMS permission
+    implementation(libs.play.services.auth)
+
     // Permissions
     implementation(libs.accompanist.permissions)
 
@@ -127,4 +135,11 @@ dependencies {
 
     // Logging
     implementation(libs.timber)
+
+    // Unit testing
+    testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.turbine)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.androidx.arch.core.testing)
 }

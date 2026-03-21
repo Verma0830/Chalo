@@ -1,906 +1,315 @@
-# Chalo Backend — Professional Code Review & Improvements
+# Chalo — Professional Code Review
 
-> Reviewed: February 2026
-> Last Updated: March 2026
-> Reviewer: Professional App Developer
-> Scope: Backend API, database schema, security, scalability, production-readiness
-
----
-
-## Executive Summary
-
-The backend is a **production-hardened foundation** with clean architecture, proper layering, Zod validation, structured logging, and **163 passing tests** across 8 test suites (unit + integration). Five rounds of code review completed.
-
-- **Round 1 & 2:** 25 security/performance/reliability findings — all fixed (see [SECURITY_PERFORMANCE_REVIEW.md](SECURITY_PERFORMANCE_REVIEW.md))
-- **Round 3:** 10 code quality issues — all fixed (see below)
-- **Round 4:** All P2 and P3 items from [chalo-backend-review.md](chalo-backend-review.md) — all 19 fixed
-- **Round 5 (March 2026):** 7 missing P0 features implemented (see below) — 0 TS errors, 0 ESLint warnings
-
-**Current score: 8.5/10** (up from 7.42/10). Backend is now feature-complete for Android app development.
+**Reviewer:** Senior App Developer (10+ yrs, ride-hailing domain)
+**Last updated:** 2026-03-21
+**Scope:** Full stack — backend (Node.js/TypeScript) + Android customer app (Kotlin + Jetpack Compose)
 
 ---
 
-## Round 5 — P0 Missing Features (March 2026)
+## Overall Score: 6.2 / 10
 
-> All 7 critical missing features implemented and verified.
-> TypeScript: **0 errors**. ESLint: **0 warnings**. Migration applied to live DB.
+| Layer | Score | Verdict |
+|---|---|---|
+| Backend Architecture | 8.0 / 10 | Production-grade foundation |
+| Backend Security | 7.5 / 10 | Solid but gaps remain |
+| Backend Testing | 7.5 / 10 | Good unit/integration coverage |
+| Android Architecture | 7.0 / 10 | Clean MVVM, modern stack |
+| Android Testing | 0.5 / 10 | Zero test files — critical gap |
+| Feature Completeness (vs Ola/Uber) | 4.5 / 10 | MVP core done, product layer missing |
+| Production Readiness | 5.0 / 10 | Not ready for public launch |
 
-### What was added
+The backend is genuinely well-built for a v1. The Android app has clean architecture bones. What pulls the score down is zero Android test coverage, critical missing product features that any real user will expect, and several production-readiness gaps that will surface under real load.
 
-| # | Feature | Endpoints / Files | Status |
+---
+
+## Part 1 — What Is Done Well
+
+### Backend
+
+**Architecture is correct.**
+The layering — routes → controllers → services → repositories (Prisma) — is clean and consistently applied across all 60 endpoints. Controllers are thin. Business logic lives in services. This is the right shape for a team to maintain.
+
+**Middleware stack is industry-standard.**
+`helmet + cors + hpp + sanitizeBody + rateLimiter + authenticate + authorize + validateBody + idempotency + errorHandler` — this is what production Node.js apps look like. Most bootcamp projects get the first two and stop. Getting all of them right, in the right order, with separate rate limits per endpoint class is genuinely good work.
+
+**Auth is done correctly.**
+Firebase custom token flow is the right choice. The auth middleware verifies the ID token server-side, caches the result in Redis for 5 minutes (avoids a DB hit on every request), and handles the deactivated-user case. The 401 retry on token refresh in the Android interceptor completes the loop properly.
+
+**BullMQ job queue architecture is solid.**
+Using BullMQ for delayed `ride-offer-expired` jobs instead of `setTimeout` means the dispatch logic survives a server restart. The two-pass radius expansion (initial radius → expanded radius after first batch exhausted) is the right design for sparse markets like Faridabad. The phantom driver cleanup cron is production-essential and it is present.
+
+**Idempotency on ride creation** prevents duplicate bookings from network retries. This is a real-world bug that Ola/Uber fixed the hard way (duplicate rides, complaints, refunds). It is already solved here.
+
+**Android architecture is modern.**
+MVVM + Repository + Hilt + Room + DataStore + Coroutines + Flow is the current Android standard. The state model (`UiState` data class + `StateFlow` + `Channel` for one-time events) is the correct pattern for Compose. No legacy `LiveData`, no `onActivityResult`, no `SharedPreferences`. Clean.
+
+**Firebase RTDB for real-time driver location** is the right call for an MVP. Avoids building a WebSocket server. The `RtdbRepository` observing driver location as a `Flow` and updating the map in `ActiveRideViewModel` is clean.
+
+---
+
+## Part 2 — Backend Issues
+
+### B-01 | CRITICAL | Hardcoded 4-digit OTP
+OTP is 4 digits. NPCI and RBI guidelines for financial apps recommend 6 digits minimum. A 4-digit OTP has only 10,000 combinations. With the rate limiter at 5 attempts per 15 minutes per IP, brute-force over multiple IPs or with leaked request IDs is feasible. **Change to 6 digits.**
+
+### B-02 | HIGH | Straight-line distance for fare and driver search
+`fare.service.ts` calculates distance using the Haversine formula (crow-flies). On-road distance from Faridabad Sector 15 to Sector 46 is 40–60% longer than the straight line. This means:
+- Fare estimates are consistently **underbidding** the real fare
+- Driver search radius is inaccurate — drivers 3km away via road could be outside a 3km crow-flies circle
+
+**What Ola/Uber do:** Google Maps Distance Matrix API for all fare calculations and ETA. This is paid but unavoidable at launch.
+
+### B-03 | HIGH | No ETA calculation
+There is no ETA field in any ride response. When a customer books a ride, they see "Driver is on the way" with no time estimate. This is the most common customer complaint in early-stage ride-hailing apps.
+
+**What Ola/Uber do:** ETA is shown at every step — before booking ("Driver 4 mins away"), after booking ("Arriving in 3 mins"), and during ride ("Reaching destination in 12 mins"). All via Google Maps Distance Matrix.
+
+### B-04 | HIGH | No place search / address autocomplete
+The backend has no `/places/autocomplete` or `/places/details` endpoint wrapping Google Places API. The Android app has no place search implementation either (HomeScreen just takes raw lat/lng). Users cannot search "BPTP Parklands" or "YMCA Chowk, Faridabad" — they have to drop a pin.
+
+**What Ola/Uber do:** Full Google Places autocomplete with recent search history, saved locations, and "near me" suggestions.
+
+### B-05 | MEDIUM | Surge pricing is a manual config key
+`surge_multiplier` is a platform config key that an admin sets manually. There is no algorithm. During peak hours (8–10am, 5–8pm) in Faridabad, supply/demand imbalance will cause long wait times. Without dynamic surge, drivers have no financial incentive to go online during peak hours.
+
+**What Ola/Uber do:** Supply/demand ratio per geohash cell, updated every 60 seconds. Surge zones shown visually on the map.
+
+### B-06 | MEDIUM | No payment wallet / in-app balance
+Only CASH and UPI (Razorpay) are supported. There is no wallet. Promo credits, referral credits, and refunds have no storage mechanism in the schema.
+
+**What Ola/Uber do:** In-app wallet (Ola Money, Uber Cash). Refunds go to wallet. Promo credits auto-apply. This drives retention significantly.
+
+### B-07 | MEDIUM | Driver earnings settlement is not automated
+`/driver/withdrawals` creates a withdrawal request but there is no automated T+2 settlement or Razorpay payout API integration. Someone has to manually process payouts. This does not scale beyond a few dozen drivers.
+
+**What Ola/Uber do:** Automated daily or weekly settlement via Razorpay Route (split payments at transaction time) or NEFT batch.
+
+### B-08 | MEDIUM | No SMS gateway integration
+SMS is printed to console in dev. There is an `sms.service.ts` with the interface but no real provider wired (MSG91, Twilio, or Fast2SMS for India are all options). Until this is wired, OTP delivery in production is impossible.
+
+### B-09 | MEDIUM | No event sourcing or audit trail for rides
+`rideEvents` table exists and some events are written, but it is not consistently populated for all state transitions. A complete audit trail is essential for:
+- Dispute resolution ("Driver says I cancelled, I say he did")
+- Customer support
+- Regulatory compliance
+
+**What Ola/Uber do:** Every state transition, every location ping, and every payment event is written to an immutable event log.
+
+### B-10 | MEDIUM | No geofencing or service area enforcement
+A customer in Delhi can book a ride and it will attempt to match drivers. There is no service area boundary. Drivers in a 12km expanded radius from a Faridabad pickup might be in Delhi or Gurugram. This creates a dispatch problem and a legal/licensing problem (if auto rickshaw licenses are zone-specific, which they are in Haryana).
+
+### B-11 | LOW | No referral or promo code system
+No `referral` table, no `promoCode` table, no discount engine. This is a growth blocker. The first 1,000 users in a new market come from referrals.
+
+### B-12 | LOW | `optionalAuth` re-fetches from DB instead of using cache
+`authenticate` uses Redis cache for the user lookup. `optionalAuth` does not — it always hits the DB. Should share the same cache path.
+
+### B-13 | LOW | No distributed tracing
+Request IDs are generated and logged (good). But there is no correlation across the BullMQ worker logs — when a `ride-offer-expired` job runs, its logs have a different context from the original ride creation. OpenTelemetry traces would link these.
+
+---
+
+## Part 3 — Android App Issues
+
+### A-01 | CRITICAL | Zero test coverage
+There are zero test files in `src/test/` and `src/androidTest/`. The build.gradle has `testImplementation(libs.junit)`, `mockk`, `turbine`, and `kotlinx.coroutines.test` declared as dependencies — but no tests use them.
+
+This means:
+- Any DTO field rename on the backend silently returns `null` in the app
+- Any ViewModel logic bug is only caught by manual testing
+- CI cannot catch regressions
+
+**Priority tests to write first (in order):**
+1. `OtpVerifyViewModel` — Firebase sign-in called after success, error state on failure
+2. `ActiveRideViewModel` — `handleRideStatus` state transitions, COMPLETED → PaymentRequired vs RideCompleted branching
+3. `AuthRepositoryImpl` — DTO-to-domain mapper correctness
+4. `FareEstimateViewModel` — request construction, error handling
+5. `UserPreferences` — DataStore read/write/clear (use in-memory DataStore)
+
+### A-02 | CRITICAL | SOS sends hardcoded (0.0, 0.0) coordinates
+In [ActiveRideScreen.kt:88](../chalo-customer-app/app/src/main/java/com/chalo/customer/presentation/screens/activeride/ActiveRideScreen.kt#L88):
+```kotlin
+onConfirm = { viewModel.onSosConfirm(0.0, 0.0) },
+```
+The SOS alert always sends latitude 0.0, longitude 0.0 — the Gulf of Guinea, off the coast of Africa. The customer's actual location is not retrieved before sending. The emergency contact and safety team receive a useless location.
+
+**Fix:** Request the last known location via `FusedLocationProviderClient` before calling `onSosConfirm`, and pass the real coordinates.
+
+### A-03 | CRITICAL | No place search / address input
+`HomeScreen` shows a map and a destination input field but there is no Google Places Autocomplete integration. Users type text and nothing happens — there is no search suggestion dropdown. The fare estimate requires explicit lat/lng coordinates that the user has no way to provide without dropping a pin.
+
+**What Ola/Uber do:** `Places.createClient(context)` → `AutocompleteSupportFragment` or a custom `FindAutocompletePredictionsRequest`. This is the single feature that makes or breaks the booking flow.
+
+### A-04 | HIGH | No route polyline on map
+`ActiveRideScreen` shows three `Marker`s (pickup, driver, drop) but draws no route polyline between them. The user sees dots on an empty map.
+
+**What Ola/Uber do:** Fetch route from Google Directions API (or use the Maps SDK `Polyline` composable with decoded direction steps). Draw the route from driver's current position to pickup, and from pickup to drop.
+
+### A-05 | HIGH | No driver marker animation
+The driver marker teleports between GPS updates. Each location update from RTDB snaps the marker to the new position with no transition.
+
+**What Ola/Uber do:** Interpolate marker position between updates using `ValueAnimator` with a `LatLngInterpolator`. Combined with a bike/car icon (custom `BitmapDescriptor`) instead of the default red pin, this gives the live-tracking feel that users expect.
+
+### A-06 | HIGH | `isMyLocationEnabled = true` without permission check
+In [HomeScreen.kt:69](../chalo-customer-app/app/src/main/java/com/chalo/customer/presentation/screens/home/HomeScreen.kt#L69):
+```kotlin
+properties = MapProperties(isMyLocationEnabled = true)
+```
+This will crash with a `SecurityException` if `ACCESS_FINE_LOCATION` is not granted. The permission request flow must happen before this composable renders with this property. The accompanist-permissions library is already in the dependency list — it is not being used here.
+
+### A-07 | HIGH | No SMS Retriever / OTP auto-read
+The OTP flow requires the user to manually read the SMS and type 4 digits. Both Ola and Uber use the SMS Retriever API (or the newer `SmsCodeAutofill` API) to read the OTP automatically and fill the field without requiring the `READ_SMS` permission. This is table-stakes UX in the Indian market — users expect it.
+
+### A-08 | HIGH | No foreground service for background location
+When the Chalo app is backgrounded during an active ride (user switches to WhatsApp etc.), the RTDB location listener and ride status observer stop working on Android 12+ due to background process limitations. The driver location updates freeze on the customer's screen.
+
+**Fix:** A `ForegroundService` with `FOREGROUND_SERVICE_TYPE_LOCATION` keeps the listeners alive and shows a persistent notification ("Ride in progress — tap to view").
+
+### A-09 | MEDIUM | GSON instead of Moshi or kotlinx.serialization
+`NetworkModule` uses `GsonConverterFactory`. Gson has a critical weakness: it bypasses Kotlin's null-safety. A missing JSON field that maps to a non-null Kotlin property silently becomes `null` at runtime instead of throwing at parse time. This means backend field renames cause silent nulls instead of obvious crashes.
+
+**Fix:** Switch to `kotlinx.serialization` (which is null-safe and Kotlin-first) or Moshi with KSP codegen. Both catch missing required fields at deserialization.
+
+### A-10 | MEDIUM | No ProGuard rules for data classes
+`isMinifyEnabled = true` in the release build type. GSON uses reflection to deserialize JSON into data classes. Minification will rename the field names, breaking deserialization silently in release builds. There are no custom ProGuard keep rules for the DTOs.
+
+**Fix:** Either add `@Keep` annotations on all DTOs, add keep rules in `proguard-rules.pro`, or switch to a codegen-based serializer (Moshi KSP / kotlinx.serialization) that is not reflection-dependent.
+
+### A-11 | MEDIUM | No deep linking for share ride URL
+`/rides/:rideId/share` generates a public tracking URL. When a customer shares it, the recipient gets a web link. There is no Android App Link (`https://api.chalo.in/track/...`) that opens the Chalo app directly if installed.
+
+**Fix:** Configure App Links in `AndroidManifest.xml` with `android:autoVerify="true"` and handle the `Intent` in `MainActivity`.
+
+### A-12 | MEDIUM | No notification channels beyond `chalo_rides`
+There is one FCM default channel (`chalo_rides`). All notifications — ride status updates, payment confirmations, promotional messages, driver OTP reminders — land in the same channel. Users cannot selectively disable promotional notifications without disabling ride notifications.
+
+**What Ola/Uber do:** Separate channels: ride updates, payments, promotions, safety alerts, driver messages.
+
+### A-13 | MEDIUM | No offline/error recovery in HomeScreen
+If the network is unavailable when the HomeScreen loads, there is no retry mechanism, no offline indicator, and no cached active ride check. The user sees a blank screen.
+
+### A-14 | LOW | `android:supportsRtl="false"`
+Faridabad is Haryana. The target audience speaks Hindi. Hindi text in Compose renders left-to-right but `android:supportsRtl="false"` can cause layout issues if the OS language is set to Arabic/Urdu (common in parts of Haryana). Leave it at the default `true`.
+
+### A-15 | LOW | Room database has no migration plan
+`AppDatabase` is at version 1 with `fallbackToDestructiveMigration()` (or equivalent — no migration is defined). Adding a column to `RideEntity` in version 2 will wipe all cached rides on update.
+
+---
+
+## Part 4 — What Ola / Uber Have That Chalo Is Missing
+
+This is the gap between a working app and a product.
+
+### Product-Critical (blocks user adoption)
+
+| Feature | Ola/Uber | Chalo | Impact |
 |---|---|---|---|
-| 1 | Driver registration | `POST /auth/register-driver` — atomic OTP + User + DriverProfile | ✅ Done |
-| 2 | OTP ride start | `rideStartOtp` field in Ride, generated on `acceptRide`, validated in `startRide` | ✅ Done |
-| 3 | Driver rates customer | `POST /driver/rides/:rideId/rate-customer` — `driverRating` + `driverComment` fields | ✅ Done |
-| 4 | Cancellation fee | Time-based fee in `cancelRide` — free window + fee from `platform_config` | ✅ Done |
-| 5 | Ride receipt | `GET /rides/:rideId/receipt` — full fare breakdown for completed rides | ✅ Done |
-| 6 | Earnings summary | `GET /driver/earnings/summary?period=week|month` — dashboard aggregate | ✅ Done |
-| 7 | Admin promotion | `POST /admin/promote` — INTERNAL_API_KEY protected, no SQL needed | ✅ Done |
+| Address autocomplete (Google Places) | Full integration | Not implemented | Users cannot book without it |
+| Route polyline on map | Directions API route drawn | Markers only, no route | Core UX expectation |
+| Driver marker animation | Smooth interpolation + custom icon | Teleporting red pin | Feels broken |
+| ETA to pickup and destination | At every screen | Not shown anywhere | Users cancel when they don't know wait time |
+| OTP auto-read (SMS Retriever) | Auto-filled | Manual entry | UX friction in a market that expects it |
+| In-app wallet / balance | Ola Money / Uber Cash | Not implemented | Refund flow is impossible without wallet |
+| Promo codes / offers | Full discount engine | Not implemented | New user acquisition requires this |
+| Referral system | Deep referral links + tracking | Not implemented | Primary growth channel in Tier-2 India |
 
-### DB migration
+### Experience-Layer (users notice the absence)
 
-Migration `20260301030000_add_ride_otp_and_driver_rating` adds 3 nullable columns to `rides`:
-- `rideStartOtp TEXT` — cleared after use
-- `driverRating INTEGER` — 1–5 stars from driver to customer
-- `driverComment TEXT` — optional comment
-
-### Config keys seeded
-
-Two new `platform_config` rows added:
-- `free_cancel_window_secs = 120` (2-minute free window)
-- `cancel_fee_amount = 20` (₹20 fee after window)
-
-### .env changes
-
-- `DATABASE_URL` updated to `postgresql://postgres:luffy@localhost:5433/chalo_db` (container port 5433, DB name `chalo_db`)
-- `INTERNAL_API_KEY = "chalo-internal-dev-key-change-in-prod"` added
-
-### What's still a placeholder (V2)
-
-- `idleTimeScore = 0.5` in driver scoring — needs real idle-time tracking
-- `TODO V2` surge in `fare.service.ts` — time-based surge is implemented, demand/supply ratio is not
-- Cancellation fee is returned in response but not yet charged via Razorpay (cash-first mode)
-
----
-
-## Round 4 — P2 / P3 Implementation (February 2026)
-
-> All 19 P2 and P3 items from the professional review implemented and verified.  
-> Tests: **163/163 passing** (up from 154). TypeScript: **0 errors**.
-
-### Summary Table
-
-| # | Item | File(s) | Status |
+| Feature | Ola/Uber | Chalo | Impact |
 |---|---|---|---|
-| P2-1.5 | Shared Redis singleton | `src/config/redis.ts` (NEW) | ✅ Done |
-| P2-1.6 | RTDB ride status sync | `src/services/ride.service.ts` | ✅ Done |
-| P2-2.3 | Auth Redis cache (5 min TTL) | `src/middleware/auth.ts` | ✅ Done |
-| P2-2.4 | `optionalAuth` error logging | `src/middleware/auth.ts` | ✅ Done |
-| P2-3.2 | `rejects.toMatchObject` test pattern | `ride.service.test.ts` | ✅ Done |
-| P2-3.3 | `calculateSettlementDate` JSDoc | `src/utils/helpers.ts` | ✅ Done |
-| P2-4.1 | Coverage thresholds | `jest.config.ts` | ✅ Done |
-| P2-4.2 | 5 happy-path ride service tests | `ride.service.test.ts` | ✅ Done |
-| P2-4.3 | 4 auth integration tests | `api.integration.test.ts` | ✅ Done |
-| P2-4.4 | k6 smoke test + ESLint `__ENV` fix | `k6/smoke.js`, `.eslintrc.json` | ✅ Done |
-| P2-5.2 | 6 composite DB index migration | `prisma/migrations/...` | ✅ Done |
-| P2-5.3 | Connection pool docs | `.env.example` | ✅ Done |
-| P2-5.4 | FareService L1+L2+L3 Redis cache | `src/services/fare.service.ts` | ✅ Done |
-| P2-6.3 | Health check Redis ping | `src/app.ts` | ✅ Done |
-| P2-6.4 | Winston `LOG_TO_FILE` opt-in | `src/config/logger.ts` | ✅ Done |
-| P2-6.5 | `REDIS_URL` production guard | `src/server.ts` | ✅ Done |
-| P2-6.6 | Secrets rotation guide | `.env.example` | ✅ Done |
-| P3-3.4 | `parsePagination` limit=0 fix | `src/utils/helpers.ts` | ✅ Done |
-| P3-3.5 | Notification Zod query validation | `src/validators/notification.validator.ts` (NEW), `src/routes/notification.routes.ts` | ✅ Done |
+| In-app call (masked number) | DTMF masked proxy call | Not implemented | Driver/customer contact before pickup |
+| In-app chat | Text messages in ride | Not implemented | Reduces missed pickups |
+| Driver photo and trip count | Profile card with photo | Placeholder icon + name | Trust signal for women riders |
+| Vehicle photo | Photo of bike/car | Not shown | Safety verification |
+| Tip after ride | Optional tip prompt | Not implemented | Driver retention lever |
+| Receipt as PDF | Download/share | Not implemented | Corporate reimbursement use case |
+| Multi-stop ride | Add waypoints | Not implemented | Common for school/office routes |
+| Fare price chart (time of day) | Uber shows cheapest time to book | Not implemented | |
+| Home screen widget | Quick re-book | Not implemented | |
+
+### Safety & Trust
+
+| Feature | Ola/Uber | Chalo | Impact |
+|---|---|---|---|
+| Safety Toolkit (consolidated UI) | Dedicated screen in-app | SOS button only | Safety is a first-class feature for women riders |
+| Biometric app lock | Optional PIN/fingerprint | Not implemented | |
+| Trusted contacts with live tracking | Auto-share link to contacts | Manual share link | |
+| Lost item report flow | In-app contact driver after trip | Not implemented | |
+| Ride insurance option | Opt-in at booking | Not implemented | |
+
+### Operations & Scale
+
+| Feature | Ola/Uber | Chalo | Impact |
+|---|---|---|---|
+| Heat map for driver supply | Drivers see demand zones | Not implemented | Driver onboarding and positioning |
+| Surge zones on map | Visual surge polygons | Config key only | |
+| Service area geofencing | Hard zone boundaries | No boundaries | Regulatory risk |
+| Dynamic ETA from Distance Matrix | Real road ETA | Not implemented | Core pricing and wait-time accuracy |
+| Auto driver settlement (Razorpay Route) | Automated T+2 | Manual withdrawal | Does not scale beyond 50 drivers |
+| A/B testing framework | Full experiment infra | Not implemented | Cannot test UI variants |
+| Analytics events (Mixpanel/Amplitude) | Full funnel tracking | Not implemented | Blind to drop-off points in funnel |
+| Localization (Hindi) | Full i18n | English only | Haryana target market speaks Hindi |
 
 ---
 
-## Round 3 Code Quality Review
+## Part 5 — Production Readiness Gaps
 
-> Completed: February 2026  
-> Scope: Industry standards, redundancy, type safety, reliability  
-> Result: **10 issues found — all 10 fixed — 154 tests still passing**
+These must be resolved before a public launch, independent of feature gaps.
 
-### Summary Table
-
-| # | Severity | Issue | File | Status |
-|---|----------|-------|------|--------|
-| 1 | 🔴 Critical | External HTTP call inside `prisma.$transaction` | `ride.service.ts` | ✅ Fixed |
-| 2 | 🟡 Medium | Duplicate `calculateDistance` (identical to `haversineDistance`) | `ride.service.ts` | ✅ Fixed |
-| 3 | 🟡 Medium | `await import()` dynamic import inside function body | `fare.service.ts` | ✅ Fixed |
-| 4 | 🟠 High | Non-atomic user find+create — race condition on concurrent OTPs | `auth.service.ts` | ✅ Fixed |
-| 5 | 🟠 High | Webhook `payment.failed` overwrites `COMPLETED` status | `payment.service.ts` | ✅ Fixed |
-| 6 | 🟡 Medium | `fare` param optional in `searchAndNotifyDrivers` — fallback DB query unreachable | `ride.service.ts` | ✅ Fixed |
-| 7 | 🟡 Medium | `getRideHistory` return type `unknown[]` — loses compile-time type info | `ride.service.ts` | ✅ Fixed |
-| 8 | 🟢 Low | `Set<any>` for connection tracking instead of `Set<Socket>` | `server.ts` | ✅ Fixed |
-| 9 | 🟢 Low | `distanceFare`/`timeFare` computed twice in `estimateFare` | `fare.service.ts` | ✅ Fixed |
-| 10 | 🟡 Medium | `cleanupExpiredOTPs` defined but never called — dead code | `auth.service.ts` / `server.ts` | ✅ Fixed |
+| # | Gap | Severity |
+|---|---|---|
+| P-01 | Zero Android tests — any release can silently break | CRITICAL |
+| P-02 | SOS sends (0.0, 0.0) coordinates — safety bug | CRITICAL |
+| P-03 | No SMS gateway connected — OTP delivery broken | CRITICAL |
+| P-04 | GSON + no ProGuard rules — release build can silently null all DTOs | HIGH |
+| P-05 | No Android CI/CD — lint, build, test not automated | HIGH |
+| P-06 | `isMyLocationEnabled` without permission guard — crash on fresh install | HIGH |
+| P-07 | Straight-line fare calculation — customers will always be undercharged | HIGH |
+| P-08 | No service area boundary — dispatches to wrong region | HIGH |
+| P-09 | Manual driver settlement — not scalable | MEDIUM |
+| P-10 | No backup / disaster recovery documented | MEDIUM |
+| P-11 | No API rate-limit response handling in Android — app freezes on 429 | MEDIUM |
+| P-12 | `network_security_config.xml` uses network addresses not host IPs — breaks physical device testing | LOW |
 
 ---
 
-### Issue 1 — External HTTP inside `$transaction` 🔴 Fixed
+## Part 6 — Immediate Action Plan (Priority Order)
 
-**File**: `src/services/ride.service.ts` · `createRide()`
+### Week 1 — Fix blockers before any user testing
 
-**Problem**: `fareService.estimateFare()` (which calls Google Maps Directions API) was being awaited inside a `prisma.$transaction()` block. Prisma holds the DB connection open for the entire transaction duration. An external HTTP call inside a transaction can:
-- Hold the Postgres connection for seconds while waiting on Google Maps
-- Cause connection pool exhaustion under load
-- Trigger transaction timeouts in production
+1. **Fix SOS location bug** — Wire `FusedLocationProviderClient` in `ActiveRideViewModel.onSosConfirm()`. Do not pass coordinates from the UI layer — fetch them in the ViewModel.
+2. **Fix location permission guard** — Wrap `isMyLocationEnabled = true` in a permission check using accompanist-permissions.
+3. **Wire SMS gateway** — Connect MSG91 or Fast2SMS to `sms.service.ts`. Test OTP delivery end-to-end.
+4. **Add ProGuard keep rules for DTOs** — Add `@Keep` on all files in `data/remote/dto/` or add rules to `proguard-rules.pro`.
 
-**Fix**: Moved `await fareService.estimateFare()` to **before** the `prisma.$transaction()` call. The fare estimate is computed once and passed into the transaction as a plain value.
+### Week 2 — Core product gaps
 
-```typescript
-// BEFORE (wrong — Google Maps call inside transaction):
-const { ride: createdRide } = await prisma.$transaction(async (tx) => {
-  const fareEstimate = await fareService.estimateFare(pickup, drop); // ← external HTTP!
-  const createdRide = await tx.ride.create({ ... });
-  return { ride: createdRide, fareEstimate };
-});
+5. **Add Google Places Autocomplete** — Without this, users cannot book. This is the single highest-priority feature after the bugs.
+6. **Add Google Directions route polyline** — Fetch route on `ActiveRideScreen` between pickup and drop.
+7. **Upgrade OTP to 6 digits** — Backend + Android + all tests.
+8. **Add SMS Retriever API** — Auto-fill OTP on `OtpVerifyScreen`.
 
-// AFTER (correct — external call before transaction):
-const fareEstimate = await fareService.estimateFare(pickup, drop); // ← outside transaction
-const createdRide = await prisma.$transaction(async (tx) => {
-  return tx.ride.create({ ... });
-});
-```
+### Week 3 — Quality and trust
 
----
+9. **Write first 5 Android unit tests** — `OtpVerifyViewModel`, `ActiveRideViewModel`, `AuthRepositoryImpl`.
+10. **Add Android CI pipeline** — GitHub Actions: lint + build + unit tests on every PR.
+11. **Add driver marker animation** — `ValueAnimator` interpolation between RTDB location updates.
+12. **Replace GSON with Moshi or kotlinx.serialization** — Null-safety for all API responses.
 
-### Issue 2 — Duplicate Haversine Function 🟡 Fixed
+### Month 2 — Product layer
 
-**File**: `src/services/ride.service.ts`
-
-**Problem**: `RideService` had a private `calculateDistance(lat1, lng1, lat2, lng2)` method that was an **exact copy** of `haversineDistance` from `src/utils/helpers.ts` — same algorithm, same rounding, same parameter names.
-
-**Fix**: Removed the private method entirely. Added `haversineDistance` to the existing import from `../utils/helpers` and replaced the internal call.
+13. Foreground service for background ride tracking
+14. In-app wallet (schema + UI)
+15. Promo code engine
+16. ETA via Google Distance Matrix
+17. Geofencing for service area
+18. Hindi localization
+19. Auto driver settlement via Razorpay Route
 
 ---
 
-### Issue 3 — Dynamic Import Anti-Pattern 🟡 Fixed
+## Summary
 
-**File**: `src/services/fare.service.ts` · `getRouteDetails()`
+Chalo has a genuinely solid technical foundation — better than most apps at this stage. The backend middleware, auth, job queues, and Android architecture patterns are professional-grade. The problems are not architectural — they are in the product layer and in the absence of testing. A user opening the app today cannot complete a booking without dropping a pin (no place search), will not see a route on the map, and is sending an SOS to the middle of the Atlantic Ocean.
 
-**Problem**: The function body contained `const { haversineDistance } = await import('../utils/helpers')`. Dynamic `import()` inside a function body:
-- Forces a module re-evaluation on each call (no caching guarantee in all runtimes)
-- Breaks static analysis (tree-shaking, type resolution)
-- Is an anti-pattern when the module is unconditionally needed
-
-**Fix**: Replaced with a static top-level `import { haversineDistance } from '../utils/helpers'`.
-
----
-
-### Issue 4 — Non-Atomic User Find-or-Create 🟠 Fixed
-
-**File**: `src/services/auth.service.ts` · `verifyOTP()`
-
-**Problem**: The code used a `findUnique` + `create` pattern without a transaction:
-```typescript
-const existing = await prisma.oTPVerification.findUnique(...);
-// ← window for concurrent duplicate creation here
-const user = await prisma.user.create(...);
-```
-Two concurrent OTP verifications for the same phone number could both pass the `findUnique` check and both attempt `create`, causing a unique constraint violation or a duplicate user.
-
-**Fix**: Wrapped both operations in `prisma.$transaction()`. The `as const` tuple pattern (`[user, isNewUser] as const`) gives callers type-safe destructuring.
-
----
-
-### Issue 5 — Non-Idempotent Webhook Handler 🟠 Fixed
-
-**File**: `src/services/payment.service.ts` · `handleWebhookEvent()`
-
-**Problem**:
-- `payment.captured` could be processed multiple times, duplicating balance updates
-- `payment.failed` would overwrite a `COMPLETED` status if Razorpay delivered events out-of-order (failed event arrives after captured event)
-
-**Fix**: Added guards to both branches:
-```typescript
-case 'payment.captured':
-  if (ride.paymentStatus === PaymentStatus.COMPLETED) {
-    logger.warn({ rideId }, 'payment.captured ignored — ride already COMPLETED');
-    return; // idempotent
-  }
-  // ... update
-
-case 'payment.failed':
-  if (ride.paymentStatus === PaymentStatus.COMPLETED) {
-    logger.warn({ rideId }, 'payment.failed ignored — ride already COMPLETED, out-of-order event');
-    return; // never downgrade a completed payment
-  }
-```
-
----
-
-### Issue 6 — Optional `fare` Param with Unreachable Fallback 🟡 Fixed
-
-**File**: `src/services/ride.service.ts` · `searchAndNotifyDrivers()`
-
-**Problem**: The `fare` parameter was typed as optional (`fare?: number`), which forced a fallback Prisma query:
-```typescript
-const fareDisplay = fare ?? (await prisma.ride.findUnique({ where: { id: rideId } }))?.finalFare ?? '?';
-```
-This fallback was unreachable — all callers always passed `fare`. The optional typing hid a contract violation and added dead DB query code.
-
-**Fix**: Made `fare: number` required (removed `?`). Deleted the fallback query. The push notification now uses `fare` directly.
-
----
-
-### Issue 7 — `unknown[]` Return Type 🟡 Fixed
-
-**File**: `src/services/ride.service.ts` · `getRideHistory()`
-
-**Problem**: Return type declared as `Promise<{ rides: unknown[]; meta: PaginationMeta }>`. Using `unknown[]` throws away all Prisma-inferred type information, forcing consumers to cast or use unsafe access patterns.
-
-**Fix**: Used `Prisma.RideGetPayload` utility type with a `satisfies Prisma.RideSelect` const — the gold-standard TypeScript pattern that stays automatically in sync with schema changes:
-
-```typescript
-const RIDE_HISTORY_SELECT = {
-  id: true, pickupAddress: true, /* ... */
-} satisfies Prisma.RideSelect;
-
-type RideHistoryItem = Prisma.RideGetPayload<{ select: typeof RIDE_HISTORY_SELECT }>;
-
-async getRideHistory(...): Promise<{ rides: RideHistoryItem[]; meta: PaginationMeta }>
-```
-
----
-
-### Issue 8 — `Set<any>` for Connection Tracking 🟢 Fixed
-
-**File**: `src/server.ts`
-
-**Problem**: `let connections: Set<any> = new Set()` — `any` defeats TypeScript's type checker. These are Node.js `net.Socket` instances.
-
-**Fix**: 
-```typescript
-import type { Socket } from 'net';
-let connections: Set<Socket> = new Set();
-```
-
----
-
-### Issue 9 — Double Fare Computation 🟢 Fixed
-
-**File**: `src/services/fare.service.ts` · `estimateFare()`
-
-**Problem**: `distanceFare` and `timeFare` were computed **twice** — once inside `calculateBaseFare()` (to produce `baseFare`) and again explicitly outside it (to populate the breakdown fields in the return value). The outer computation also missed `Math.round()`, producing float values in the breakdown while `baseFare` was rounded internally.
-
-**Fix**: Removed the `calculateBaseFare()` call from `estimateFare`. Compute components once, round once, derive `baseFare` from them directly:
-```typescript
-const distanceFare = Math.round(distanceKm * runtimeConfig.baseFarePerKm);
-const timeFare = Math.round(durationMins * runtimeConfig.baseFarePerMin);
-const rawBase = distanceFare + timeFare + CONSTANTS.BOOKING_FEE;
-const baseFare = Math.max(rawBase, CONSTANTS.MIN_FARE);
-```
-`calculateBaseFare` is still used in `calculateFinalFare` where the breakdown is not needed.
-
----
-
-### Issue 10 — Dead Code: `cleanupExpiredOTPs` Never Called 🟡 Fixed
-
-**File**: `src/services/auth.service.ts` (defined), `src/server.ts` (now wired)
-
-**Problem**: `authService.cleanupExpiredOTPs()` deleted expired OTP rows from Postgres, but was never called — not at startup, not on a schedule. The `otp_verifications` table would grow indefinitely.
-
-**Fix**: Wired in `server.ts` after startup — runs immediately on startup, then every 24 hours:
-```typescript
-const OTP_CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000;
-authService.cleanupExpiredOTPs().catch(err => logger.error({ err }, 'Initial OTP cleanup failed'));
-setInterval(() => {
-  authService.cleanupExpiredOTPs().catch(err => logger.error({ err }, 'Scheduled OTP cleanup failed'));
-}, OTP_CLEANUP_INTERVAL_MS);
-```
-
----
-
----
-
-## 1. CRITICAL — Security Issues
-
-### 1.1 Secrets in Default Values (Risk: HIGH)
-
-**Problem**: [src/config/index.ts](chalo-backend/src/config/index.ts) has placeholder secrets as default values:
-```typescript
-keyId: requireEnv('RAZORPAY_KEY_ID', 'rzp_test_placeholder'),
-keySecret: requireEnv('RAZORPAY_KEY_SECRET', 'placeholder_secret'),
-apiKey: requireEnv('GOOGLE_MAPS_API_KEY', 'placeholder_key'),
-```
-
-If `.env` is missing these keys, the app starts with dummy credentials instead of failing fast.
-
-**Fix**:
-```typescript
-// Remove default values for sensitive keys — fail hard if missing
-keyId: requireEnv('RAZORPAY_KEY_ID'),
-keySecret: requireEnv('RAZORPAY_KEY_SECRET'),
-apiKey: requireEnv('GOOGLE_MAPS_API_KEY'),
-```
-
----
-
-### 1.2 No Request Body Size Validation per Endpoint
-
-**Problem**: Global `10mb` limit is too generous. Ride requests should be ~1KB max.
-
-**Fix**: Add per-route body limits:
-```typescript
-// In ride routes
-app.post('/rides', express.json({ limit: '10kb' }), ...);
-```
-
----
-
-### 1.3 Missing HTTPS Enforcement
-
-**Problem**: No check that requests come over HTTPS in production.
-
-**Fix**: Add middleware in `app.ts`:
-```typescript
-if (config.isProd) {
-  app.use((req, res, next) => {
-    if (req.headers['x-forwarded-proto'] !== 'https') {
-      return res.redirect(301, `https://${req.headers.host}${req.url}`);
-    }
-    next();
-  });
-}
-```
-
----
-
-### 1.4 Rate Limiter Uses Memory Store
-
-**Problem**: [src/middleware/rateLimiter.ts](chalo-backend/src/middleware/rateLimiter.ts) uses in-memory store — resets on server restart, doesn't share across instances.
-
-**Fix**: Use Redis store:
-```typescript
-import RedisStore from 'rate-limit-redis';
-import { createClient } from 'redis';
-
-const redisClient = createClient({ url: config.redisUrl });
-
-export const createRateLimiter = (opts) => rateLimit({
-  store: new RedisStore({ client: redisClient }),
-  ...opts,
-});
-```
-
----
-
-### 1.5 Webhook Signature Timing Attack
-
-**Problem**: [src/services/payment.service.ts](chalo-backend/src/services/payment.service.ts) uses `!==` for signature comparison:
-```typescript
-if (expectedSignature !== razorpaySignature) { ... }
-```
-
-String comparison can leak timing information.
-
-**Fix**:
-```typescript
-import { timingSafeEqual } from 'crypto';
-
-const isValid = timingSafeEqual(
-  Buffer.from(expectedSignature, 'hex'),
-  Buffer.from(razorpaySignature, 'hex')
-);
-if (!isValid) throw ...;
-```
-
----
-
-### 1.6 No Input Sanitization for XSS
-
-**Problem**: User-provided strings (address, name, comments) are stored and returned as-is.
-
-**Fix**: Sanitize on input:
-```bash
-npm install xss
-```
-```typescript
-import xss from 'xss';
-const sanitizedAddress = xss(pickup.address);
-```
-
----
-
-## 2. CRITICAL — Database Issues
-
-### 2.1 No Database Connection Pooling Config
-
-**Problem**: Default Prisma pooling may not scale. Under load, you'll hit connection limits.
-
-**Fix**: Add connection pool settings to `DATABASE_URL`:
-```
-postgresql://user:pass@host:5432/db?connection_limit=20&pool_timeout=30
-```
-
-Or use PgBouncer in front of PostgreSQL for production.
-
----
-
-### 2.2 Missing Database Indexes
-
-**Problem**: [prisma/schema.prisma](chalo-backend/prisma/schema.prisma) is missing indexes on:
-- `rides.driverId` (driver lookup)
-- `rides.status` (filtering active rides)
-- `rides.scheduledAt` (scheduled ride queries)
-- `ride_events.rideId` (event lookups)
-
-**Fix**: Add to schema:
-```prisma
-model Ride {
-  ...
-  @@index([driverId])
-  @@index([status])
-  @@index([scheduledAt])
-}
-
-model RideEvent {
-  ...
-  @@index([rideId])
-}
-```
-
----
-
-### 2.3 No Soft Delete
-
-**Problem**: `onDelete: Cascade` on profiles means deleting a user wipes all their rides permanently.
-
-**Fix**: Add soft delete:
-```prisma
-model User {
-  ...
-  deletedAt DateTime?
-}
-```
-Filter `deletedAt IS NULL` in all queries.
-
----
-
-### 2.4 No Transaction for Multi-Table Writes
-
-**Problem**: [src/services/ride.service.ts#rateRide](chalo-backend/src/services/ride.service.ts) updates both `rides` and `driver_profiles` without a transaction — partial failure possible.
-
-**Fix**:
-```typescript
-await prisma.$transaction(async (tx) => {
-  await tx.ride.update({ ... });
-  await tx.driverProfile.update({ ... });
-});
-```
-
-Apply same pattern to: `cancelRide`, `createRide`, payment confirmations.
-
----
-
-### 2.5 PostGIS Not Actually Used
-
-**Problem**: Schema declares PostGIS extension but driver search uses bounding box math, not spatial queries.
-
-**Fix**: Use proper geometry:
-```prisma
-model DriverProfile {
-  ...
-  location  Unsupported("geometry(Point, 4326)")?
-}
-```
-```sql
--- Query within 5km
-SELECT * FROM driver_profiles
-WHERE ST_DWithin(location, ST_MakePoint($lng, $lat)::geography, 5000)
-AND is_online = true;
-```
-
----
-
-## 3. HIGH — API Design Issues
-
-### 3.1 No API Versioning Beyond URL
-
-**Problem**: `/api/v1/...` is good, but there's no strategy for deprecation or v2.
-
-**Fix**: Document versioning policy in README:
-- v1 endpoints remain stable for 1 year after v2 launch
-- Deprecation warnings via `Sunset` header
-- Add version header: `X-API-Version: 1`
-
----
-
-### 3.2 Inconsistent Error Codes
-
-**Problem**: Some errors return generic codes. Clients can't distinguish "ride already rated" from "ride not found" programmatically.
-
-**Fix**: Add error codes:
-```typescript
-throw ApiError.conflict('RIDE_ALREADY_RATED', 'Ride already rated');
-```
-Response:
-```json
-{ "code": "RIDE_ALREADY_RATED", "message": "Ride already rated" }
-```
-
----
-
-### 3.3 No Idempotency Keys
-
-**Problem**: `POST /rides` can create duplicate rides if client retries on timeout.
-
-**Fix**: Accept `Idempotency-Key` header, store in Redis with 24h TTL:
-```typescript
-const existing = await redis.get(`idempotency:${key}`);
-if (existing) return JSON.parse(existing);
-// ... create ride ...
-await redis.set(`idempotency:${key}`, JSON.stringify(result), 'EX', 86400);
-```
-
----
-
-### 3.4 No Pagination Cursor
-
-**Problem**: Offset pagination (`?page=5`) is slow on large tables.
-
-**Fix**: Add cursor-based pagination:
-```
-GET /rides?cursor=abc123&limit=20
-```
-Return `nextCursor` in response for infinite scroll.
-
----
-
-### 3.5 Missing Ride Tracking Endpoint
-
-**Problem**: No endpoint for real-time ride location. Clients must poll or use Firebase directly.
-
-**Fix**: Add:
-```
-GET /rides/:id/location → { lat, lng, heading, speed, updatedAt }
-```
-Or better: document Firebase Realtime Database path structure for clients.
-
----
-
-## 4. HIGH — Missing Production Features
-
-### 4.1 No Health Check for Dependencies
-
-**Problem**: `/health` returns OK even if database or Redis is down.
-
-**Fix**:
-```typescript
-app.get('/health', async (req, res) => {
-  const dbOk = await prisma.$queryRaw`SELECT 1`.then(() => true).catch(() => false);
-  const redisOk = await redis.ping().then(() => true).catch(() => false);
-  
-  const healthy = dbOk && redisOk;
-  res.status(healthy ? 200 : 503).json({
-    status: healthy ? 'ok' : 'degraded',
-    database: dbOk ? 'ok' : 'down',
-    redis: redisOk ? 'ok' : 'down',
-  });
-});
-```
-
----
-
-### 4.2 No Graceful Shutdown
-
-**Problem**: [src/server.ts](chalo-backend/src/server.ts) doesn't wait for in-flight requests on SIGTERM.
-
-**Fix**:
-```typescript
-process.on('SIGTERM', async () => {
-  logger.info('SIGTERM received, shutting down gracefully');
-  server.close(async () => {
-    await prisma.$disconnect();
-    process.exit(0);
-  });
-  // Force exit after 30s
-  setTimeout(() => process.exit(1), 30000);
-});
-```
-
----
-
-### 4.3 No Request ID Tracing
-
-**Problem**: Can't correlate logs across a single request.
-
-**Fix**: Add request ID middleware:
-```typescript
-import { v4 as uuid } from 'uuid';
-
-app.use((req, res, next) => {
-  req.id = req.headers['x-request-id'] || uuid();
-  res.setHeader('X-Request-Id', req.id);
-  next();
-});
-```
-Include `requestId` in all log calls.
-
----
-
-### 4.4 No Circuit Breaker for External Services
-
-**Problem**: If Google Maps or Razorpay is slow/down, requests pile up and crash the server.
-
-**Fix**: Use `opossum` circuit breaker:
-```typescript
-import CircuitBreaker from 'opossum';
-
-const mapsBreaker = new CircuitBreaker(callGoogleMaps, {
-  timeout: 5000,
-  errorThresholdPercentage: 50,
-  resetTimeout: 30000,
-});
-```
-
----
-
-### 4.5 No Metrics / Observability
-
-**Problem**: No Prometheus metrics, no APM.
-
-**Fix**: Add `prom-client`:
-```typescript
-import { collectDefaultMetrics, Registry } from 'prom-client';
-const register = new Registry();
-collectDefaultMetrics({ register });
-
-app.get('/metrics', async (req, res) => {
-  res.set('Content-Type', register.contentType);
-  res.end(await register.metrics());
-});
-```
-
-Track custom metrics: `rides_created_total`, `payment_failures_total`, `driver_search_time_seconds`.
-
----
-
-## 5. MEDIUM — Code Quality
-
-### 5.1 Services Are Classes but Exported as Singletons
-
-**Problem**: `export const rideService = new RideService()` makes testing harder.
-
-**Fix**: Use dependency injection via constructor or Hilt-style providers:
-```typescript
-export const createRideService = (deps: { prisma, logger, notificationService }) => {
-  return {
-    createRide: async (...) => { ... },
-  };
-};
-```
-
----
-
-### 5.2 No Input Validation on Internal Methods
-
-**Problem**: `searchAndNotifyDrivers(rideId, lat, lng)` trusts callers to pass valid data.
-
-**Fix**: Add runtime checks even on private methods for defense in depth:
-```typescript
-if (!rideId || !lat || !lng) throw new Error('Invalid params');
-```
-
----
-
-### 5.3 TODO Comments in Code
-
-**Problem**: `// TODO V2: Broadcast to multiple drivers` — technical debt not tracked.
-
-**Fix**: Convert all TODOs to GitHub Issues with labels (`v2`, `enhancement`, `tech-debt`).
-
----
-
-### 5.4 Magic Numbers in Code
-
-**Problem**: `take: 10` (max drivers to search) is hardcoded.
-
-**Fix**: Move to CONSTANTS:
-```typescript
-DRIVER_SEARCH_MAX_CANDIDATES: 10,
-```
-
----
-
-### 5.5 No JSDoc on Public Methods
-
-**Problem**: IDE hints are limited without JSDoc.
-
-**Fix**: Add JSDoc to all exported functions:
-```typescript
-/**
- * Create an on-demand ride request
- * @param customerId - The customer's user ID
- * @param pickup - Pickup location with lat, lng, address
- * @throws {ApiError} If customer has active ride
- */
-```
-
----
-
-## 6. MEDIUM — Testing Gaps
-
-### 6.1 No Integration Tests
-
-**Problem**: All 135 tests are unit tests. No tests hit the actual API endpoints.
-
-**Fix**: Add integration tests with `supertest`:
-```typescript
-import request from 'supertest';
-import { createApp } from '../app';
-
-describe('POST /api/v1/auth/send-otp', () => {
-  it('returns 200 for valid phone', async () => {
-    const res = await request(createApp())
-      .post('/api/v1/auth/send-otp')
-      .send({ phone: '+919876543210' });
-    expect(res.status).toBe(200);
-  });
-});
-```
-
----
-
-### 6.2 No Service Layer Tests
-
-**Problem**: Services have complex logic (fare calculation, driver matching) but no dedicated tests.
-
-**Fix**: Mock Prisma and test business logic:
-```typescript
-jest.mock('../config/database');
-// Test calculateCommission, searchAndNotifyDrivers, etc.
-```
-
----
-
-### 6.3 No Load Testing
-
-**Problem**: Unknown how system behaves under 100+ concurrent ride requests.
-
-**Fix**: Add k6 or Artillery load tests:
-```yaml
-# artillery.yml
-scenarios:
-  - duration: 60
-    arrivalRate: 50
-    flow:
-      - post:
-          url: "/api/v1/rides/fare-estimate"
-          json: { pickup: {...}, drop: {...} }
-```
-
----
-
-## 7. MEDIUM — Driver Matching Improvements
-
-### 7.1 Nearest-First is Unfair
-
-**Problem**: Always sending to nearest driver starves drivers slightly further away.
-
-**Fix**: Implement round-robin or score-based matching:
-```
-score = (1 / distance) * 0.5 + rating * 0.3 + recentIdleTime * 0.2
-```
-
----
-
-### 7.2 No Driver Acceptance Timeout Handling
-
-**Problem**: If driver ignores the notification, ride stays in `REQUESTED` forever.
-
-**Fix**: Add a scheduled job (cron or Bull queue):
-```typescript
-// Every 10 seconds
-if (ride.status === 'REQUESTED' && ride.requestedAt < 60 seconds ago) {
-  // Try next driver or mark NO_DRIVER
-}
-```
-
----
-
-### 7.3 No Broadcast Mode
-
-**Problem**: V1 sends request to one driver at a time — slow matching.
-
-**Fix**: Broadcast to top 5 drivers, first-accept wins, cancel others.
-
----
-
-## 8. LOW — Nice-to-Haves
-
-### 8.1 GraphQL API Option
-
-For mobile clients that want to fetch ride + driver + payment in one call.
-
----
-
-### 8.2 WebSocket for Real-Time Updates
-
-Instead of FCM-only, offer WebSocket channel for ride status updates.
-
----
-
-### 8.3 OpenAPI / Swagger Documentation
-
-Auto-generate from Zod schemas using `zod-to-openapi`.
-
----
-
-### 8.4 Database Read Replicas
-
-For read-heavy queries (ride history, earnings), route to replicas.
-
----
-
-### 8.5 CDN for Static Assets
-
-If serving driver photos or docs, put them behind CloudFront / Cloudflare.
-
----
-
-## Implementation Priority Matrix
-
-| Priority | Issue | Effort | Impact |
-|----------|-------|--------|--------|
-| 🔴 Critical | 1.1 Secrets in defaults | 10 min | Prevents accidental prod breach |
-| 🔴 Critical | 1.5 Timing-safe signature | 10 min | Security best practice |
-| 🔴 Critical | 2.2 Missing indexes | 30 min | Prevents slow queries at scale |
-| 🔴 Critical | 2.4 Transactions | 2 hrs | Data integrity |
-| 🟠 High | 1.4 Redis rate limiter | 1 hr | Horizontal scaling |
-| 🟠 High | 4.2 Graceful shutdown | 30 min | Zero-downtime deploys |
-| 🟠 High | 4.3 Request ID tracing | 30 min | Debug production issues |
-| 🟠 High | 3.3 Idempotency keys | 2 hrs | Prevent duplicate rides |
-| 🟠 High | 7.2 Driver timeout job | 3 hrs | Core feature completion |
-| 🟡 Medium | 6.1 Integration tests | 4 hrs | Build confidence |
-| 🟡 Medium | 4.5 Prometheus metrics | 2 hrs | Observability |
-| 🟡 Medium | 5.1 Dependency injection | 4 hrs | Testability |
-| 🟢 Low | 8.3 OpenAPI docs | 2 hrs | Developer experience |
-
----
-
-## Immediate Action Items (This Week)
-
-1. ~~**Fix secrets defaults** — remove placeholder values from config~~ ✅ Done
-2. ~~**Add timing-safe signature comparison** — 10-minute fix~~ ✅ Done
-3. **Add missing database indexes** — create migration (2.2)
-4. ~~**Wrap multi-table writes in transactions** — ride.service, payment.service~~ ✅ Done
-5. ~~**Add graceful shutdown** — server.ts~~ ✅ Done (previous session)
-6. ~~**Add request ID middleware** — app.ts~~ ✅ Done (previous session)
-
-## Remaining Items (next priority — not blocking V1 quality bar)
-
-| Priority | Issue | Effort | Status |
-|----------|-------|--------|--------|
-| 🔴 Critical | Dockerfile + docker-compose | 2 hrs | ✅ Done |
-| 🔴 Critical | GitHub Actions CI pipeline | 1 hr | ✅ Done |
-| 🔴 Critical | FCM `messaging.send()` | 3 hrs | ⬜ Pending |
-| 🔴 Critical | Google Maps Directions API | 2 hrs | ⬜ Pending |
-| 🔴 Critical | SOS SMS via MSG91 | 2 hrs | ⬜ Pending |
-| 🟠 High | Driver-side REST endpoints (16) | 3–4 days | ✅ Done |
-| 🟠 High | PostGIS spatial indexes (5 indexes) | 3 hrs | ✅ Done |
-| 🟠 High | BullMQ scheduled ride dispatcher | 1 day | ⬜ Pending |
-| 🟠 High | Admin API (driver approval, config) | 2–3 days | ⬜ Pending |
-| 🟡 Medium | Prisma instanceof error handler (2.5) | 30 min | ⬜ Pending |
-| 🟡 Medium | Cursor-based pagination | 2 hrs | ⬜ Pending |
-| 🟡 Medium | OpenAPI / Swagger docs | 3 hrs | ⬜ Pending |
-| 🟢 Low | Rate limit by user ID (not just IP) | 1 hr | ⬜ Pending |
-
----
-
-## Conclusion
-
-The backend architecture is **production-ready for a controlled V1 launch**. All 25 security/performance/reliability findings from Rounds 1–2, all 10 code quality issues from Round 3, and all 19 P2+P3 items from the professional Round 4 review have been resolved.
-
-**Completed since last review:**
-- ✅ Docker + docker-compose (multi-stage build, PostGIS 16, Redis 7, OpenSSL fix)
-- ✅ GitHub Actions CI (type-check → lint → test → build on every PR)
-- ✅ Driver API — all 16 endpoints with atomic compare-and-swap acceptance, Redis offer keys, IST-aware earnings, settlement summary
-- ✅ PostGIS spatial indexes — 5 `CREATE INDEX CONCURRENTLY IF NOT EXISTS` statements
-
-The codebase now features cryptographically secure OTPs, timing-safe webhook verification, circuit breaker protection, transactional data integrity, idempotent webhooks, fully typed Prisma selects, shared Redis singleton, RTDB sync, auth caching, composite DB indexes, PostGIS GIST indexes, k6 load tests, **163 passing tests**, and **41 live API endpoints**.
-
-**Current score: ~8.0/10.** Reaching 9.0/10 requires FCM send, Google Maps, SOS SMS, BullMQ, and Admin API — none of which require re-architecture.
-
-After configuring the database and environment variables (see [NEXT_STEPS.md](NEXT_STEPS.md)), this backend is ready for the Faridabad market pilot.
+Fix the three critical bugs, wire the SMS gateway, add Google Places, then invest in Android tests before adding any new features. The backend can scale. The Android app needs hardening first.

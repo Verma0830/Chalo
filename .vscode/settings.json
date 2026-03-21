@@ -1,4 +1,8 @@
 {
+  "files.associations": {
+    ".github/workflows/*.yml": "yaml",
+    ".github/workflows/*.yaml": "yaml"
+  },
   "typescript.tsdk": "chalo-backend/node_modules/typescript/lib",
   "typescript.enablePromptUseWorkspaceTsdk": true,
   "eslint.workingDirectories": ["./chalo-backend"],
@@ -8,6 +12,7 @@
     "source.fixAll.eslint": "explicit"
   },
   "prisma.pinToPrisma6": true,
+  "github-actions.use-enterprise": false,
   "chat.tools.terminal.autoApprove": {
     "npx jest": true
   }

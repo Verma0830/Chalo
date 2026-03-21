@@ -1,393 +1,132 @@
-# Chalo 🏍️
+# Chalo
 
-> Faridabad's hyper-local **bike ride-hailing app** for customers and drivers.
-> V1 — Bike rides only · Android (Kotlin + Jetpack Compose) · Hindi/Punjabi market
+Faridabad-focused bike ride-hailing platform. Production-ready backend with a fully-tested Android customer app.
 
----
+## Current Status (March 2026)
 
-## Project Overview
+- Backend API: **60 endpoints** across auth, rides, driver, payments, notifications, admin, and public tracking. 319/319 tests passing.
+- Database: Prisma + PostgreSQL/PostGIS, 10 migrations applied.
+- Android customer app: full feature implementation — Compose screens, navigation, DI, repositories, API clients, Room, Firebase RTDB + FCM integration. 53 unit tests across 6 test classes.
+- CI: GitHub Actions pipeline — backend (lint + test + build) and Android (lint + unit tests + debug APK) run on every push to `main`.
 
-| Item | Detail |
-|---|---|
-| Platform | Android (API 28+) |
-| Language | Kotlin + Jetpack Compose |
-| Market | Faridabad, Haryana |
-| App Languages | Punjabi (`pa`) + English (`en`) |
-| Payment | Razorpay (UPI) + Cash |
-| Maps | Google Maps SDK |
-| Auth | Firebase Phone OTP |
-| V1 Scope | Bike rides only |
-
----
-
-## Repository Structure
+## Repository Layout
 
 ```
-Chalo/
-├── README.md               # This file
-├── chalo-backend/          # Node.js + TypeScript + Express API
-│   ├── prisma/             # Database schema (PostgreSQL) + seed + migrations
-│   └── src/
-│       ├── config/         # App config, logger, Firebase, database, Redis
-│       ├── controllers/    # HTTP request handlers (auth, ride, driver, admin…)
-│       ├── jobs/           # BullMQ background jobs (ride expiry, OTP cleanup)
-│       ├── middleware/     # Auth, error handler, rate limiter, validator
-│       ├── routes/         # Express route definitions
-│       ├── services/       # Business logic (ride, fare, payment, SOS, KYC…)
-│       ├── types/          # TypeScript type definitions
-│       ├── utils/          # Helpers, constants, ApiError, ApiResponse, metrics
-│       ├── validators/     # Zod request validators
-│       └── __tests__/      # Unit + integration tests (Jest + ts-jest)
-│
-└── docs/
-    ├── CODEBASE.md                    # Full codebase reference (give to Claude at session start)
-    ├── api/
-    │   └── POSTMAN_GUIDE.md          # API testing guide (Postman flows)
-    ├── design/                        # All UI/UX design files
-    │   ├── chalo-prototype.html
-    │   ├── chalo-customer-screens.html
-    │   ├── chalo-driver-screens.html
-    │   ├── chalo-design-system.html
-    │   ├── chalo-component-library.html
-    │   ├── chalo-spec-sheet.html
-    │   ├── chalo-user-flows.html
-    │   ├── chalo-wireframes.html
-    │   └── chalo-design-tokens.json
-    ├── development/
-    │   ├── NEXT_STEPS.md             # Step-by-step development roadmap
-    │   ├── IMPLEMENTATION_ROADMAP.md # Detailed task breakdown (phases 1-3)
-    │   └── FRIEND_SETUP.md           # New developer onboarding guide (start here)
-    ├── product/
-    │   └── chalo-product-documentation.md
-    └── reviews/
-        ├── CODE_REVIEW.md
-        ├── SECURITY_PERFORMANCE_REVIEW.md
-        ├── chalo-backend-review.md
-        └── chalo-master-document.docx
+chalo-backend/          Node.js + TypeScript backend
+chalo-customer-app/     Android customer app (Kotlin + Jetpack Compose)
+docs/                   All documentation
+  api/                  POSTMAN_GUIDE.md, token-exchange-guide.md
+  development/          NEXT_STEPS.md, EMULATOR_SETUP.md, BACKEND_FLOWS.md, FRIEND_SETUP.md
+  reviews/              CODE_REVIEW.md, SECURITY_PERFORMANCE_REVIEW.md
+  product/              chalo-product-documentation.md
+  CODEBASE.md           Full architecture and endpoint reference
 ```
-
----
 
 ## Backend Stack
 
 | Layer | Technology |
 |---|---|
-| Runtime | Node.js 20+ |
-| Language | TypeScript 5.3 (strict) |
+| Runtime | Node.js 20 |
 | Framework | Express 4 |
+| Language | TypeScript (strict mode) |
 | ORM | Prisma 5 |
-| Database | PostgreSQL (PostGIS) + 6 composite indexes |
-| Cache | Redis (rate limiting, idempotency, auth tokens, config cache) |
-| Auth | Firebase Admin SDK + phone OTP (SHA-256 hashed) |
-| Push Notifications | FCM (Firebase Cloud Messaging) + in-app DB storage |
-| Realtime Location | Firebase Realtime Database (ride status sync) |
-| File Storage | Firebase Storage |
-| Payments | Razorpay (UPI + webhooks) |
-| Maps | Google Maps Directions + Places APIs |
-| Validation | Zod (every endpoint) |
-| Logging | Winston (JSON prod / colorized dev, Docker-aware) |
-| Security | Helmet, CORS, HPP, per-endpoint rate limiting (Redis), request ID tracing, timing-safe comparisons |
-| Testing | Jest + ts-jest (163 tests, 8 suites, 100% passing) |
-| Circuit Breaker | opossum (Razorpay API protection) |
-| Metrics | prom-client (Prometheus, custom business metrics) |
-| Load Testing | k6 (smoke test with thresholds) |
+| Database | PostgreSQL 16 + PostGIS 3.4 |
+| Cache / Queues | Redis 7 + BullMQ |
+| Auth / Realtime / Push | Firebase Admin + RTDB + FCM |
+| Payments | Razorpay |
+| Validation | Zod |
+| Logging | Winston |
+| Metrics | Prometheus client |
+| Tests | Jest + ts-jest (319 passing) |
 
----
+## Android Customer App Stack
 
-## Business Rules (Locked)
+| Layer | Technology |
+|---|---|
+| Language | Kotlin |
+| UI | Jetpack Compose + Material 3 |
+| DI | Hilt + KSP |
+| Networking | Retrofit 2 + OkHttp 4 + Gson |
+| Local DB | Room 2 |
+| Auth | Firebase Auth (custom token flow) |
+| Real-time | Firebase RTDB (driver location + ride status) |
+| Push | Firebase Cloud Messaging |
+| Maps | Google Maps Compose |
+| Location | Play Services Location (FusedLocationProviderClient) |
+| Preferences | DataStore |
+| Tests | JUnit 4 + MockK + Turbine + kotlinx-coroutines-test |
 
-| Config | Value | Changeable? |
-|---|---|---|
-| Commission (per ride) | 15% | Yes — via DB config |
-| Weekly subscription | ₹199 | Yes — via DB config |
-| Surge pricing | Enabled | Yes — via DB config |
-| Min fare | ₹30 | Yes — via DB config |
-| Base fare / km | ₹12 | Yes — via DB config |
-| Base fare / min | ₹2 | Yes — via DB config |
-| Booking fee | ₹5 | Yes — via DB config |
-| Settlement | T+2 days | Yes — via DB config |
-| Payment gateway | Razorpay | No |
+## Quick Start — Backend
 
-All configs live in the `PlatformConfig` DB table — change without redeployment.
-
----
-
-## Backend Quick Start
-
-### Before You Start — Prerequisites
-
-| Requirement | Why | Check |
-|---|---|---|
-| Node.js ≥ 20 | Runs the API | `node --version` |
-| Docker Desktop | Runs PostgreSQL + Redis | Open Docker Desktop → whale icon in taskbar |
-| Git | Clone the repo | `git --version` |
-| `firebase-service-account.json` | Firebase auth + FCM | Must be in `chalo-backend/` — get from team (not committed to git) |
-
-> **Windows:** Docker Desktop must be **open and showing "Engine running"** (whale icon in system tray) before any `docker` command will work.
-
----
-
-### First-Time Setup (do this once)
+**Prerequisites:** Docker Desktop running (starts postgres + redis containers automatically).
 
 ```bash
-# Step 1 — Open Docker Desktop, wait for "Engine running"
-
-# Step 2 — Create the PostgreSQL container (skip if it already exists)
-docker run -d --name chalo-db \
-  -e POSTGRES_PASSWORD=luffy \
-  -e POSTGRES_DB=chalo \
-  -p 5432:5432 \
-  postgis/postgis:15-3.3
-
-# Step 3 — Create the Redis container (skip if it already exists)
-docker run -d --name chalo-redis \
-  -p 6379:6379 \
-  redis:7-alpine
-
-# Step 4 — Install Node dependencies
 cd chalo-backend
-npm install
 
-# Step 5 — Create your .env file (copy the template and fill in values)
-copy .env.example .env
-# Edit .env — minimum: set REDIS_URL and FIREBASE_DATABASE_URL
-
-# Step 6 — Apply all database migrations
+# First time setup
 npx prisma migrate deploy
-
-# Step 7 — Seed platform config (fares, commission %, etc.)
 npm run db:seed
 
-# Step 8 — Start the server
+# Daily dev
 npm run dev
-# → API at http://localhost:3001/api/v1
-# → Health: http://localhost:3001/health  (should return {"status":"ok"})
 ```
 
----
+Health check: `http://localhost:3001/health`
 
-### Daily Dev Workflow
+Environment: `chalo-backend/.env` — see [docs/development/FRIEND_SETUP.md](docs/development/FRIEND_SETUP.md) for required values.
+
+Database URL (local): `postgresql://postgres:luffy@localhost:5433/chalo_db?schema=public`
+
+## Quick Start — Android App
+
+**Prerequisites:** Android Studio, local.properties configured.
+
+```
+chalo-customer-app/local.properties:
+  sdk.dir=/path/to/Android/sdk
+  DEV_BASE_URL=http://10.0.2.2:3001/api/v1
+  MAPS_API_KEY=your_google_maps_api_key
+```
+
+1. Open `chalo-customer-app/` in Android Studio.
+2. Sync Gradle.
+3. Run on emulator (use Google APIs image, not AOSP).
+
+Full emulator setup: [docs/development/EMULATOR_SETUP.md](docs/development/EMULATOR_SETUP.md)
+
+## Running Tests
 
 ```bash
-# 1. Open Docker Desktop and wait for it to start (whale icon = ready)
-# 2. Start containers
-docker start chalo-db
-docker start chalo-redis
-# 3. Start the API
+# Backend (319 tests)
 cd chalo-backend
-npm run dev
+npm test
+
+# Android unit tests (53 tests)
+cd chalo-customer-app
+./gradlew test
 ```
 
----
+## CI Pipeline
 
-### Environment Variables (`.env`)
+Every push to `main` runs:
 
-```env
-DATABASE_URL="postgresql://postgres:luffy@localhost:5432/chalo?schema=public"
-REDIS_URL="redis://localhost:6379"
-PORT=3001
-NODE_ENV=development
+1. **Lint** — TypeScript type check + ESLint + npm audit
+2. **Test** — Jest with live PostgreSQL/PostGIS + Redis (Docker services), prisma migrate deploy, coverage upload
+3. **Build** — TypeScript compile, verify `dist/server.js` exists
+4. **Android** — Android lint + JVM unit tests + assembleDebug APK, artifact upload
 
-# Firebase (get FIREBASE_DATABASE_URL from Firebase console → Realtime Database)
-FIREBASE_SERVICE_ACCOUNT_PATH=./firebase-service-account.json
-FIREBASE_DATABASE_URL=https://your-project-default-rtdb.firebaseio.com
+## Documentation Index
 
-# Razorpay — leave as placeholder for Cash-only dev (UPI not needed locally)
-RAZORPAY_KEY_ID=rzp_test_placeholder
-RAZORPAY_KEY_SECRET=placeholder_secret
-
-# Google Maps — leave blank for dev (Haversine fallback is used automatically)
-GOOGLE_MAPS_API_KEY=
-
-# KYC API — leave blank (ManualKYCProvider is used automatically)
-SUREPASS_API_KEY=
-
-# SMS for SOS alerts — leave blank (SOS alert logs to console in dev)
-MSG91_AUTH_KEY=
-MSG91_SENDER_ID=CHALO
-```
-
-> If `REDIS_URL` is not set, the app runs without Redis in dev mode — rate limiting and caching are disabled, which is fine for local testing.
-
----
-
-### Useful Commands
-
-```bash
-npm run dev                  # Start dev server (hot reload via ts-node-dev)
-npm run build                # Compile TypeScript → dist/
-npm run lint                 # ESLint check
-npm test                     # Run all 249 tests
-npm run db:studio            # Open Prisma Studio GUI at localhost:5555
-npm run db:seed              # Seed / reseed platform config table
-npx prisma migrate deploy    # Apply pending DB migrations
-docker-compose up --build    # Alternative: run entire stack via Docker Compose
-```
-
-> **Migration rule:** Always use `prisma migrate deploy`, never `prisma migrate dev`. The `dev` command needs a shadow database which fails with PostGIS on Windows.
-
----
-
-## API Endpoints — 41 Total
-
-### Auth (7 endpoints)
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| POST | `/api/v1/auth/otp/send` | Public | Send OTP to phone |
-| POST | `/api/v1/auth/otp/verify` | Public | Verify OTP + get Firebase token |
-| GET | `/api/v1/auth/profile` | Required | Get current user profile |
-| PUT | `/api/v1/auth/profile` | Required | Complete / update profile |
-| PUT | `/api/v1/auth/emergency-contact` | Required | Update emergency contact |
-| PUT | `/api/v1/auth/saved-location` | Required | Save home / work location |
-| PUT | `/api/v1/auth/device-token` | Required | Register FCM device token |
-
-### Rides — Customer (11 endpoints)
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| POST | `/api/v1/rides/fare-estimate` | Required | Get fare + ETA before booking |
-| POST | `/api/v1/rides` | CUSTOMER | Create on-demand ride |
-| POST | `/api/v1/rides/schedule` | CUSTOMER | Schedule a future ride |
-| GET | `/api/v1/rides/history` | CUSTOMER | Paginated ride history |
-| GET | `/api/v1/rides/scheduled` | CUSTOMER | Upcoming scheduled rides |
-| GET | `/api/v1/rides/:rideId` | Required | Ride details (includes `rideStartOtp` in `DRIVER_ASSIGNED` / `DRIVER_ARRIVED`) |
-| GET | `/api/v1/rides/:rideId/location` | Required | Live driver location |
-| POST | `/api/v1/rides/:rideId/cancel` | CUSTOMER | Cancel a ride |
-| POST | `/api/v1/rides/:rideId/rate` | CUSTOMER | Rate a completed ride |
-| POST | `/api/v1/rides/:rideId/sos` | Required | Trigger SOS alert |
-| POST | `/api/v1/rides/sos/:sosAlertId/resolve` | Required | Resolve SOS alert |
-
-### Payments (3 endpoints)
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| POST | `/api/v1/payments/order` | Required | Create Razorpay order |
-| POST | `/api/v1/payments/verify` | Required | Verify UPI payment |
-| POST | `/api/v1/payments/webhook` | Signature | Razorpay webhook handler |
-
-### Notifications (4 endpoints)
-
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| GET | `/api/v1/notifications` | Required | Paginated notifications list |
-| GET | `/api/v1/notifications/unread-count` | Required | Unread notification count |
-| PATCH | `/api/v1/notifications/:notificationId/read` | Required | Mark one as read |
-| PATCH | `/api/v1/notifications/read-all` | Required | Mark all as read |
-
-### Driver (16 endpoints)
-
-All driver endpoints require Firebase auth + `DRIVER` role.
-
-| Method | Path | Description |
-|---|---|---|
-| POST | `/api/v1/driver/go-online` | Set online + starting GPS location |
-| POST | `/api/v1/driver/go-offline` | Set offline (blocked if active ride) |
-| GET | `/api/v1/driver/status` | Current online state + active ride |
-| POST | `/api/v1/driver/location` | GPS location update (Redis→Postgres→RTDB) |
-| GET | `/api/v1/driver/rides/incoming` | Poll for pending ride offer |
-| POST | `/api/v1/driver/rides/:rideId/accept` | Accept ride (atomic compare-and-swap) |
-| POST | `/api/v1/driver/rides/:rideId/decline` | Decline ride + retrigger search |
-| POST | `/api/v1/driver/rides/:rideId/arrived` | Mark arrived at pickup |
-| POST | `/api/v1/driver/rides/:rideId/start` | Start ride (customer on board) |
-| POST | `/api/v1/driver/rides/:rideId/complete` | Complete ride + create earnings record |
-| POST | `/api/v1/driver/rides/:rideId/cancel` | Cancel ride (before start only) |
-| GET | `/api/v1/driver/trips` | Paginated trip history |
-| GET | `/api/v1/driver/earnings` | Earnings summary + breakdown by period |
-| GET | `/api/v1/driver/earnings/settlement` | Pending / processing / settled amounts |
-| POST | `/api/v1/driver/withdrawals` | Request payout (bank transfer or UPI) |
-| GET | `/api/v1/driver/withdrawals/:withdrawalId` | Withdrawal status |
-
-### Admin (8 endpoints)
-
-All admin endpoints require Firebase auth + `ADMIN` role.
-
-| Method | Path | Description |
-|---|---|---|
-| GET | `/api/v1/admin/drivers/pending` | List drivers pending verification (FIFO) |
-| GET | `/api/v1/admin/drivers/:driverId` | Full driver profile + documents |
-| POST | `/api/v1/admin/drivers/:driverId/approve` | Approve driver (optional note) |
-| POST | `/api/v1/admin/drivers/:driverId/reject` | Reject driver (required reason) |
-| POST | `/api/v1/admin/drivers/:driverId/auto-verify` | Run KYC API (Surepass / manual fallback) |
-| GET | `/api/v1/admin/rides/live` | Live rides currently in progress |
-| GET | `/api/v1/admin/config` | Get all platform config values |
-| PUT | `/api/v1/admin/config/:key` | Update a platform config value |
-
----
-
-## Design Files
-
-All design assets are in [`docs/design/`](docs/design/):
-
-| File | Contents |
+| Document | What it covers |
 |---|---|
-| `chalo-prototype.html` | Interactive prototype |
-| `chalo-customer-screens.html` | All 14 customer screen mockups |
-| `chalo-driver-screens.html` | All 14 driver screen mockups |
-| `chalo-wireframes.html` | Structural wireframes |
-| `chalo-user-flows.html` | Complete user flow diagrams |
-| `chalo-design-system.html` | Colors, typography, spacing rules |
-| `chalo-component-library.html` | Reusable UI components |
-| `chalo-spec-sheet.html` | Developer handoff specs |
-| `chalo-design-tokens.json` | Design tokens (for Android theming) |
-
----
-
-## Security & Reliability
-
-All 25 security/performance/reliability findings have been resolved. Key protections:
-
-| Feature | Implementation |
-|---|---|
-| OTP security | `crypto.randomInt()` + SHA-256 hashed storage |
-| Webhook integrity | Raw body HMAC verification + timing-safe comparison |
-| Payment validation | Ride ownership + order association + duplicate checks |
-| Secret management | `requireEnv()` in production + startup guards |
-| Circuit breaker | `opossum` on Razorpay API calls |
-| Race conditions | `prisma.$transaction()` for ride creation + OTP verification |
-| Rate limiting | Redis-backed, per-endpoint, trust proxy enabled |
-| Idempotency | User-scoped cache keys (Redis, 24h TTL) |
-| Metrics | Prometheus via `/metrics` (API key protected in production) |
-| Observability | Request ID tracing, structured JSON logging (Winston) |
-
-See [SECURITY_PERFORMANCE_REVIEW.md](docs/reviews/SECURITY_PERFORMANCE_REVIEW.md) for full details on all 25 findings (all fixed), and [CODE_REVIEW.md](docs/reviews/CODE_REVIEW.md) for the complete Round 3 + Round 4 reviews.
-
----
-
-## Code Review Score
-
-| Phase | Score | What Changed |
-|---|---|---|
-| Initial Review | 6.63/10 | Baseline |
-| After Security Fixes (P0+P1) | 6.87/10 | Critical gaps identified and fixed |
-| After P2+P3 Implementation | **7.42/10** | Redis singleton, RTDB sync, auth cache, indexes, k6 tests, coverage, notification validation |
-| After Driver API + Docker + CI | **~8.0/10** | 16 driver endpoints, PostGIS indexes, Dockerized, CI pipeline |
-| After Local DB Setup | **~8.0/10** | Docker PostGIS running locally, migrations applied, server live on port 3001 |
-
----
-
-## Current Runtime Status
-
-| Service | Status | Details |
-|---|---|---|
-| PostgreSQL + PostGIS | ✅ Running | Docker container `chalo-db`, port 5432 |
-| Redis | ✅ Running | localhost:6379 |
-| Firebase Admin | ✅ Connected | Service account loaded |
-| API Server | ✅ Running | http://localhost:3001/api/v1 |
-| BullMQ job queue | ✅ Running | OTP cleanup queue active |
-| All 11 DB tables | ✅ Migrated | `prisma migrate deploy` applied |
-| PostGIS GIST index | ✅ Applied | Driver proximity search optimised |
-| Postman API Testing | ✅ Done | All 41 endpoints verified — all flows working correctly |
-
-## What's Next
-
-See [NEXT_STEPS.md](docs/development/NEXT_STEPS.md) for the detailed, step-by-step development roadmap.
-
-## Key Docs
-
-| Document | Purpose |
-|---|---|
-| [docs/CODEBASE.md](docs/CODEBASE.md) | Full codebase reference — give this to any Claude at the start of a session |
-| [docs/development/FRIEND_SETUP.md](docs/development/FRIEND_SETUP.md) | New developer onboarding guide (fresh machine → running server) |
-| [docs/api/POSTMAN_GUIDE.md](docs/api/POSTMAN_GUIDE.md) | Step-by-step API testing with Postman |
-| [docs/development/NEXT_STEPS.md](docs/development/NEXT_STEPS.md) | Development roadmap (what to build next) |
+| [docs/CODEBASE.md](docs/CODEBASE.md) | Full architecture reference — all 60 endpoints, Android screens, data flow, migrations |
+| [docs/api/POSTMAN_GUIDE.md](docs/api/POSTMAN_GUIDE.md) | How to test every endpoint from scratch, 10 journeys |
+| [docs/api/token-exchange-guide.md](docs/api/token-exchange-guide.md) | Firebase token exchange for Postman testing |
+| [docs/development/EMULATOR_SETUP.md](docs/development/EMULATOR_SETUP.md) | Android emulator setup, local.properties, common problems |
+| [docs/development/NEXT_STEPS.md](docs/development/NEXT_STEPS.md) | Remaining work with priority and impact |
+| [docs/development/FRIEND_SETUP.md](docs/development/FRIEND_SETUP.md) | New developer onboarding |
+| [docs/development/BACKEND_FLOWS.md](docs/development/BACKEND_FLOWS.md) | Backend lifecycle flows (auth, ride, driver broadcast) |
+| [docs/reviews/CODE_REVIEW.md](docs/reviews/CODE_REVIEW.md) | Full code quality review — 15 backend + 15 Android findings |
+| [docs/reviews/SECURITY_PERFORMANCE_REVIEW.md](docs/reviews/SECURITY_PERFORMANCE_REVIEW.md) | Security (OWASP) + performance findings with fixes |
+| [docs/development/IMPROVEMENTS.md](docs/development/IMPROVEMENTS.md) | Prioritised feature and quality improvements backlog |
+| [docs/product/chalo-product-documentation.md](docs/product/chalo-product-documentation.md) | Product scope, delivery state, user journeys |
