@@ -5,6 +5,7 @@
 // ============================================================
 
 import prisma from '../config/database';
+import { RideStatus } from '@prisma/client';
 import config from '../config';
 import CONSTANTS from '../utils/constants';
 import { calculateBaseFare, applySurge, calculateCommission, haversineDistance } from '../utils/helpers';
@@ -162,7 +163,7 @@ export class FareService {
         }),
         prisma.ride.count({
           where: {
-            status: { in: ['REQUESTED', 'DRIVER_ASSIGNED'] as any },
+            status: { in: [RideStatus.REQUESTED, RideStatus.DRIVER_ASSIGNED] },
             pickupLat: { gte: pickup.lat - radiusDeg, lte: pickup.lat + radiusDeg },
             pickupLng: { gte: pickup.lng - radiusDeg, lte: pickup.lng + radiusDeg },
           },
