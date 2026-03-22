@@ -66,9 +66,9 @@ jobs:
 
       - name: Security audit (high severity only)
         working-directory: chalo-backend
-        run: npm audit --audit-level=high
-        # Allow the job to continue — advisory only (does not block merge)
-        continue-on-error: true
+        run: |
+          npm audit --json > audit-report.json || true
+          node -e "const fs=require('fs');const r=JSON.parse(fs.readFileSync('audit-report.json','utf8'));const v=r?.metadata?.vulnerabilities||{};const high=Number(v.high||0);const critical=Number(v.critical||0);console.log('npm audit summary:',v);if(high+critical>0){console.error('High/Critical vulnerabilities detected.');process.exit(1);}console.log('No high/critical vulnerabilities found.');"
 
   # ─────────────────────────────────────────────
   # Job 2: Test (needs DB + Redis)
