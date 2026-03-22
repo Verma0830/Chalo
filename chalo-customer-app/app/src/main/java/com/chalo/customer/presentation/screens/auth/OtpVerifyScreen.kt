@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.chalo.customer.presentation.components.ChaloPrimaryButton
@@ -58,7 +59,12 @@ fun OtpVerifyScreen(
             }
         }
         val filter = IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION)
-        context.registerReceiver(receiver, filter)
+        ContextCompat.registerReceiver(
+            context,
+            receiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
         onDispose { context.unregisterReceiver(receiver) }
     }
 
