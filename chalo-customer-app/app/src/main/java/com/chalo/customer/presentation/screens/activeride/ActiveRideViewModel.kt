@@ -120,7 +120,7 @@ class ActiveRideViewModel @Inject constructor(
                     _uiState.update { state ->
                         state.copy(
                             driverLocation = latLng,
-                            etaMins        = calculateEtaMins(latLng, state.ride),
+                            etaMins        = latLng?.let { calculateEtaMins(it, state.ride) },
                         )
                     }
                 }

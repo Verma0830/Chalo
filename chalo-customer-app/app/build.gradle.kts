@@ -69,6 +69,10 @@ android {
     }
 }
 
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
     // Core
     implementation(libs.androidx.core.ktx)
@@ -120,6 +124,7 @@ dependencies {
 
     // Maps
     implementation(libs.maps.compose)
+    implementation(libs.maps.utils)
     implementation(libs.play.services.maps)
     implementation(libs.play.services.location)
 

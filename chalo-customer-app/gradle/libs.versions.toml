@@ -31,6 +31,7 @@ firebaseBom            = "32.8.1"
 
 # Maps
 mapsCompose            = "4.3.3"
+mapsUtils              = "3.8.2"
 playServicesMaps       = "18.2.0"
 playServicesLocation   = "21.2.0"
 places                 = "3.5.0"
@@ -110,6 +111,7 @@ firebase-config            = { group = "com.google.firebase", name = "firebase-c
 
 # Maps
 maps-compose               = { group = "com.google.maps.android", name = "maps-compose",          version.ref = "mapsCompose" }
+maps-utils                 = { group = "com.google.maps.android", name = "android-maps-utils",    version.ref = "mapsUtils" }
 play-services-maps         = { group = "com.google.android.gms",  name = "play-services-maps",    version.ref = "playServicesMaps" }
 play-services-location     = { group = "com.google.android.gms",  name = "play-services-location", version.ref = "playServicesLocation" }
 play-services-auth         = { group = "com.google.android.gms",  name = "play-services-auth",     version.ref = "playServicesAuth" }
