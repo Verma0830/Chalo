@@ -201,7 +201,7 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.4'
-          cache-cleanup: true
+          cache-cleanup: on-success
 
       # local.properties is not committed — create a minimal one for CI
       # DEV_BASE_URL is not used in CI builds (no emulator), Maps key is a placeholder
