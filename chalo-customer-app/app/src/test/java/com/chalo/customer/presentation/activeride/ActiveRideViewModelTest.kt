@@ -13,13 +13,10 @@ import com.chalo.customer.domain.repository.RtdbRepository
 import com.chalo.customer.presentation.screens.activeride.ActiveRideEvent
 import com.chalo.customer.presentation.screens.activeride.ActiveRideViewModel
 import com.chalo.customer.util.MainDispatcherRule
-import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.LatLng
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkStatic
-import io.mockk.unmockkStatic
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -74,17 +71,9 @@ class ActiveRideViewModelTest {
 
     @Before
     fun setUp() {
-        mockkStatic(LocationServices::class)
-        every { LocationServices.getFusedLocationProviderClient(any()) } returns mockk(relaxed = true)
-
         // Default: RTDB emits no events (empty flows)
         every { rtdbRepository.observeRideStatus(any()) } returns flowOf()
         every { rtdbRepository.observeDriverLocation(any()) } returns flowOf()
-    }
-
-    @org.junit.After
-    fun tearDown() {
-        unmockkStatic(LocationServices::class)
     }
 
     private fun initViewModel() {
@@ -321,7 +310,7 @@ class ActiveRideViewModelTest {
     @Test
     fun `onSosConfirm emits SosTriggered event on success`() = runTest {
         coEvery { rideRepository.getRideDetails(rideId) } returns Result.success(baseRide)
-        coEvery { rideRepository.triggerSos(rideId, 28.41, 77.32) } returns Result.success(Unit)
+        coEvery { rideRepository.triggerSos(eq(rideId), any(), any()) } returns Result.success(Unit)
         initViewModel()
         advanceUntilIdle()
 

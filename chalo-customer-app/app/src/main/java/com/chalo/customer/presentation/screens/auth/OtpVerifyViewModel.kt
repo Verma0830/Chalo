@@ -68,7 +68,7 @@ class OtpVerifyViewModel @Inject constructor(
             try {
                 SmsRetriever.getClient(context).startSmsRetriever().await()
                 Timber.d("SMS Retriever started")
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Timber.w(e, "SMS Retriever could not start — user will enter OTP manually")
             }
         }

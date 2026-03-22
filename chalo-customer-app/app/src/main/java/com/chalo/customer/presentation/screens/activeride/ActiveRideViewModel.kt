@@ -8,6 +8,7 @@ import com.chalo.customer.domain.model.Ride
 import com.chalo.customer.domain.model.RideStatus
 import com.chalo.customer.domain.repository.RideRepository
 import com.chalo.customer.domain.repository.RtdbRepository
+import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.LatLng
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -52,7 +53,11 @@ class ActiveRideViewModel @Inject constructor(
     private fun com.chalo.customer.domain.model.Ride.toDropLocation() =
         com.chalo.customer.domain.model.Location(dropLat ?: pickupLat, dropLng ?: pickupLng, dropAddress)
 
-    private val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+    private val fusedLocationClient: FusedLocationProviderClient? by lazy {
+        runCatching { LocationServices.getFusedLocationProviderClient(context) }
+            .onFailure { Timber.w(it, "FusedLocationProviderClient unavailable; SOS will use pickup fallback") }
+            .getOrNull()
+    }
 
     private val _uiState = MutableStateFlow(ActiveRideUiState())
     val uiState: StateFlow<ActiveRideUiState> = _uiState.asStateFlow()
@@ -215,14 +220,15 @@ class ActiveRideViewModel @Inject constructor(
      *  Falls back to the ride pickup point if location permission is absent or unavailable. */
     @SuppressLint("MissingPermission")
     private suspend fun getCurrentLocation(): Pair<Double, Double> {
+        val client = fusedLocationClient ?: return pickupFallback()
         return try {
-            val location = fusedLocationClient.lastLocation.await()
+            val location = client.lastLocation.await()
             if (location != null) {
                 Pair(location.latitude, location.longitude)
             } else {
                 pickupFallback()
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Timber.w(e, "SOS location fetch failed — using ride pickup as fallback")
             pickupFallback()
         }
