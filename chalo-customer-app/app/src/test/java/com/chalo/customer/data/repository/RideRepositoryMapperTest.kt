@@ -41,8 +41,8 @@ class RideRepositoryMapperTest {
     private val mockDao: RideDao = mockk()
     private lateinit var repository: RideRepositoryImpl
 
-    private val pickup = Location(28.4089, 77.3178, "Sector 14, Faridabad")
-    private val drop   = Location(28.3852, 77.3126, "NIT Faridabad")
+    private val pickup = Location(30.9010, 75.8573, "Sadar Bazaar, Ludhiana")
+    private val drop   = Location(31.3260, 75.5762, "Civil Lines, Jalandhar")
 
     @Before
     fun setUp() {
@@ -150,7 +150,7 @@ class RideRepositoryMapperTest {
                     id = "drv-99",
                     name = "Ravi Kumar",
                     driverProfile = DriverProfileSummaryDto(
-                        vehicleNumber = "HR01AB1234",
+                        vehicleNumber = "PB10AB1234",
                         vehicleModel  = "Honda Activa 6G",
                         ratingAvg     = 4.2,
                         ratingCount   = 38,
@@ -163,7 +163,7 @@ class RideRepositoryMapperTest {
         val driver = ride.driver!!
         assertEquals("drv-99", driver.id)
         assertEquals("Ravi Kumar", driver.name)
-        assertEquals("HR01AB1234", driver.vehicleNumber)
+        assertEquals("PB10AB1234", driver.vehicleNumber)
         assertEquals("Honda Activa 6G", driver.vehicleModel)
         assertEquals(4.2, driver.ratingAvg!!, 0.01)
         assertEquals(38, driver.ratingCount)
@@ -259,8 +259,8 @@ class RideRepositoryMapperTest {
             success = true, message = "ok",
             data = RideReceiptDto(
                 rideId          = "ride-done",
-                pickupAddress   = "Sector 14, Faridabad",
-                dropAddress     = "NIT Faridabad",
+                pickupAddress   = "Sadar Bazaar, Ludhiana",
+                dropAddress     = "Civil Lines, Jalandhar",
                 distanceKm      = 3.2,
                 durationMins    = 12,
                 baseFare        = 50,
@@ -298,10 +298,10 @@ class RideRepositoryMapperTest {
         finalFare      = null,
         distanceKm     = null,
         durationMins   = null,
-        pickupAddress  = "Sector 14, Faridabad",
-        dropAddress    = "NIT Faridabad",
-        pickupLat      = 28.4089,
-        pickupLng      = 77.3178,
+        pickupAddress  = "Sadar Bazaar, Ludhiana",
+        dropAddress    = "Civil Lines, Jalandhar",
+        pickupLat      = 30.9010,
+        pickupLng      = 75.8573,
         dropLat        = null,
         dropLng        = null,
         rideStartOtp   = null,

@@ -43,7 +43,7 @@ export const CONSTANTS = {
   SETTLEMENT_DAYS: 2,                     // T+2
 
   // --- Auth ---
-  OTP_LENGTH: 4,
+  OTP_LENGTH: 6,
   OTP_EXPIRY_MINS: 5,
   MAX_OTP_ATTEMPTS: 3,
   PHONE_REGEX: /^\+91[6-9]\d{9}$/,       // Indian mobile numbers

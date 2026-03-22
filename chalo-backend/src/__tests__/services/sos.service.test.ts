@@ -64,7 +64,7 @@ function buildRide(overrides = {}) {
     },
     driver: {
       name: 'Raj Kumar',
-      driverProfile: { vehicleNumber: 'HR 26 AB 1234' },
+      driverProfile: { vehicleNumber: 'PB 10 AB 1234' },
     },
     ...overrides,
   };
@@ -129,7 +129,7 @@ describe('SOSService.triggerSOS', () => {
       expect.objectContaining({
         customerName: 'Priya Sharma',
         driverName: 'Raj Kumar',
-        vehicleNumber: 'HR 26 AB 1234',
+        vehicleNumber: 'PB 10 AB 1234',
         lat: 28.47,
         lng: 77.40,
         recipients: expect.arrayContaining([

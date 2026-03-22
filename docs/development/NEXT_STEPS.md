@@ -52,7 +52,7 @@ Location: `app/src/test/` — these run on JVM, no emulator needed, fast to run.
 Framework: JUnit 5 + MockK + Kotlin coroutines test (`kotlinx-coroutines-test`).
 
 **OtpVerifyViewModel tests:**
-- Entering 4 digits triggers `onVerify()` automatically
+- Entering 6 digits triggers `onVerify()` automatically (and SMS Retriever auto-fills + submits)
 - On successful OTP verify: `FirebaseAuth.signInWithCustomToken` is called with the token from the response
 - On Firebase sign-in failure: `errorMessage` in UI state is set to "Authentication failed"
 - On wrong OTP (API returns error): `errorMessage` in UI state shows the API error message
@@ -112,7 +112,7 @@ Use fake/mock repositories so tests do not hit the real backend.
 2. Assert `PhoneInputScreen` is shown
 3. Enter a phone number, tap Send OTP
 4. Assert navigation to `OtpVerifyScreen`
-5. Enter 4 digits — assert `onVerify()` is triggered
+5. Enter 6 digits — assert `onVerify()` is triggered
 6. Fake repository returns success → fake Firebase signs in
 7. Assert navigation to `CompleteProfileScreen` (isNewUser=true) or `HomeScreen` (returning user)
 

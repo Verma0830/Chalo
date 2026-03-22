@@ -26,8 +26,8 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
 import kotlinx.coroutines.tasks.await
 
-// Default map center — Faridabad, Haryana (used only when GPS is unavailable)
-private val FARIDABAD_CENTER = LatLng(28.4089, 77.3178)
+// Default map center — Ludhiana, Punjab (used only when GPS is unavailable)
+private val PUNJAB_CENTER = LatLng(30.9010, 75.8573)
 
 @SuppressLint("MissingPermission")
 @OptIn(ExperimentalPermissionsApi::class)
@@ -53,8 +53,8 @@ fun HomeScreen(
         if (!locationGranted) locationPermission.launchPermissionRequest()
     }
 
-    // --- Real pickup location (falls back to Faridabad centre) ---
-    var pickupLatLng by remember { mutableStateOf(FARIDABAD_CENTER) }
+    // --- Real pickup location (falls back to Punjab centre) ---
+    var pickupLatLng by remember { mutableStateOf(PUNJAB_CENTER) }
 
     LaunchedEffect(locationGranted) {
         if (locationGranted) {
@@ -66,7 +66,7 @@ fun HomeScreen(
                 if (loc != null) {
                     pickupLatLng = LatLng(loc.latitude, loc.longitude)
                 }
-            } catch (_: Exception) { /* keep Faridabad fallback */ }
+            } catch (_: Exception) { /* keep Punjab fallback */ }
         }
     }
 
@@ -76,12 +76,12 @@ fun HomeScreen(
     }
 
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(FARIDABAD_CENTER, 13f)
+        position = CameraPosition.fromLatLngZoom(PUNJAB_CENTER, 13f)
     }
 
     // Animate camera to real location when it becomes available
     LaunchedEffect(pickupLatLng) {
-        if (pickupLatLng != FARIDABAD_CENTER) {
+        if (pickupLatLng != PUNJAB_CENTER) {
             cameraPositionState.position = CameraPosition.fromLatLngZoom(pickupLatLng, 15f)
         }
     }
@@ -239,7 +239,7 @@ private fun DestinationPickerSheet(
                 value         = query,
                 onValueChange = { query = it },
                 modifier      = Modifier.fillMaxWidth(),
-                placeholder   = { Text("Search destination in Faridabad") },
+                placeholder   = { Text("Search destination in Punjab") },
                 leadingIcon   = { Icon(Icons.Default.Search, null) },
                 trailingIcon  = {
                     if (isSearching) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
@@ -309,11 +309,11 @@ private suspend fun fetchPlacesPredictions(
         val request = com.google.android.libraries.places.api.net.FindAutocompletePredictionsRequest
             .builder()
             .setQuery(query)
-            // Bias results toward Faridabad / NCR region
+            // Bias results toward Punjab state
             .setLocationBias(
                 com.google.android.libraries.places.api.model.RectangularBounds.newInstance(
-                    com.google.android.gms.maps.model.LatLng(28.30, 77.20),  // SW corner
-                    com.google.android.gms.maps.model.LatLng(28.55, 77.45),  // NE corner
+                    com.google.android.gms.maps.model.LatLng(29.50, 73.85),  // SW corner
+                    com.google.android.gms.maps.model.LatLng(32.60, 76.95),  // NE corner
                 )
             )
             .setCountries(listOf("IN"))
@@ -361,13 +361,13 @@ private fun fetchPlaceDetails(
 private data class PlaceSuggestion(val name: String, val address: String, val lat: Double, val lng: Double)
 
 private val popularPlaces = listOf(
-    PlaceSuggestion("Old Faridabad Railway Station", "Old Faridabad, Haryana", 28.4118, 77.3120),
-    PlaceSuggestion("Badkhal Lake", "Badkhal, Faridabad, Haryana", 28.3890, 77.3040),
-    PlaceSuggestion("Sector 12 Faridabad", "Sector 12, Faridabad, Haryana", 28.4001, 77.3250),
-    PlaceSuggestion("Bata Chowk", "NIT, Faridabad, Haryana", 28.3898, 77.3178),
-    PlaceSuggestion("Faridabad Bus Stand", "Faridabad, Haryana", 28.4068, 77.3086),
-    PlaceSuggestion("Crown Plaza", "Sector 15A, Faridabad, Haryana", 28.4200, 77.3300),
-    PlaceSuggestion("Escorts Mujesar Metro", "Mujesar, Faridabad, Haryana", 28.3790, 77.3130),
+    PlaceSuggestion("Golden Temple", "Amritsar, Punjab", 31.6200, 74.8765),
+    PlaceSuggestion("Ludhiana Bus Stand", "Ludhiana, Punjab", 30.9010, 75.8573),
+    PlaceSuggestion("Chandigarh Railway Station", "Chandigarh, Punjab", 30.7333, 76.7794),
+    PlaceSuggestion("Jalandhar City Railway Station", "Jalandhar, Punjab", 31.3260, 75.5762),
+    PlaceSuggestion("Patiala Bus Stand", "Patiala, Punjab", 30.3398, 76.3869),
+    PlaceSuggestion("Mohali Stadium", "Mohali, Punjab", 30.6942, 76.7160),
+    PlaceSuggestion("Wagah Border", "Attari, Amritsar, Punjab", 31.6041, 74.5723),
 )
 
 @Composable

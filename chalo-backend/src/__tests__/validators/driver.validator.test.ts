@@ -59,8 +59,8 @@ describe('goOnlineSchema', () => {
 
 // ─── updateLocationSchema ─────────────────────────────────────
 describe('updateLocationSchema', () => {
-  it('accepts valid Faridabad coordinates', () => {
-    expect(updateLocationSchema.safeParse({ lat: 28.4089, lng: 77.3178 }).success).toBe(true);
+  it('accepts valid Punjab coordinates', () => {
+    expect(updateLocationSchema.safeParse({ lat: 30.9010, lng: 75.8573 }).success).toBe(true);
   });
 
   it('rejects empty object', () => {
@@ -375,11 +375,11 @@ describe('submitDocumentsSchema', () => {
   const validDocs = {
     licenseNumber: 'DL-1234567890',
     licenseUrl: 'https://storage.example.com/license.jpg',
-    rcNumber: 'HR26AB1234',
+    rcNumber: 'PB10AB1234',
     rcUrl: 'https://storage.example.com/rc.jpg',
     aadharNumber: '123456789012',
     aadharUrl: 'https://storage.example.com/aadhar.jpg',
-    vehicleNumber: 'HR26AB1234',
+    vehicleNumber: 'PB10AB1234',
     vehicleModel: 'Honda Activa 6G',
   };
 

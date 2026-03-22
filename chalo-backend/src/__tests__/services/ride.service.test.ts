@@ -100,13 +100,13 @@ describe('RideService', () => {
   });
 
   describe('createRide', () => {
-    const validPickup = { lat: 28.4089, lng: 77.3178, address: 'Sector 14, Faridabad' };
-    const validDrop = { lat: 28.4506, lng: 77.3150, address: 'Old Faridabad' };
+    const validPickup = { lat: 30.9010, lng: 75.8573, address: 'Sadar Bazaar, Ludhiana' };
+    const validDrop = { lat: 31.3260, lng: 75.5762, address: 'Civil Lines, Jalandhar' };
     const customerId = 'cuid_customer_001';
 
     it('throws VALIDATION_ERROR when pickup is missing lat', async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const invalidPickup = { lat: undefined as any, lng: 77.3178, address: 'Test' };
+      const invalidPickup = { lat: undefined as any, lng: 75.8573, address: 'Test' };
 
       await expect(
         rideService.createRide(customerId, invalidPickup, validDrop, 'CASH')
@@ -297,7 +297,7 @@ describe('RideService', () => {
           driver: {
             name: 'Ravi',
             driverProfile: {
-              vehicleNumber: 'HR26AB1234',
+              vehicleNumber: 'PB10AB1234',
               vehicleModel: 'Activa',
               currentLat: 28.45,
               currentLng: 77.35,
@@ -312,7 +312,7 @@ describe('RideService', () => {
       expect(result.rideId).toBe('ride_001');
       expect(result.isTrackingActive).toBe(true);
       expect(result.location).toMatchObject({ lat: 28.45, lng: 77.35 });
-      expect(result.driver).toMatchObject({ name: 'Ravi', vehicleNumber: 'HR26AB1234' });
+      expect(result.driver).toMatchObject({ name: 'Ravi', vehicleNumber: 'PB10AB1234' });
     });
   });
 
@@ -321,8 +321,8 @@ describe('RideService', () => {
   // -------------------------------------------------------
 
   describe('createRide (success)', () => {
-    const validPickup = { lat: 28.4089, lng: 77.3178, address: 'Sector 14, Faridabad' };
-    const validDrop = { lat: 28.4506, lng: 77.3150, address: 'Old Faridabad' };
+    const validPickup = { lat: 30.9010, lng: 75.8573, address: 'Sadar Bazaar, Ludhiana' };
+    const validDrop = { lat: 31.3260, lng: 75.5762, address: 'Civil Lines, Jalandhar' };
     const customerId = 'cuid_customer_001';
 
     it('creates a ride successfully when no active ride exists', async () => {
@@ -344,7 +344,7 @@ describe('RideService', () => {
       expect(result.rideId).toBe('ride_new_001');
       expect(result.status).toBe(RideStatus.REQUESTED);
       expect(result.fare.totalFare).toBe(55);
-      expect(result.pickup.address).toBe('Sector 14, Faridabad');
+      expect(result.pickup.address).toBe('Sadar Bazaar, Ludhiana');
       expect(result.paymentMethod).toBe('CASH');
     });
   });
@@ -383,7 +383,7 @@ describe('RideService', () => {
           name: 'Ravi',
           phone: '+919999999999',
           driverProfile: {
-            vehicleNumber: 'HR26AB1234',
+            vehicleNumber: 'PB10AB1234',
             vehicleModel: 'Honda Activa',
             ratingAvg: 4.5,
             bikePhotoUrl: null,
@@ -485,7 +485,7 @@ describe('RideService', () => {
           customerRating: 5,
           createdAt: new Date(),
           completedAt: new Date(),
-          driver: { name: 'Ravi', driverProfile: { vehicleNumber: 'HR26AB1234' } },
+          driver: { name: 'Ravi', driverProfile: { vehicleNumber: 'PB10AB1234' } },
         },
       ];
 
@@ -558,8 +558,8 @@ describe('RideService', () => {
       id: 'ride_001',
       customerId: 'customer_001',
       status: RideStatus.COMPLETED,
-      pickupAddress: 'Sector 14, Faridabad',
-      dropAddress: 'Old Faridabad',
+      pickupAddress: 'Sadar Bazaar, Ludhiana',
+      dropAddress: 'Civil Lines, Jalandhar',
       distanceKm: 4.2,
       durationMins: 18,
       baseFare: 86,
@@ -576,7 +576,7 @@ describe('RideService', () => {
       driver: {
         name: 'Ravi Kumar',
         driverProfile: {
-          vehicleNumber: 'HR26AB1234',
+          vehicleNumber: 'PB10AB1234',
           vehicleModel: 'Honda Activa 6G',
           ratingAvg: 4.7,
         },
@@ -625,7 +625,7 @@ describe('RideService', () => {
       expect(result.route.distanceKm).toBe(4.2);
       expect(result.payment.method).toBe('CASH');
       expect(result.driver?.name).toBe('Ravi Kumar');
-      expect(result.driver?.vehicleNumber).toBe('HR26AB1234');
+      expect(result.driver?.vehicleNumber).toBe('PB10AB1234');
     });
 
     it('calculates surge charge correctly when surgeMultiplier > 1', async () => {

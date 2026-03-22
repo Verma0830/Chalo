@@ -48,26 +48,26 @@ describe('sendOTPSchema', () => {
 
 // ─── verifyOTPSchema ──────────────────────────────────────────
 describe('verifyOTPSchema', () => {
-  const valid = { phone: '+919876543210', otp: '1234' };
+  const valid = { phone: '+919876543210', otp: '123456' };
 
-  it('accepts valid phone + 4-digit OTP', () => {
+  it('accepts valid phone + 6-digit OTP', () => {
     expect(verifyOTPSchema.safeParse(valid).success).toBe(true);
   });
 
-  it('rejects OTP shorter than 4 digits', () => {
-    expect(verifyOTPSchema.safeParse({ ...valid, otp: '123' }).success).toBe(false);
-  });
-
-  it('rejects OTP longer than 4 digits', () => {
+  it('rejects OTP shorter than 6 digits', () => {
     expect(verifyOTPSchema.safeParse({ ...valid, otp: '12345' }).success).toBe(false);
   });
 
+  it('rejects OTP longer than 6 digits', () => {
+    expect(verifyOTPSchema.safeParse({ ...valid, otp: '1234567' }).success).toBe(false);
+  });
+
   it('rejects non-numeric OTP', () => {
-    expect(verifyOTPSchema.safeParse({ ...valid, otp: 'ABCD' }).success).toBe(false);
+    expect(verifyOTPSchema.safeParse({ ...valid, otp: 'ABCDEF' }).success).toBe(false);
   });
 
   it('rejects OTP with spaces', () => {
-    expect(verifyOTPSchema.safeParse({ ...valid, otp: '12 4' }).success).toBe(false);
+    expect(verifyOTPSchema.safeParse({ ...valid, otp: '123 56' }).success).toBe(false);
   });
 });
 

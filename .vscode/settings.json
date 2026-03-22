@@ -13,6 +13,7 @@
   },
   "prisma.pinToPrisma6": true,
   "github-actions.use-enterprise": false,
+  "github-actions.workflows.pinned.enabled": false,
   "chat.tools.terminal.autoApprove": {
     "npx jest": true
   }

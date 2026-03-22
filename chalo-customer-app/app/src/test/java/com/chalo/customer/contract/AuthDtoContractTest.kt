@@ -213,9 +213,9 @@ class AuthDtoContractTest {
                 "customerProfile": {
                   "emergencyContactName": "Mom",
                   "emergencyContactPhone": "+919999999999",
-                  "savedHomeAddress": "Sector 14, Faridabad",
-                  "savedHomeLat": 28.4089,
-                  "savedHomeLng": 77.3178,
+                  "savedHomeAddress": "Sadar Bazaar, Ludhiana",
+                  "savedHomeLat": 30.9010,
+                  "savedHomeLng": 75.8573,
                   "savedWorkAddress": "Cyber City, Gurugram",
                   "savedWorkLat": 28.4950,
                   "savedWorkLng": 77.0900,
@@ -233,9 +233,9 @@ class AuthDtoContractTest {
         val cp: CustomerProfileDto = profile.customerProfile!!
         assertEquals("Mom", cp.emergencyContactName)
         assertEquals("+919999999999", cp.emergencyContactPhone)
-        assertEquals("Sector 14, Faridabad", cp.savedHomeAddress)
-        assertEquals(28.4089, cp.savedHomeLat!!, 0.0001)
-        assertEquals(77.3178, cp.savedHomeLng!!, 0.0001)
+        assertEquals("Sadar Bazaar, Ludhiana", cp.savedHomeAddress)
+        assertEquals(30.9010, cp.savedHomeLat!!, 0.0001)
+        assertEquals(75.8573, cp.savedHomeLng!!, 0.0001)
         assertEquals(7, cp.totalRides)
         assertEquals(0, cp.cancellationCount)
     }

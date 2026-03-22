@@ -36,7 +36,7 @@ The layering — routes → controllers → services → repositories (Prisma) �
 Firebase custom token flow is the right choice. The auth middleware verifies the ID token server-side, caches the result in Redis for 5 minutes (avoids a DB hit on every request), and handles the deactivated-user case. The 401 retry on token refresh in the Android interceptor completes the loop properly.
 
 **BullMQ job queue architecture is solid.**
-Using BullMQ for delayed `ride-offer-expired` jobs instead of `setTimeout` means the dispatch logic survives a server restart. The two-pass radius expansion (initial radius → expanded radius after first batch exhausted) is the right design for sparse markets like Faridabad. The phantom driver cleanup cron is production-essential and it is present.
+Using BullMQ for delayed `ride-offer-expired` jobs instead of `setTimeout` means the dispatch logic survives a server restart. The two-pass radius expansion (initial radius → expanded radius after first batch exhausted) is the right design for sparse markets like Punjab. The phantom driver cleanup cron is production-essential and it is present.
 
 **Idempotency on ride creation** prevents duplicate bookings from network retries. This is a real-world bug that Ola/Uber fixed the hard way (duplicate rides, complaints, refunds). It is already solved here.
 
@@ -49,11 +49,11 @@ MVVM + Repository + Hilt + Room + DataStore + Coroutines + Flow is the current A
 
 ## Part 2 — Backend Issues
 
-### B-01 | CRITICAL | Hardcoded 4-digit OTP
-OTP is 4 digits. NPCI and RBI guidelines for financial apps recommend 6 digits minimum. A 4-digit OTP has only 10,000 combinations. With the rate limiter at 5 attempts per 15 minutes per IP, brute-force over multiple IPs or with leaked request IDs is feasible. **Change to 6 digits.**
+### B-01 | ~~CRITICAL~~ | ~~Hardcoded 4-digit OTP~~ — **RESOLVED**
+OTP upgraded to 6 digits. `CONSTANTS.OTP_LENGTH = 6`, validators updated (`z.string().length(6).regex(/^\d{6}$/)`), Android OTP field updated to 6 boxes, all tests updated. SMS Retriever regex was already looking for 6 digits — mismatch fixed.
 
 ### B-02 | HIGH | Straight-line distance for fare and driver search
-`fare.service.ts` calculates distance using the Haversine formula (crow-flies). On-road distance from Faridabad Sector 15 to Sector 46 is 40–60% longer than the straight line. This means:
+`fare.service.ts` calculates distance using the Haversine formula (crow-flies). On-road distance between Punjab cities is 40–60% longer than the straight line. This means:
 - Fare estimates are consistently **underbidding** the real fare
 - Driver search radius is inaccurate — drivers 3km away via road could be outside a 3km crow-flies circle
 
@@ -65,12 +65,12 @@ There is no ETA field in any ride response. When a customer books a ride, they s
 **What Ola/Uber do:** ETA is shown at every step — before booking ("Driver 4 mins away"), after booking ("Arriving in 3 mins"), and during ride ("Reaching destination in 12 mins"). All via Google Maps Distance Matrix.
 
 ### B-04 | HIGH | No place search / address autocomplete
-The backend has no `/places/autocomplete` or `/places/details` endpoint wrapping Google Places API. The Android app has no place search implementation either (HomeScreen just takes raw lat/lng). Users cannot search "BPTP Parklands" or "YMCA Chowk, Faridabad" — they have to drop a pin.
+The backend has no `/places/autocomplete` or `/places/details` endpoint wrapping Google Places API. The Android app has no place search implementation either (HomeScreen just takes raw lat/lng). Users cannot search "Clock Tower, Ludhiana" or "Atta Mandi, Jalandhar" — they have to drop a pin.
 
 **What Ola/Uber do:** Full Google Places autocomplete with recent search history, saved locations, and "near me" suggestions.
 
 ### B-05 | MEDIUM | Surge pricing is a manual config key
-`surge_multiplier` is a platform config key that an admin sets manually. There is no algorithm. During peak hours (8–10am, 5–8pm) in Faridabad, supply/demand imbalance will cause long wait times. Without dynamic surge, drivers have no financial incentive to go online during peak hours.
+`surge_multiplier` is a platform config key that an admin sets manually. There is no algorithm. During peak hours (8–10am, 5–8pm) in Punjab, supply/demand imbalance will cause long wait times. Without dynamic surge, drivers have no financial incentive to go online during peak hours.
 
 **What Ola/Uber do:** Supply/demand ratio per geohash cell, updated every 60 seconds. Surge zones shown visually on the map.
 
@@ -84,8 +84,8 @@ Only CASH and UPI (Razorpay) are supported. There is no wallet. Promo credits, r
 
 **What Ola/Uber do:** Automated daily or weekly settlement via Razorpay Route (split payments at transaction time) or NEFT batch.
 
-### B-08 | MEDIUM | No SMS gateway integration
-SMS is printed to console in dev. There is an `sms.service.ts` with the interface but no real provider wired (MSG91, Twilio, or Fast2SMS for India are all options). Until this is wired, OTP delivery in production is impossible.
+### B-08 | ~~MEDIUM~~ | ~~No SMS gateway integration~~ — **RESOLVED**
+`sms.service.ts` now has `sendOTPSms()` calling MSG91's transactional API. `auth.service.ts` imports and calls it (fire-and-forget with error logging) in production; dev still logs to console. Set `MSG91_AUTH_KEY` and `MSG91_SENDER_ID` env vars to enable delivery.
 
 ### B-09 | MEDIUM | No event sourcing or audit trail for rides
 `rideEvents` table exists and some events are written, but it is not consistently populated for all state transitions. A complete audit trail is essential for:
@@ -96,7 +96,7 @@ SMS is printed to console in dev. There is an `sms.service.ts` with the interfac
 **What Ola/Uber do:** Every state transition, every location ping, and every payment event is written to an immutable event log.
 
 ### B-10 | MEDIUM | No geofencing or service area enforcement
-A customer in Delhi can book a ride and it will attempt to match drivers. There is no service area boundary. Drivers in a 12km expanded radius from a Faridabad pickup might be in Delhi or Gurugram. This creates a dispatch problem and a legal/licensing problem (if auto rickshaw licenses are zone-specific, which they are in Haryana).
+A customer outside Punjab can book a ride and it will attempt to match drivers. There is no service area boundary. Drivers in a 12km expanded radius from a Punjab pickup might be in Himachal Pradesh or Haryana. This creates a dispatch problem and a legal/licensing problem (if vehicle licenses are zone-specific).
 
 ### B-11 | LOW | No referral or promo code system
 No `referral` table, no `promoCode` table, no discount engine. This is a growth blocker. The first 1,000 users in a new market come from referrals.
@@ -126,39 +126,27 @@ This means:
 4. `FareEstimateViewModel` — request construction, error handling
 5. `UserPreferences` — DataStore read/write/clear (use in-memory DataStore)
 
-### A-02 | CRITICAL | SOS sends hardcoded (0.0, 0.0) coordinates
-In [ActiveRideScreen.kt:88](../chalo-customer-app/app/src/main/java/com/chalo/customer/presentation/screens/activeride/ActiveRideScreen.kt#L88):
-```kotlin
-onConfirm = { viewModel.onSosConfirm(0.0, 0.0) },
-```
-The SOS alert always sends latitude 0.0, longitude 0.0 — the Gulf of Guinea, off the coast of Africa. The customer's actual location is not retrieved before sending. The emergency contact and safety team receive a useless location.
+### A-02 | ~~CRITICAL~~ | ~~SOS sends hardcoded (0.0, 0.0) coordinates~~ — **RESOLVED**
+`ActiveRideViewModel.onSosConfirm()` now calls `getCurrentLocation()` which uses `FusedLocationProviderClient.lastLocation.await()`. Falls back to the ride's pickup coordinates if GPS is unavailable. `SosConfirmDialog` in `ActiveRideScreen.kt` takes `onConfirm: () -> Unit` (no coordinates passed from UI — ViewModel owns the location fetch).
 
-**Fix:** Request the last known location via `FusedLocationProviderClient` before calling `onSosConfirm`, and pass the real coordinates.
+### A-03 | ~~CRITICAL~~ | ~~No place search / address input~~ — **RESOLVED**
+`HomeScreen.kt` → `DestinationPickerSheet` uses Google Places SDK directly on-device:
+- `Places.createClient(context).findAutocompletePredictions(request)` with 300ms debounce
+- Location bias: Punjab bounding box (SW 29.50/73.85 → NE 32.60/76.95), country=IN
+- `fetchPlaceDetails(placeId)` → `Place.Field.LAT_LNG` + `ADDRESS` to resolve selected place
+- Fallback: 7 popular Punjab landmarks shown when query is < 3 characters
 
-### A-03 | CRITICAL | No place search / address input
-`HomeScreen` shows a map and a destination input field but there is no Google Places Autocomplete integration. Users type text and nothing happens — there is no search suggestion dropdown. The fare estimate requires explicit lat/lng coordinates that the user has no way to provide without dropping a pin.
+### A-04 | ~~HIGH~~ | ~~No route polyline on map~~ — **RESOLVED**
+`ActiveRideScreen.kt` decodes `uiState.routePolyline` (Google encoded polyline string from `POST /rides/fare-estimate` response) using `PolyUtil.decode()`. Renders as `Polyline` composable — blue (#1A73E8), 8dp, geodesic. Falls back gracefully to no polyline if the field is empty (Maps API unavailable, Haversine fallback active).
 
-**What Ola/Uber do:** `Places.createClient(context)` → `AutocompleteSupportFragment` or a custom `FindAutocompletePredictionsRequest`. This is the single feature that makes or breaks the booking flow.
+### A-05 | ~~HIGH~~ | ~~No driver marker animation~~ — **RESOLVED**
+`ActiveRideScreen.kt` uses Compose `Animatable` for both lat and lng of the driver marker. Each RTDB location update triggers `animLat.animateTo()` + `animLng.animateTo()` with `tween(durationMillis = 800)`. The animated values are composed into `driverLatLng` for the `Marker`. The effect is smooth interpolation between GPS pings — no teleporting.
 
-### A-04 | HIGH | No route polyline on map
-`ActiveRideScreen` shows three `Marker`s (pickup, driver, drop) but draws no route polyline between them. The user sees dots on an empty map.
+### A-06 | ~~HIGH~~ | ~~`isMyLocationEnabled = true` without permission check~~ — **RESOLVED**
+`HomeScreen.kt` now uses `rememberPermissionState(ACCESS_FINE_LOCATION)`. Permission is requested on first launch via `LaunchedEffect`. Map properties use `MapProperties(isMyLocationEnabled = locationGranted)` — only enables the blue dot when permission is actually granted. No more `SecurityException` risk.
 
-**What Ola/Uber do:** Fetch route from Google Directions API (or use the Maps SDK `Polyline` composable with decoded direction steps). Draw the route from driver's current position to pickup, and from pickup to drop.
-
-### A-05 | HIGH | No driver marker animation
-The driver marker teleports between GPS updates. Each location update from RTDB snaps the marker to the new position with no transition.
-
-**What Ola/Uber do:** Interpolate marker position between updates using `ValueAnimator` with a `LatLngInterpolator`. Combined with a bike/car icon (custom `BitmapDescriptor`) instead of the default red pin, this gives the live-tracking feel that users expect.
-
-### A-06 | HIGH | `isMyLocationEnabled = true` without permission check
-In [HomeScreen.kt:69](../chalo-customer-app/app/src/main/java/com/chalo/customer/presentation/screens/home/HomeScreen.kt#L69):
-```kotlin
-properties = MapProperties(isMyLocationEnabled = true)
-```
-This will crash with a `SecurityException` if `ACCESS_FINE_LOCATION` is not granted. The permission request flow must happen before this composable renders with this property. The accompanist-permissions library is already in the dependency list — it is not being used here.
-
-### A-07 | HIGH | No SMS Retriever / OTP auto-read
-The OTP flow requires the user to manually read the SMS and type 4 digits. Both Ola and Uber use the SMS Retriever API (or the newer `SmsCodeAutofill` API) to read the OTP automatically and fill the field without requiring the `READ_SMS` permission. This is table-stakes UX in the Indian market — users expect it.
+### A-07 | ~~HIGH~~ | ~~No SMS Retriever / OTP auto-read~~ — **RESOLVED**
+`OtpVerifyViewModel.init()` calls `SmsRetriever.getClient(context).startSmsRetriever()`. `OtpVerifyScreen` registers a `BroadcastReceiver` on `SmsRetriever.SMS_RETRIEVED_ACTION` via `DisposableEffect`. When the SMS arrives, the receiver parses the 6-digit OTP with `Regex("\\d{6}")` and calls `viewModel.onSmsReceived(otp)` which auto-fills and submits. No `READ_SMS` permission needed.
 
 ### A-08 | HIGH | No foreground service for background location
 When the Chalo app is backgrounded during an active ride (user switches to WhatsApp etc.), the RTDB location listener and ride status observer stop working on Android 12+ due to background process limitations. The driver location updates freeze on the customer's screen.
@@ -189,7 +177,7 @@ There is one FCM default channel (`chalo_rides`). All notifications — ride sta
 If the network is unavailable when the HomeScreen loads, there is no retry mechanism, no offline indicator, and no cached active ride check. The user sees a blank screen.
 
 ### A-14 | LOW | `android:supportsRtl="false"`
-Faridabad is Haryana. The target audience speaks Hindi. Hindi text in Compose renders left-to-right but `android:supportsRtl="false"` can cause layout issues if the OS language is set to Arabic/Urdu (common in parts of Haryana). Leave it at the default `true`.
+Punjab's target audience speaks Punjabi and Hindi. Hindi/Punjabi text in Compose renders left-to-right but `android:supportsRtl="false"` can cause layout issues if the OS language is set to Arabic/Urdu. Leave it at the default `true`.
 
 ### A-15 | LOW | Room database has no migration plan
 `AppDatabase` is at version 1 with `fallbackToDestructiveMigration()` (or equivalent — no migration is defined). Adding a column to `RideEntity` in version 2 will wipe all cached rides on update.
@@ -248,7 +236,7 @@ This is the gap between a working app and a product.
 | Auto driver settlement (Razorpay Route) | Automated T+2 | Manual withdrawal | Does not scale beyond 50 drivers |
 | A/B testing framework | Full experiment infra | Not implemented | Cannot test UI variants |
 | Analytics events (Mixpanel/Amplitude) | Full funnel tracking | Not implemented | Blind to drop-off points in funnel |
-| Localization (Hindi) | Full i18n | English only | Haryana target market speaks Hindi |
+| Localization (Hindi/Punjabi) | Full i18n | English only | Punjab target market speaks Punjabi and Hindi |
 
 ---
 
@@ -258,18 +246,18 @@ These must be resolved before a public launch, independent of feature gaps.
 
 | # | Gap | Severity |
 |---|---|---|
-| P-01 | Zero Android tests — any release can silently break | CRITICAL |
-| P-02 | SOS sends (0.0, 0.0) coordinates — safety bug | CRITICAL |
-| P-03 | No SMS gateway connected — OTP delivery broken | CRITICAL |
-| P-04 | GSON + no ProGuard rules — release build can silently null all DTOs | HIGH |
-| P-05 | No Android CI/CD — lint, build, test not automated | HIGH |
-| P-06 | `isMyLocationEnabled` without permission guard — crash on fresh install | HIGH |
-| P-07 | Straight-line fare calculation — customers will always be undercharged | HIGH |
-| P-08 | No service area boundary — dispatches to wrong region | HIGH |
-| P-09 | Manual driver settlement — not scalable | MEDIUM |
-| P-10 | No backup / disaster recovery documented | MEDIUM |
-| P-11 | No API rate-limit response handling in Android — app freezes on 429 | MEDIUM |
-| P-12 | `network_security_config.xml` uses network addresses not host IPs — breaks physical device testing | LOW |
+| P-01 | Zero Android tests — any release can silently break | ~~CRITICAL~~ **RESOLVED** — 53 unit tests across 6 test classes |
+| P-02 | SOS sends (0.0, 0.0) coordinates — safety bug | ~~CRITICAL~~ **RESOLVED** — FusedLocationProviderClient in ViewModel |
+| P-03 | No SMS gateway connected — OTP delivery broken | ~~CRITICAL~~ **RESOLVED** — MSG91 wired in sms.service.ts |
+| P-04 | GSON + no ProGuard rules — release build can silently null all DTOs | HIGH — still open, add `@Keep` to all DTO classes |
+| P-05 | No Android CI/CD — lint, build, test not automated | ~~HIGH~~ **RESOLVED** — `.github/workflows/ci.yml` Job 4 (Android lint + unit tests + APK) |
+| P-06 | `isMyLocationEnabled` without permission guard — crash on fresh install | ~~HIGH~~ **RESOLVED** — accompanist-permissions guard in HomeScreen |
+| P-07 | Straight-line fare calculation — customers will always be undercharged | ~~HIGH~~ **RESOLVED** — Google Maps Directions API with circuit breaker + Haversine fallback |
+| P-08 | No service area boundary — dispatches to wrong region | ~~HIGH~~ **RESOLVED** — `enforceServiceArea()` in ride.service.ts, 400 if outside Punjab |
+| P-09 | Manual driver settlement — not scalable | MEDIUM — still open, Razorpay Route planned for V2 |
+| P-10 | No backup / disaster recovery documented | MEDIUM — still open |
+| P-11 | No API rate-limit response handling in Android — app freezes on 429 | MEDIUM — still open |
+| P-12 | `network_security_config.xml` uses network addresses not host IPs — breaks physical device testing | LOW — still open |
 
 ---
 

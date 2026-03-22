@@ -119,12 +119,12 @@ class RideDtoContractTest {
                 "finalFare": null,
                 "distanceKm": null,
                 "durationMins": null,
-                "pickupAddress": "Sector 14, Faridabad",
-                "dropAddress": "NIT Faridabad",
-                "pickupLat": 28.4089,
-                "pickupLng": 77.3178,
-                "dropLat": 28.3852,
-                "dropLng": 77.3126,
+                "pickupAddress": "Sadar Bazaar, Ludhiana",
+                "dropAddress": "Civil Lines, Jalandhar",
+                "pickupLat": 30.9010,
+                "pickupLng": 75.8573,
+                "dropLat": 31.3260,
+                "dropLng": 75.5762,
                 "rideStartOtp": null,
                 "customerRating": null,
                 "driverRating": null,
@@ -168,12 +168,12 @@ class RideDtoContractTest {
                 "finalFare": null,
                 "distanceKm": null,
                 "durationMins": null,
-                "pickupAddress": "Sector 14, Faridabad",
-                "dropAddress": "NIT Faridabad",
-                "pickupLat": 28.4089,
-                "pickupLng": 77.3178,
-                "dropLat": 28.3852,
-                "dropLng": 77.3126,
+                "pickupAddress": "Sadar Bazaar, Ludhiana",
+                "dropAddress": "Civil Lines, Jalandhar",
+                "pickupLat": 30.9010,
+                "pickupLng": 75.8573,
+                "dropLat": 31.3260,
+                "dropLng": 75.5762,
                 "rideStartOtp": "4823",
                 "customerRating": null,
                 "driverRating": null,
@@ -185,7 +185,7 @@ class RideDtoContractTest {
                   "id": "cldrv001",
                   "name": "Ravi Kumar",
                   "driverProfile": {
-                    "vehicleNumber": "HR01AB1234",
+                    "vehicleNumber": "PB10AB1234",
                     "vehicleModel": "Honda Activa 6G",
                     "ratingAvg": 4.2,
                     "ratingCount": 38
@@ -205,7 +205,7 @@ class RideDtoContractTest {
         assertEquals("cldrv001", driver.id)
         assertEquals("Ravi Kumar", driver.name)
         val profile = driver.driverProfile!!
-        assertEquals("HR01AB1234", profile.vehicleNumber)
+        assertEquals("PB10AB1234", profile.vehicleNumber)
         assertEquals("Honda Activa 6G", profile.vehicleModel)
         assertEquals(4.2, profile.ratingAvg!!, 0.01)
         assertEquals(38, profile.ratingCount)
@@ -226,12 +226,12 @@ class RideDtoContractTest {
                 "finalFare": 88,
                 "distanceKm": 3.4,
                 "durationMins": 14,
-                "pickupAddress": "Sector 14, Faridabad",
-                "dropAddress": "NIT Faridabad",
-                "pickupLat": 28.4089,
-                "pickupLng": 77.3178,
-                "dropLat": 28.3852,
-                "dropLng": 77.3126,
+                "pickupAddress": "Sadar Bazaar, Ludhiana",
+                "dropAddress": "Civil Lines, Jalandhar",
+                "pickupLat": 30.9010,
+                "pickupLng": 75.8573,
+                "dropLat": 31.3260,
+                "dropLng": 75.5762,
                 "rideStartOtp": null,
                 "customerRating": 5,
                 "driverRating": 4,
@@ -270,10 +270,10 @@ class RideDtoContractTest {
                 "finalFare": null,
                 "distanceKm": null,
                 "durationMins": null,
-                "pickupAddress": "Sector 14, Faridabad",
-                "dropAddress": "NIT Faridabad",
-                "pickupLat": 28.4089,
-                "pickupLng": 77.3178,
+                "pickupAddress": "Sadar Bazaar, Ludhiana",
+                "dropAddress": "Civil Lines, Jalandhar",
+                "pickupLat": 30.9010,
+                "pickupLng": 75.8573,
                 "dropLat": null,
                 "dropLng": null,
                 "rideStartOtp": null,
@@ -354,8 +354,8 @@ class RideDtoContractTest {
               "message": "ok",
               "data": {
                 "rideId": "clride003",
-                "pickupAddress": "Sector 14, Faridabad",
-                "dropAddress": "NIT Faridabad",
+                "pickupAddress": "Sadar Bazaar, Ludhiana",
+                "dropAddress": "Civil Lines, Jalandhar",
                 "distanceKm": 3.4,
                 "durationMins": 14,
                 "baseFare": 55,
@@ -397,8 +397,8 @@ class RideDtoContractTest {
               "data": [
                 {
                   "id": "clride005",
-                  "pickupAddress": "Sector 14, Faridabad",
-                  "dropAddress": "NIT Faridabad",
+                  "pickupAddress": "Sadar Bazaar, Ludhiana",
+                  "dropAddress": "Civil Lines, Jalandhar",
                   "finalFare": 88,
                   "status": "COMPLETED",
                   "paymentMethod": "CASH",
@@ -410,7 +410,7 @@ class RideDtoContractTest {
                     "id": "cldrv001",
                     "name": "Ravi Kumar",
                     "driverProfile": {
-                      "vehicleNumber": "HR01AB1234",
+                      "vehicleNumber": "PB10AB1234",
                       "vehicleModel": "Honda Activa 6G",
                       "ratingAvg": 4.2,
                       "ratingCount": 38
@@ -442,8 +442,8 @@ class RideDtoContractTest {
               "data": [
                 {
                   "id": "clride006",
-                  "pickupAddress": "Sector 14, Faridabad",
-                  "dropAddress": "NIT Faridabad",
+                  "pickupAddress": "Sadar Bazaar, Ludhiana",
+                  "dropAddress": "Civil Lines, Jalandhar",
                   "finalFare": null,
                   "status": "CANCELLED",
                   "paymentMethod": "CASH",

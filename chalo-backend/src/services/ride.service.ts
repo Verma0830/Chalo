@@ -76,6 +76,11 @@ export class RideService {
     const sanitizedPickup = sanitizeLocation(pickup);
     const sanitizedDrop = sanitizeLocation(drop);
 
+    // Service area geofencing — reject rides outside the Punjab operating zone.
+    // Bounds cover the full state of Punjab including Ludhiana, Amritsar, Chandigarh,
+    // Jalandhar, and Patiala to prevent dispatch to drivers in neighbouring states.
+    this.enforceServiceArea(sanitizedPickup.lat, sanitizedPickup.lng);
+
     // 1. Calculate fare estimate BEFORE the transaction.
     //    Never call external services or long-running async work inside a Prisma
     //    $transaction — it holds the DB connection open for the full duration,
@@ -186,6 +191,30 @@ export class RideService {
    * @param paymentMethod - CASH or UPI
    * @param scheduledAt - When the ride should start
    */
+  /**
+   * Enforce that a pickup coordinate falls within the Punjab service area.
+   * Bounds: SW (29.50, 73.85) → NE (32.60, 76.95) — covers all of Punjab state.
+   * Throws 400 VALIDATION_ERROR if the point is outside.
+   *
+   * These bounds are intentionally kept as constants (not platform_config) so that the
+   * check is always available without a DB round-trip on every ride creation.
+   * Expand the bounds via a code change when the operating zone grows.
+   */
+  private enforceServiceArea(lat: number, lng: number): void {
+    const SW_LAT = 29.50;
+    const SW_LNG = 73.85;
+    const NE_LAT = 32.60;
+    const NE_LNG = 76.95;
+
+    if (lat < SW_LAT || lat > NE_LAT || lng < SW_LNG || lng > NE_LNG) {
+      logger.warn('Ride request outside service area', { lat, lng });
+      throw ApiError.badRequest(
+        'Chalo is currently available only in Punjab. Your pickup location is outside our service area.',
+        ErrorCode.VALIDATION_ERROR
+      );
+    }
+  }
+
   async createScheduledRide(
     customerId: string,
     pickup: { lat: number; lng: number; address: string },

@@ -1,6 +1,6 @@
 # Chalo
 
-Faridabad-focused bike ride-hailing platform. Production-ready backend with a fully-tested Android customer app.
+Punjab-focused bike ride-hailing platform. Production-ready backend with a fully-tested Android customer app.
 
 ## Current Status (March 2026)
 
@@ -120,7 +120,8 @@ Every push to `main` runs:
 | Document | What it covers |
 |---|---|
 | [docs/CODEBASE.md](docs/CODEBASE.md) | Full architecture reference — all 60 endpoints, Android screens, data flow, migrations |
-| [docs/api/POSTMAN_GUIDE.md](docs/api/POSTMAN_GUIDE.md) | How to test every endpoint from scratch, 10 journeys |
+| [docs/api/POSTMAN_GUIDE.md](docs/api/POSTMAN_GUIDE.md) | How to test every backend endpoint from scratch, 10 journeys |
+| [docs/api/CUSTOMER_APP_API_GUIDE.md](docs/api/CUSTOMER_APP_API_GUIDE.md) | Screen-by-screen API calls the Android customer app makes |
 | [docs/api/token-exchange-guide.md](docs/api/token-exchange-guide.md) | Firebase token exchange for Postman testing |
 | [docs/development/EMULATOR_SETUP.md](docs/development/EMULATOR_SETUP.md) | Android emulator setup, local.properties, common problems |
 | [docs/development/NEXT_STEPS.md](docs/development/NEXT_STEPS.md) | Remaining work with priority and impact |

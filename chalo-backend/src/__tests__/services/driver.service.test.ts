@@ -254,7 +254,7 @@ describe('DriverService', () => {
         // Second call: fetch for notification
         .mockResolvedValueOnce({
           customerId: 'customer_001',
-          dropAddress: 'Old Faridabad',
+          dropAddress: 'Civil Lines, Jalandhar',
         });
 
       (prisma.ride.updateMany as jest.Mock).mockResolvedValue({ count: 1 });

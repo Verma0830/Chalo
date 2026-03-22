@@ -1,7 +1,7 @@
 {
   "name": "chalo-backend",
   "version": "1.0.0",
-  "description": "Chalo ride-hailing backend API — Faridabad's hyper-local bike ride platform",
+  "description": "Chalo ride-hailing backend API — Punjab's hyper-local bike ride platform",
   "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",

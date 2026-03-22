@@ -29,8 +29,8 @@ class FareEstimateViewModelTest {
     private val rideRepository: RideRepository = mockk()
     private lateinit var viewModel: FareEstimateViewModel
 
-    private val pickup = Location(28.4089, 77.3178, "Sector 14, Faridabad")
-    private val drop   = Location(28.3852, 77.3126, "NIT Faridabad")
+    private val pickup = Location(30.9010, 75.8573, "Sadar Bazaar, Ludhiana")
+    private val drop   = Location(31.3260, 75.5762, "Civil Lines, Jalandhar")
 
     private val fakeEstimate = FareEstimate(
         estimatedFare      = 85,

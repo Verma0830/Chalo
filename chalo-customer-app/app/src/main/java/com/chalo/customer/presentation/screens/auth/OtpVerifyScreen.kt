@@ -71,7 +71,7 @@ fun OtpVerifyScreen(
         Text("Verify OTP", style = MaterialTheme.typography.headlineLarge)
         Spacer(Modifier.height(ChaloSpacing.sm))
         Text(
-            text  = "Enter the 4-digit OTP sent to ${phone.maskPhone()}",
+            text  = "Enter the 6-digit OTP sent to ${phone.maskPhone()}",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -89,7 +89,7 @@ fun OtpVerifyScreen(
             text      = "Verify",
             onClick   = viewModel::onVerify,
             isLoading = uiState.isLoading,
-            enabled   = uiState.otp.length == 4,
+            enabled   = uiState.otp.length == 6,
         )
 
         Spacer(Modifier.height(ChaloSpacing.md))
@@ -127,14 +127,14 @@ private fun OtpInputRow(
 ) {
     BasicTextField(
         value         = otp,
-        onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) onChanged(it) },
+        onValueChange = { if (it.length <= 6 && it.all { c -> c.isDigit() }) onChanged(it) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
         decorationBox = { _ ->
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                repeat(4) { index ->
+                repeat(6) { index ->
                     val char = otp.getOrNull(index)?.toString() ?: ""
                     Box(
                         modifier = Modifier

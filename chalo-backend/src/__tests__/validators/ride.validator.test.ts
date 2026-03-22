@@ -13,8 +13,8 @@ import {
 import CONSTANTS from '../../utils/constants';
 
 // reusable valid location
-const validPickup = { lat: 28.4744, lng: 77.4024, address: 'Sector 15, Faridabad' };
-const validDrop   = { lat: 28.5000, lng: 77.4200, address: 'Sector 21, Faridabad' };
+const validPickup = { lat: 30.9010, lng: 75.8573, address: 'Sadar Bazaar, Ludhiana' };
+const validDrop   = { lat: 31.3260, lng: 75.5762, address: 'Civil Lines, Jalandhar' };
 
 // ─── fareEstimateSchema ───────────────────────────────────────
 describe('fareEstimateSchema', () => {

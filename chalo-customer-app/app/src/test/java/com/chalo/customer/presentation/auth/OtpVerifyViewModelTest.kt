@@ -67,10 +67,10 @@ class OtpVerifyViewModelTest {
     }
 
     @Test
-    fun `onVerify does nothing when otp is less than 4 digits`() = runTest {
+    fun `onVerify does nothing when otp is less than 6 digits`() = runTest {
         viewModel.onOtpChanged("12")
-        // Manually call onVerify — should short-circuit because length != 4
-        // onOtpChanged("12") won't auto-trigger because length < 4
+        // Manually call onVerify — should short-circuit because length != 6
+        // onOtpChanged("12") won't auto-trigger because length < 6
         coVerify(exactly = 0) { authRepository.verifyOtp(any(), any()) }
     }
 
@@ -78,10 +78,10 @@ class OtpVerifyViewModelTest {
 
     @Test
     fun `onVerify sets errorMessage when repository returns failure`() = runTest {
-        coEvery { authRepository.verifyOtp("+919876543210", "9999") } returns
+        coEvery { authRepository.verifyOtp("+919876543210", "999999") } returns
             Result.failure(Exception("Invalid OTP. Please try again."))
 
-        viewModel.onOtpChanged("9999")   // 4 digits → triggers onVerify automatically
+        viewModel.onOtpChanged("999999")   // 6 digits → triggers onVerify automatically
         advanceUntilIdle()
 
         assertEquals("Invalid OTP. Please try again.", viewModel.uiState.value.errorMessage)
@@ -93,7 +93,7 @@ class OtpVerifyViewModelTest {
         coEvery { authRepository.verifyOtp(any(), any()) } returns
             Result.failure(Exception("Network error"))
 
-        viewModel.onOtpChanged("1234")
+        viewModel.onOtpChanged("123456")
         advanceUntilIdle()
 
         assertEquals(false, viewModel.uiState.value.isLoading)
@@ -107,7 +107,7 @@ class OtpVerifyViewModelTest {
             Result.failure(Exception("timeout"))
         }
 
-        viewModel.onOtpChanged("1234")
+        viewModel.onOtpChanged("123456")
         // Don't advance — check loading is true immediately after launch
         mainDispatcherRule.testDispatcher.scheduler.advanceTimeBy(1)
         assertEquals(true, viewModel.uiState.value.isLoading)
@@ -126,7 +126,7 @@ class OtpVerifyViewModelTest {
             firebaseCustomToken = customToken,
         )
 
-        coEvery { authRepository.verifyOtp("+919876543210", "5678") } returns
+        coEvery { authRepository.verifyOtp("+919876543210", "567890") } returns
             Result.success(verifyResult)
 
         mockkStatic(FirebaseAuth::class)
@@ -141,7 +141,7 @@ class OtpVerifyViewModelTest {
         coEvery { mockTask.await() } returns mockAuthResult
 
         viewModel.events.test {
-            viewModel.onOtpChanged("5678")
+            viewModel.onOtpChanged("567890")
             advanceUntilIdle()
 
             val event = awaitItem()
@@ -172,7 +172,7 @@ class OtpVerifyViewModelTest {
         coEvery { mockTask.await() } returns mockk()
 
         viewModel.events.test {
-            viewModel.onOtpChanged("1234")
+            viewModel.onOtpChanged("123456")
             advanceUntilIdle()
 
             val event = awaitItem() as OtpVerifyEvent.Verified
@@ -201,7 +201,7 @@ class OtpVerifyViewModelTest {
         every { mockFirebaseAuth.signInWithCustomToken(any()) } returns mockTask
         coEvery { mockTask.await() } throws Exception("Firebase auth failed")
 
-        viewModel.onOtpChanged("1234")
+        viewModel.onOtpChanged("123456")
         advanceUntilIdle()
 
         assertNotNull(viewModel.uiState.value.errorMessage)

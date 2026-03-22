@@ -172,7 +172,7 @@ describe('API Integration Tests', () => {
         .post('/api/v1/auth/register-driver')
         .send({
           phone: '+919876543210',
-          otp: '4242',
+          otp: '424242',
           name: 'Ravi Kumar',
         })
         .expect(200);
@@ -302,10 +302,10 @@ describe('API Integration Tests', () => {
           driver: {
             name: 'Ravi',
             driverProfile: {
-              vehicleNumber: 'HR26AB1234',
+              vehicleNumber: 'PB10AB1234',
               vehicleModel: 'Activa',
-              currentLat: 28.41,
-              currentLng: 77.31,
+              currentLat: 30.90,
+              currentLng: 75.85,
               lastLocationUpdate: new Date(),
             },
           },
@@ -318,7 +318,7 @@ describe('API Integration Tests', () => {
 
       expect(response.body.success).toBe(true);
       expect(response.body.data.rideId).toBe('ride_123');
-      expect(response.body.data.location).toMatchObject({ lat: 28.41, lng: 77.31 });
+      expect(response.body.data.location).toMatchObject({ lat: 30.90, lng: 75.85 });
     });
   });
 });

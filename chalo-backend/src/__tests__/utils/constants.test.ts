@@ -46,8 +46,8 @@ describe('CONSTANTS — surge pricing bounds', () => {
 });
 
 describe('CONSTANTS — OTP', () => {
-  it('OTP length is 4', () => {
-    expect(CONSTANTS.OTP_LENGTH).toBe(4);
+  it('OTP length is 6', () => {
+    expect(CONSTANTS.OTP_LENGTH).toBe(6);
   });
 
   it('OTP expires in 5 minutes', () => {

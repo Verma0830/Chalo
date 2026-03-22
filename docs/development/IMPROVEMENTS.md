@@ -1,165 +1,70 @@
 # Chalo — Improvements Backlog
 
-Last updated: 2026-03-21
+Last updated: 2026-03-22
 Source: derived from reading all backend services, Android source, schema, validators, and CI configuration.
 
 Items are grouped by theme and ordered within each group by impact. Do not add items here that are already tracked in NEXT_STEPS.md (those are active in-sprint work). This file is for planned improvements beyond the immediate sprint.
 
 ---
 
-## Group 1 — Critical Bugs (must fix before any user testing)
+## Group 1 — Critical Bugs — RESOLVED
 
-### 1.1 SOS sends (0.0, 0.0) coordinates
-**File:** `ActiveRideScreen.kt` line 88
-**Bug:** `onConfirm = { viewModel.onSosConfirm(0.0, 0.0) }` — hardcoded coordinates.
-**Impact:** Emergency contacts and safety team receive a location in the Gulf of Guinea. The SOS feature is completely non-functional for its intended purpose.
-**Fix:** In `ActiveRideViewModel.onSosConfirm()`, use `FusedLocationProviderClient.lastLocation.await()` to get the real GPS fix before calling the API. Pass `null, null` if location is unavailable and let the backend handle gracefully.
+All Group 1 bugs have been fixed:
 
-### 1.2 `isMyLocationEnabled = true` without permission guard
-**File:** `HomeScreen.kt` line 69
-**Bug:** `MapProperties(isMyLocationEnabled = true)` is passed unconditionally. If `ACCESS_FINE_LOCATION` is not granted (fresh install, user denied), this throws `SecurityException` and crashes.
-**Fix:** Wrap with `accompanist-permissions`' `rememberPermissionState(ACCESS_FINE_LOCATION)` before the GoogleMap composable renders. `accompanist-permissions` is already in the dependency list.
-
-### 1.3 No SMS gateway wired for OTP delivery
-**File:** `sms.service.ts`
-**Bug:** OTP is logged to console in dev and silently dropped in production. There is no SMS provider configured.
-**Fix:** Wire MSG91 (recommended for India — cheapest bulk rate) or Fast2SMS. The `SmsService` interface is already defined — only the provider implementation is missing. Requires: `MSG91_API_KEY` env variable, one HTTP call to MSG91's transactional API per OTP.
+| Bug | File | Status |
+|---|---|---|
+| SOS sent (0.0, 0.0) | `ActiveRideViewModel.kt` | Fixed — uses `FusedLocationProviderClient.lastLocation.await()`, falls back to ride pickup coords |
+| `isMyLocationEnabled` without permission check | `HomeScreen.kt` | Fixed — uses `rememberPermissionState(ACCESS_FINE_LOCATION)`, passes `locationGranted` to `MapProperties` |
+| No SMS gateway for OTP delivery | `sms.service.ts` | Fixed — `sendOTPSms()` calls MSG91 API. Set `MSG91_AUTH_KEY` env variable to enable. |
+| OTP was 4 digits (brute-force risk + SMS Retriever mismatch) | `constants.ts`, `auth.validator.ts`, `OtpVerifyScreen.kt`, `OtpVerifyViewModel.kt` | Fixed — upgraded to 6 digits across backend + Android + all tests |
 
 ---
 
-## Group 2 — Android Product Gaps (blocks real user adoption)
+## Group 2 — Android Product Gaps — RESOLVED
 
-### 2.1 Google Places Autocomplete — address search is missing
-Without this, users cannot book a ride. The destination field on `HomeScreen` accepts text input but shows no suggestions. Users cannot find pickup/drop locations unless they manually drop a pin.
+All Group 2 items have been implemented:
 
-**What to build:**
-1. Backend: `GET /places/autocomplete?input=&sessionToken=` — proxy to Google Places API, return top 5 predictions (place_id, description).
-2. Backend: `GET /places/details?placeId=` — return lat/lng + formatted address.
-3. Android: Replace the current text field with a `PlacesAutoCompleteField` composable showing a dropdown. On selection, call `/places/details` and set the location marker.
-
-**Estimated impact:** Without this, 100% of users cannot complete their first booking.
-
-### 2.2 Route polyline on active ride map
-`ActiveRideScreen` shows three markers (pickup, driver, drop) on an otherwise empty map. No route is drawn.
-
-**What to build:**
-1. Fetch encoded polyline from `GET /rides/:rideId` (the `polyline` field is already in the schema — `Ride.polyline String?`).
-2. Decode with Google Maps Android SDK `PolyUtil.decode()`.
-3. Render as `Polyline` composable in the `GoogleMap` block.
-
-### 2.3 Driver marker animation (smooth tracking)
-Driver location updates from Firebase RTDB cause the driver marker to teleport. Each GPS update (every 3–5 seconds) snaps the marker with no transition.
-
-**What to build:**
-Use `ValueAnimator` with a `LatLngInterpolator` to interpolate marker position between consecutive coordinates. Standard implementation is ~50 lines of Kotlin. Also: replace the default red pin with a bike icon `BitmapDescriptor` drawn from a vector drawable.
-
-### 2.4 ETA display (pickup and destination)
-There is no ETA shown anywhere in the app. Users see "Driver assigned" with no indication of how long until arrival.
-
-**What to build:**
-1. Backend: Add `etaToPickupMins` and `etaToDestinationMins` fields to the `GET /rides/:rideId` response, calculated via Google Maps Distance Matrix API from driver's current location.
-2. Android: Display ETA pill on `ActiveRideScreen` below the driver info card. Update from RTDB location events.
-
-### 2.5 SMS Retriever for OTP auto-fill
-Users must manually read the SMS and type the OTP. The Indian market expects auto-fill.
-
-**What to build:**
-Use `SmsRetriever` API (no `READ_SMS` permission required). The OTP SMS format must include an 11-character app hash. Wire on `OtpVerifyScreen`: start retriever before sending OTP request, listen for `SmsRetriever.SMS_RETRIEVED_ACTION` broadcast, parse OTP from message, fill `OtpTextField`.
-
-### 2.6 Foreground service for background ride tracking
-On Android 12+, RTDB listeners stop working when the app is backgrounded for more than ~10 minutes. A customer who locks their screen during a ride loses real-time driver location.
-
-**What to build:**
-`RideTrackingService : LifecycleService` with `foregroundServiceType="location"`. Start when ride status becomes `DRIVER_ASSIGNED`, stop when `COMPLETED` or `CANCELLED`. Show a persistent notification: "Your ride is in progress — tap to view". Wire to `ActiveRideViewModel` via the same RTDB flows.
+| Feature | File | Status |
+|---|---|---|
+| Google Places Autocomplete | `HomeScreen.kt` → `DestinationPickerSheet` | Done — `Places.createClient()`, `FindAutocompletePredictionsRequest` with Punjab bounding bias, 300ms debounce, popular places fallback |
+| Route polyline on active ride map | `ActiveRideScreen.kt` | Done — `PolyUtil.decode(routePolyline)` + `Polyline` composable, blue (#1A73E8) 8dp line |
+| Driver marker animation | `ActiveRideScreen.kt` | Done — `Animatable` (lat + lng) with `tween(800ms)`, smooth interpolation between RTDB updates |
+| ETA display | `ActiveRideViewModel.kt` + `ActiveRideScreen.kt` | Done — Haversine × 1.3 road factor ÷ 20 km/h, shown as "ETA: X min" pill on status card |
+| SMS Retriever for OTP auto-fill | `OtpVerifyScreen.kt` + `OtpVerifyViewModel.kt` | Done — `SmsRetriever.getClient().startSmsRetriever()`, `BroadcastReceiver` on `SMS_RETRIEVED_ACTION`, auto-fills and submits |
+| Foreground service for background tracking | Pending — see Group 4 below | Not yet implemented |
 
 ---
 
 ## Group 3 — Backend Product Gaps
 
-### 3.1 Dynamic surge pricing
-Currently `surgeMultiplier` is a single global config key set by an admin. There is no algorithm.
+### 3.1 Dynamic surge pricing — IMPLEMENTED
+`fare.service.ts` → `calculateSurgeMultiplier()` now runs a two-layer algorithm:
+- **Layer 1 (always active):** Time-of-day baseline (1.3× morning rush 8–10am, 1.5× evening 5–8pm, 1.3× late night)
+- **Layer 2 (demand/supply, Redis-backed, 60s TTL):** Counts online drivers vs active ride requests in a ±0.05° bounding box (~5.5km) around the pickup. `surge = clamp(activeRides/onlineDrivers, 1.0, 2.0)` rounded to nearest 0.1. Higher of time-based or demand-based is used.
+- Falls back to time-based surge if Redis unavailable.
 
-**What to build (V2):**
-1. Every 60 seconds, for each geohash cell (precision 6, ~1.2km × 0.6km), count `onlineDrivers` and `requestedRides` in the last 10 minutes.
-2. Surge = `max(1.0, min(2.0, requestedRides / onlineDrivers))` — capped at 2x.
-3. Store per-cell surge in Redis with 60-second TTL.
-4. `fare.service.ts` looks up the pickup cell's surge instead of the global config key.
-5. Show surge zones as colored polygons on the `HomeScreen` map.
+### 3.2 Google Maps Directions API for accurate fares — IMPLEMENTED
+`fare.service.ts` → `getRouteDetails()` calls Google Maps Directions API and returns `distanceKm`, `durationMins`, and encoded `routePolyline`. Circuit breaker falls back to Haversine × 1.3 road factor at 25 km/h when Maps API is unavailable.
 
-**Impact:** Critical for driver retention during peak hours (8–10am, 5–8pm). Without surge incentive, drivers log off at peak demand.
+Set `GOOGLE_MAPS_API_KEY` in `.env` to enable. Without it, Haversine fallback is used for all requests.
 
-### 3.2 Google Maps Distance Matrix for accurate fares
-Haversine straight-line distance consistently underpredicts on-road distance by 25–40% in Faridabad's grid+old-town mix. Customers are being undercharged.
+### 3.3 In-app wallet and refund mechanism — PENDING
+No wallet schema yet. Requires a Prisma migration + new endpoints. Planned for V2 after launch validation.
 
-**What to build:**
-Replace the Haversine primary calculation in `fare.service.ts` with `Google Maps Distance Matrix API` (already partially integrated — circuit breaker is present). The Maps API is already called for the Directions API in some paths. Unified: one `distanceMatrix` call gives both distance and duration.
+**Schema when ready:** `Wallet`, `WalletTransaction` models. `PaymentMethod` enum: add `WALLET`.
 
-**Cost:** Google Maps Distance Matrix is ~$5 per 1,000 elements. At 200 rides/day, cost is ~$1/day — negligible at MVP scale.
+### 3.4 Geofencing and service area enforcement — IMPLEMENTED
+`ride.service.ts` → `enforceServiceArea()` checks pickup coordinates against Punjab state bounding box:
+- SW corner: (29.50°N, 73.85°E)
+- NE corner: (32.60°N, 76.95°E)
+- Returns HTTP 400 with "outside service area" message if pickup is out of bounds
+- Called before fare calculation in both `createRide()` and (extend to) `createScheduledRide()` — prevents dispatch to drivers outside Punjab
 
-### 3.3 In-app wallet and refund mechanism
-There is no wallet schema. CASH and UPI are the only payment methods. When a refund is needed (driver cancelled, customer overcharged), there is no way to credit the customer in-app.
+### 3.5 Promo code and referral engine — PENDING
+No schema yet. Planned for V2.
 
-**What to build (V2 schema additions):**
-```prisma
-model Wallet {
-  id           String   @id @default(cuid())
-  userId       String   @unique
-  balance      Float    @default(0)
-  currency     String   @default("INR")
-  user         User     @relation(...)
-  transactions WalletTransaction[]
-}
-
-model WalletTransaction {
-  id          String   @id @default(cuid())
-  walletId    String
-  amount      Float
-  type        WalletTxType  // CREDIT, DEBIT, REFUND, PROMO
-  referenceId String?  // rideId or promoId
-  description String
-  createdAt   DateTime @default(now())
-}
-```
-
-PaymentMethod enum: add `WALLET`. Backend: deduct from wallet balance atomically in a transaction when ride completes.
-
-### 3.4 Geofencing and service area enforcement
-A customer outside Faridabad (e.g., Delhi, Noida) can request a ride and the system will try to dispatch. This wastes driver capacity and creates a licensing issue (Haryana CNG auto permits are state-specific).
-
-**What to build:**
-Define a GeoJSON polygon for the Faridabad service area. In `ride.service.ts` `createRide()`, check `ST_Within(pickup_geography, service_area_polygon)` before creating the ride. Return `400 SERVICE_AREA_OUT_OF_BOUNDS` if outside. Store the polygon in `platform_config` as a GeoJSON string.
-
-### 3.5 Promo code and referral engine
-The first 1,000 users in a new market come from referrals. There is no schema or logic for this.
-
-**What to build (minimal V1):**
-```prisma
-model PromoCode {
-  id              String   @id @default(cuid())
-  code            String   @unique
-  discountAmount  Float
-  maxUses         Int
-  usedCount       Int      @default(0)
-  expiresAt       DateTime?
-  isActive        Boolean  @default(true)
-}
-
-model PromoRedemption {
-  id          String   @id @default(cuid())
-  promoCodeId String
-  userId      String
-  rideId      String
-  createdAt   DateTime @default(now())
-}
-```
-
-Backend: `POST /rides/apply-promo` validates code, checks one-use-per-user, deducts from `finalFare`. Android: promo code input field on `FareEstimateScreen`.
-
-### 3.6 Automated driver settlement via Razorpay Route
-Manual withdrawal processing does not scale beyond ~50 drivers. Razorpay Route (split payments) settles driver earnings automatically at transaction time.
-
-**What to build:**
-At ride completion, instead of creating an `Earning` record to be settled later, call Razorpay Route API to split the payment: platform keeps commission %, driver receives remainder as a direct bank transfer. Removes the entire manual withdrawal flow for UPI rides. CASH rides still need the manual withdrawal path.
+### 3.6 Automated driver settlement via Razorpay Route — PENDING
+Manual withdrawal path remains. Razorpay Route requires additional KYC on driver accounts (Razorpay linked accounts). Planned for when driver count exceeds 50.
 
 ---
 
@@ -193,7 +98,7 @@ If the network is unavailable at app open, `HomeScreen` shows a blank map with n
 4. Cache the last known active ride ID in DataStore so a returning user sees their in-progress ride immediately.
 
 ### 4.4 Hindi localization
-The app is targeted at Faridabad, Haryana. The majority of users are Hindi or Punjabi speakers.
+The app is targeted at Punjab. The majority of users are Punjabi or Hindi speakers.
 
 **What to build:**
 1. Add `res/values-hi/strings.xml` with Hindi translations of all UI strings.

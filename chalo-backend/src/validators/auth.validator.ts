@@ -24,8 +24,8 @@ export const verifyOTPSchema = z.object({
     .regex(/^\+91[6-9]\d{9}$/, 'Invalid Indian mobile number'),
   otp: z
     .string()
-    .length(4, 'OTP must be exactly 4 digits')
-    .regex(/^\d{4}$/, 'OTP must contain only digits'),
+    .length(6, 'OTP must be exactly 6 digits')
+    .regex(/^\d{6}$/, 'OTP must contain only digits'),
 });
 
 /**
@@ -83,8 +83,8 @@ export const registerDriverSchema = z.object({
     .regex(/^\+91[6-9]\d{9}$/, 'Invalid Indian mobile number. Format: +91XXXXXXXXXX'),
   otp: z
     .string()
-    .length(4, 'OTP must be exactly 4 digits')
-    .regex(/^\d{4}$/, 'OTP must contain only digits'),
+    .length(6, 'OTP must be exactly 6 digits')
+    .regex(/^\d{6}$/, 'OTP must contain only digits'),
   name: z
     .string()
     .trim()

@@ -89,7 +89,7 @@ Total: **60 endpoints** across 7 route groups. All under `/api/v1`.
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| POST | `/auth/otp/send` | Public | Send 4-digit OTP to phone. Rate limited: 5/15 min |
+| POST | `/auth/otp/send` | Public | Send 6-digit OTP to phone via MSG91 SMS. Rate limited: 3/15 min |
 | POST | `/auth/otp/verify` | Public | Verify OTP → returns Firebase custom token |
 | POST | `/auth/register-driver` | Public | OTP verify + driver account creation in one call |
 | GET  | `/auth/profile` | Bearer | Get current user profile |
@@ -130,7 +130,7 @@ Total: **60 endpoints** across 7 route groups. All under `/api/v1`.
 | POST | `/driver/rides/:rideId/accept` | DRIVER | Accept an incoming ride |
 | POST | `/driver/rides/:rideId/decline` | DRIVER | Decline a ride offer |
 | POST | `/driver/rides/:rideId/arrived` | DRIVER | Mark arrived at pickup |
-| POST | `/driver/rides/:rideId/start` | DRIVER | Start ride (requires customer's 4-digit OTP) |
+| POST | `/driver/rides/:rideId/start` | DRIVER | Start ride (requires customer's 4-digit ride-start OTP) |
 | POST | `/driver/rides/:rideId/complete` | DRIVER | Complete the ride |
 | POST | `/driver/rides/:rideId/cancel` | DRIVER | Cancel active ride |
 | POST | `/driver/rides/:rideId/rate-customer` | DRIVER | Rate customer (1–5) after completion |
@@ -185,7 +185,7 @@ Total: **60 endpoints** across 7 route groups. All under `/api/v1`.
 
 ### Auth flow
 
-1. `POST /auth/otp/send` — generates a 4-digit OTP, stores it in Redis with TTL, sends via SMS service (or prints to console in dev).
+1. `POST /auth/otp/send` — generates a 6-digit OTP (SHA-256 hashed in DB), calls MSG91 SMS API in production (or prints to console in dev).
 2. `POST /auth/otp/verify` — validates OTP from Redis, creates or retrieves user in DB, mints a Firebase custom token via Firebase Admin SDK, returns it with user data.
 3. Client signs into Firebase with the custom token (`signInWithCustomToken`). Firebase SDK then manages the ID token lifecycle (auto-refresh, expiry).
 4. All protected routes receive a Firebase ID token in `Authorization: Bearer`. The `authenticate` middleware verifies it server-side via Firebase Admin.

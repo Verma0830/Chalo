@@ -92,8 +92,8 @@ const defaultConfigs = [
 
 describe('FareService.estimateFare', () => {
   let service: FareService;
-  const pickup = { lat: 28.4089, lng: 77.3178, address: 'Sector 21, Faridabad' };
-  const drop = { lat: 28.5017, lng: 77.4041, address: 'Connaught Place, Delhi' };
+  const pickup = { lat: 30.9010, lng: 75.8573, address: 'Sadar Bazaar, Ludhiana' };
+  const drop = { lat: 31.3260, lng: 75.5762, address: 'Civil Lines, Jalandhar' };
 
   beforeEach(() => {
     jest.clearAllMocks();

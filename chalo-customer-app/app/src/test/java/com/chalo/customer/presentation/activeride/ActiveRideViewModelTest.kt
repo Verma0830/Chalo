@@ -50,10 +50,10 @@ class ActiveRideViewModelTest {
         finalFare     = null,
         distanceKm    = null,
         durationMins  = null,
-        pickupAddress = "Sector 14, Faridabad",
-        dropAddress   = "NIT Faridabad",
-        pickupLat     = 28.4089,
-        pickupLng     = 77.3178,
+        pickupAddress = "Sadar Bazaar, Ludhiana",
+        dropAddress   = "Civil Lines, Jalandhar",
+        pickupLat     = 30.9010,
+        pickupLng     = 75.8573,
         dropLat       = null,
         dropLng       = null,
         rideStartOtp  = "4823",
@@ -61,7 +61,7 @@ class ActiveRideViewModelTest {
         scheduledAt   = null,
         createdAt     = 1_700_000_000_000L,
         completedAt   = null,
-        driver        = Driver("driver-1", "Ravi Kumar", "HR01AB1234", "Honda Activa", 4.2, 38),
+        driver        = Driver("driver-1", "Ravi Kumar", "PB10AB1234", "Honda Activa", 4.2, 38),
         cancellationFee = null,
     )
 

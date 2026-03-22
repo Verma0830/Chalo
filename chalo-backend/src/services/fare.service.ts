@@ -112,23 +112,108 @@ export class FareService {
    * Calculate surge multiplier based on demand/supply in an area
    * V1: Time-based surge (peak hours). V2: Dynamic demand-based.
    */
-  private async calculateSurgeMultiplier(_pickup: Location): Promise<number> {
+  /**
+   * Dynamic surge multiplier — two-layer algorithm:
+   *
+   * Layer 1 (always active): Time-of-day baseline
+   *   — Morning rush (8–10 AM):   1.3×
+   *   — Evening rush (5–8 PM):    1.5×
+   *   — Late night (10 PM–5 AM):  1.3×
+   *   — Normal hours:             1.0×
+   *
+   * Layer 2 (demand-supply override, Redis-backed, 60s TTL):
+   *   — Geohash cell (precision 5, ~4.8km × 4.8km) demand/supply ratio
+   *   — ratio = activeRidesNearby / onlineDriversNearby
+   *   — surge = clamp(ratio, MIN, MAX) rounded to nearest STEP
+   *   — Falls back to time-based surge if Redis is unavailable
+   */
+  private async calculateSurgeMultiplier(pickup: Location): Promise<number> {
     const now = new Date();
     const hour = now.getHours();
 
-    // V1 simple time-based surge rules
-    // Morning rush: 8-10 AM → 1.3x
-    // Evening rush: 5-8 PM → 1.5x
-    // Late night: 10 PM - 5 AM → 1.3x
-    // Normal: 1.0x
-    if (hour >= 8 && hour < 10) return 1.3;
-    if (hour >= 17 && hour < 20) return 1.5;
-    if (hour >= 22 || hour < 5) return 1.3;
+    // Layer 1: time-based baseline
+    let timeSurge = 1.0;
+    if (hour >= 8  && hour < 10) timeSurge = 1.3;
+    if (hour >= 17 && hour < 20) timeSurge = 1.5;
+    if (hour >= 22 || hour  < 5) timeSurge = 1.3;
 
-    // TODO V2: Query active rides vs available drivers in the area
-    // If demand/supply ratio > threshold, apply dynamic surge
+    // Layer 2: demand-supply ratio from Redis (fire-and-forget — falls back on error)
+    const redis = getRedisClient();
+    if (!redis || !isRedisReady()) return timeSurge;
 
-    return 1.0;
+    try {
+      const cell = this.geohashCell(pickup.lat, pickup.lng, 5);
+      const redisKey = `surge:cell:${cell}`;
+      const SURGE_CACHE_TTL = 60; // seconds
+
+      // Check cached surge for this cell
+      const cached = await redis.get(redisKey);
+      if (cached) return Math.max(timeSurge, Number(cached));
+
+      // Count online drivers within ~5km (±0.05 degrees ≈ 5.5km at Punjab latitude)
+      const radiusDeg = 0.05;
+      const [onlineDrivers, activeRides] = await Promise.all([
+        prisma.driverProfile.count({
+          where: {
+            isOnline: true,
+            currentLat: { gte: pickup.lat - radiusDeg, lte: pickup.lat + radiusDeg },
+            currentLng: { gte: pickup.lng - radiusDeg, lte: pickup.lng + radiusDeg },
+          },
+        }),
+        prisma.ride.count({
+          where: {
+            status: { in: ['REQUESTED', 'DRIVER_ASSIGNED'] as any },
+            pickupLat: { gte: pickup.lat - radiusDeg, lte: pickup.lat + radiusDeg },
+            pickupLng: { gte: pickup.lng - radiusDeg, lte: pickup.lng + radiusDeg },
+          },
+        }),
+      ]);
+
+      // Not enough supply data — use time-based surge
+      if (onlineDrivers === 0) {
+        await redis.setEx(redisKey, SURGE_CACHE_TTL, String(timeSurge));
+        return timeSurge;
+      }
+
+      const ratio = activeRides / onlineDrivers;
+
+      // Clamp and round to nearest STEP (0.1)
+      const rawSurge = Math.min(
+        Math.max(ratio, CONSTANTS.SURGE_MIN_MULTIPLIER),
+        CONSTANTS.SURGE_MAX_MULTIPLIER
+      );
+      const step = CONSTANTS.SURGE_STEP;
+      const demandSurge = Math.round(rawSurge / step) * step;
+
+      // Use whichever is higher: time-based or demand-based
+      const finalSurge = Math.max(timeSurge, demandSurge);
+
+      // Cache for 60 seconds
+      await redis.setEx(redisKey, SURGE_CACHE_TTL, String(finalSurge));
+
+      logger.debug('Dynamic surge calculated', {
+        cell, onlineDrivers, activeRides, ratio, demandSurge, timeSurge, finalSurge,
+      });
+
+      return finalSurge;
+    } catch (err) {
+      logger.warn('Dynamic surge calculation failed — using time-based surge', { error: String(err) });
+      return timeSurge;
+    }
+  }
+
+  /**
+   * Approximate geohash cell for a lat/lng at a given precision level.
+   * Precision 5 gives cells of ~4.8km × 4.8km — good for city-block surge zones.
+   * This is a simplified grid-based cell (not the full geohash alphabet) — sufficient
+   * for Redis key grouping and cache invalidation.
+   */
+  private geohashCell(lat: number, lng: number, precision: number): string {
+    const latStep = 180 / Math.pow(2, precision * 2.5);
+    const lngStep = 360 / Math.pow(2, precision * 2.5);
+    const latCell = Math.floor((lat + 90)  / latStep);
+    const lngCell = Math.floor((lng + 180) / lngStep);
+    return `${latCell}:${lngCell}`;
   }
 
   /**

@@ -128,7 +128,7 @@ First Gradle sync takes several minutes on a fresh clone. Subsequent builds are 
 |---|---|---|
 | App opens | Splash screen checks Firebase auth state | Should proceed quickly |
 | No session | Navigates to Phone Input screen | `FirebaseAuth.currentUser == null` |
-| Enter `+919876543210` → Send OTP | App calls `POST /auth/otp/send` | Backend console prints the 4-digit OTP |
+| Enter `+919876543210` → Send OTP | App calls `POST /auth/otp/send` | Backend console prints the 6-digit OTP (SMS Retriever auto-fills it if SMS is delivered) |
 | Enter OTP | App calls `POST /auth/otp/verify` → gets `customToken` | Then calls Firebase `signInWithCustomToken` |
 | Firebase sign-in succeeds | App saves session in DataStore | Navigates to Complete Profile (new user) or Home (returning) |
 | Complete Profile | App calls `PUT /auth/profile` | Navigates to Home screen |

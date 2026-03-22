@@ -83,9 +83,9 @@ class AuthRepositoryMapperTest {
                 customerProfile = CustomerProfileDto(
                     emergencyContactName  = "Mom",
                     emergencyContactPhone = "+919999999999",
-                    savedHomeAddress      = "Sector 14, Faridabad",
-                    savedHomeLat          = 28.4089,
-                    savedHomeLng          = 77.3178,
+                    savedHomeAddress      = "Sadar Bazaar, Ludhiana",
+                    savedHomeLat          = 30.9010,
+                    savedHomeLng          = 75.8573,
                     savedWorkAddress      = "Cyber City, Gurugram",
                     savedWorkLat          = 28.4950,
                     savedWorkLng          = 77.0900,
@@ -100,9 +100,9 @@ class AuthRepositoryMapperTest {
 
         assertEquals("Mom", profile.emergencyContactName)
         assertEquals("+919999999999", profile.emergencyContactPhone)
-        assertEquals("Sector 14, Faridabad", profile.savedHomeAddress)
-        assertEquals(28.4089, profile.savedHomeLat!!, 0.0001)
-        assertEquals(77.3178, profile.savedHomeLng!!, 0.0001)
+        assertEquals("Sadar Bazaar, Ludhiana", profile.savedHomeAddress)
+        assertEquals(30.9010, profile.savedHomeLat!!, 0.0001)
+        assertEquals(75.8573, profile.savedHomeLng!!, 0.0001)
         assertEquals(12, profile.totalRides)
         assertEquals(1, profile.cancellationCount)
     }
@@ -176,7 +176,7 @@ class AuthRepositoryMapperTest {
             )
         )
 
-        val result = repository.verifyOtp("+919876543210", "1234")
+        val result = repository.verifyOtp("+919876543210", "123456")
         assertTrue(result.isSuccess)
         val r = result.getOrThrow()
         assertTrue(r.isNewUser)

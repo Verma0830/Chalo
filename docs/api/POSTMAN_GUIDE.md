@@ -125,12 +125,12 @@ No auth required
 Body:
 {
   "phone": "+919876543210",
-  "otp": "1234"
+  "otp": "123456"
 }
 ```
 
-- Use the 4-digit OTP from the console.
-- OTP is exactly 4 digits, numeric only.
+- Use the 6-digit OTP from the console.
+- OTP is exactly 6 digits, numeric only.
 
 Expected response:
 
@@ -208,9 +208,9 @@ Authorization: Bearer {{customer_token}}
 Body:
 {
   "type": "home",
-  "lat": 28.4089,
-  "lng": 77.3178,
-  "address": "Sector 14, Faridabad"
+  "lat": 30.9010,
+  "lng": 75.8573,
+  "address": "Sadar Bazaar, Ludhiana"
 }
 ```
 
@@ -234,7 +234,7 @@ Used for push notifications. In testing use any non-empty string up to 512 chars
 - New user gets `isNewUser: true` on first verify, `false` on subsequent.
 - `401` if Bearer token is missing or expired.
 - `422` if phone format is wrong (e.g. `9876543210` without `+91`).
-- `422` if OTP length is not exactly 4 digits.
+- `422` if OTP length is not exactly 6 digits.
 - Rate limiter returns `429` after 5 OTP sends in 15 minutes.
 
 ---
@@ -252,14 +252,14 @@ Authorization: Bearer {{customer_token}}
 Body:
 {
   "pickup": {
-    "lat": 28.4089,
-    "lng": 77.3178,
-    "address": "Sector 14, Faridabad"
+    "lat": 30.9010,
+    "lng": 75.8573,
+    "address": "Sadar Bazaar, Ludhiana"
   },
   "drop": {
-    "lat": 28.3852,
-    "lng": 77.3126,
-    "address": "NIT Faridabad"
+    "lat": 31.3260,
+    "lng": 75.5762,
+    "address": "Civil Lines, Jalandhar"
   }
 }
 ```
@@ -276,14 +276,14 @@ Idempotency-Key: <generate a UUID, e.g. 550e8400-e29b-41d4-a716-446655440000>
 Body:
 {
   "pickup": {
-    "lat": 28.4089,
-    "lng": 77.3178,
-    "address": "Sector 14, Faridabad"
+    "lat": 30.9010,
+    "lng": 75.8573,
+    "address": "Sadar Bazaar, Ludhiana"
   },
   "drop": {
-    "lat": 28.3852,
-    "lng": 77.3126,
-    "address": "NIT Faridabad"
+    "lat": 31.3260,
+    "lng": 75.5762,
+    "address": "Civil Lines, Jalandhar"
   },
   "paymentMethod": "CASH"
 }
@@ -395,8 +395,8 @@ Authorization: Bearer {{driver_token}}
 
 Body:
 {
-  "lat": 28.4089,
-  "lng": 77.3178
+  "lat": 30.9010,
+  "lng": 75.8573
 }
 ```
 
@@ -439,8 +439,8 @@ Authorization: Bearer {{driver_token}}
 
 Body:
 {
-  "lat": 28.4100,
-  "lng": 77.3180
+  "lat": 30.9050,
+  "lng": 75.8600
 }
 ```
 
@@ -466,7 +466,7 @@ No body. Status transitions to `DRIVER_ARRIVED`.
 
 ### Step 14 — Driver: Start Ride (OTP verification)
 
-Customer sees a 4-digit OTP in the app (also in ride details response). Driver enters it to start.
+Customer sees a 4-digit ride-start OTP in the app (also in ride details response as `rideStartOtp`). Driver enters it to start. Note: this ride-start OTP is different from the auth OTP — it is a separate 4-digit code generated when driver is assigned.
 
 ```
 POST {{base_url}}/driver/rides/{{ride_id}}/start
@@ -635,8 +635,8 @@ Authorization: Bearer {{customer_token}}
 
 Body:
 {
-  "lat": 28.4089,
-  "lng": 77.3178
+  "lat": 30.9010,
+  "lng": 75.8573
 }
 ```
 
@@ -743,14 +743,14 @@ Idempotency-Key: <new UUID>
 Body:
 {
   "pickup": {
-    "lat": 28.4089,
-    "lng": 77.3178,
-    "address": "Sector 14, Faridabad"
+    "lat": 30.9010,
+    "lng": 75.8573,
+    "address": "Sadar Bazaar, Ludhiana"
   },
   "drop": {
-    "lat": 28.3852,
-    "lng": 77.3126,
-    "address": "NIT Faridabad"
+    "lat": 31.3260,
+    "lng": 75.5762,
+    "address": "Civil Lines, Jalandhar"
   },
   "paymentMethod": "CASH",
   "scheduledAt": "2026-03-22T08:00:00.000Z"

@@ -4,7 +4,7 @@ Last updated: 2026-03-21
 
 ## 1) Product summary
 
-Chalo is a Faridabad-focused ride-hailing product with bike ride scope in V1.
+Chalo is a Punjab-focused ride-hailing product with bike ride scope in V1.
 
 Core outcomes:
 

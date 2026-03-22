@@ -82,8 +82,8 @@ fun SavedLocationsScreen(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    // Faridabad center as placeholder coords — replace with Places API
-                    viewModel.saveLocation(type, 28.4089, 77.3178, addressInput)
+                    // Ludhiana center as placeholder coords — replace with Places API
+                    viewModel.saveLocation(type, 30.9010, 75.8573, addressInput)
                     editingType = null
                 }) { Text("Save") }
             },

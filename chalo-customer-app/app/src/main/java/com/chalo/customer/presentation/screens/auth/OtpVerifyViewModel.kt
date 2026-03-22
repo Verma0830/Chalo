@@ -83,13 +83,13 @@ class OtpVerifyViewModel @Inject constructor(
 
     fun onOtpChanged(value: String) {
         _uiState.update { it.copy(otp = value, errorMessage = null) }
-        // Auto-verify when 4 digits entered
-        if (value.length == 4) onVerify()
+        // Auto-verify when 6 digits entered
+        if (value.length == 6) onVerify()
     }
 
     fun onVerify() {
         val otp = _uiState.value.otp
-        if (otp.length != 4) return
+        if (otp.length != 6) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }

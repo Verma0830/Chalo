@@ -65,12 +65,8 @@ This is a correct and complete stack. All rate limiters use Redis (not in-memory
 - `isActive = false` is checked in the auth middleware — deactivated users get 401 immediately.
 - Driver accounts require `role === DRIVER` on driver endpoints. Customer-side endpoints require `CUSTOMER` or above. Admin endpoints require `ADMIN`.
 
-**Finding SEC-01 (MEDIUM): OTP is 4 digits**
-`CONSTANTS.OTP_DIGITS = 4` → 10,000 combinations. Rate limit is 3 OTP sends per phone per 15 minutes and 3 verify attempts per OTP record. However:
-- A single leaked phone number can be brute-forced by cycling through multiple OTP requests.
-- Over 15 minutes × N IPs, the attack surface expands.
-- NPCI and RBI guidance for financial applications recommends 6 digits minimum.
-- **Fix:** Change `OTP_DIGITS` to 6 in `constants.ts`, update the Zod validator `z.string().length(6)`, update Android `OtpVerifyScreen` (field length + contract tests).
+**Finding SEC-01 — RESOLVED: OTP upgraded to 6 digits**
+`CONSTANTS.OTP_LENGTH = 6`. Zod validators updated to `.length(6).regex(/^\d{6}$/)`. Android `OtpVerifyScreen` updated to 6 boxes with `length <= 6` guard. `OtpVerifyViewModel` auto-verify triggers at `length == 6`. All unit tests updated. SMS Retriever regex was already `\d{6}` — mismatch now fixed.
 
 **Finding SEC-02 (LOW): OTP is stored hashed (good)**
 `hashOTP(otp)` uses `crypto.createHash('sha256')`. SHA-256 without a salt is technically vulnerable to precomputation if an attacker gains DB read access — but the OTP space is only 10,000 values so a rainbow table is trivial anyway. The rate-limit defence is more important than the hash for this use case. This is acceptable for MVP.
@@ -194,12 +190,8 @@ Firebase Auth handles ID token storage internally in an encrypted SharedPreferen
 
 ### 3.2 Network Security
 
-**Finding SEC-15 (CRITICAL): SOS sends (0.0, 0.0) coordinates**
-```kotlin
-// ActiveRideScreen.kt
-onConfirm = { viewModel.onSosConfirm(0.0, 0.0) }
-```
-Emergency alerts are sent with coordinates in the Gulf of Guinea. This is a safety-critical bug. See Code Review A-02 for the fix (FusedLocationProviderClient in ViewModel).
+**Finding SEC-15 — RESOLVED: SOS now sends real GPS coordinates**
+`ActiveRideViewModel.onSosConfirm()` calls `getCurrentLocation()` which uses `FusedLocationProviderClient.lastLocation.await()`. Falls back to ride pickup coordinates if GPS unavailable. `SosConfirmDialog` signature changed to `onConfirm: () -> Unit` (no coordinates from UI — ViewModel owns location fetch).
 
 **Finding SEC-16 (LOW): `network_security_config.xml` uses network addresses**
 ```xml
@@ -302,8 +294,8 @@ The fare service uses Google Maps Directions API as the primary route calculator
 3. Speed: 25 km/h average → duration estimate.
 
 **Finding PERF-05 (MEDIUM): Haversine fallback consistently underestimates**
-Faridabad road network is grid-like in sectors but irregular in the old town area. A 1.3x road factor is a global estimate. Real road-to-straight-line ratio in dense urban grids is 1.4–1.6x. During circuit breaker fallback, customers are systematically undercharged by 10–20%.
-- **Fix:** Increase fallback road factor to 1.45 and duration speed to 20 km/h (Faridabad peak congestion average).
+Punjab road network is grid-like in newer sectors but irregular in old city areas. A 1.3x road factor is a global estimate. Real road-to-straight-line ratio in dense urban grids is 1.4–1.6x. During circuit breaker fallback, customers are systematically undercharged by 10–20%.
+- **Fix:** Increase fallback road factor to 1.45 and duration speed to 20 km/h (Punjab city peak congestion average).
 
 ---
 
@@ -361,7 +353,7 @@ Driver profile cards and bike photos are fetched via URLs. Without explicit cach
 |---|---|---|---|
 | M1 | Improper Credential Usage | Pass | No credentials hardcoded in APK. Secrets in local.properties (git-ignored). Firebase config in google-services.json (not sensitive on its own). |
 | M2 | Inadequate Supply Chain Security | Pass | All dependencies pinned in `libs.versions.toml`. No dynamic version ranges. |
-| M3 | Insecure Authentication/Authorization | Partial | Firebase Auth is correct. SOS at (0,0) is a data integrity issue. OTP is 4 digits. |
+| M3 | Insecure Authentication/Authorization | Pass | Firebase Auth is correct. SOS fixed (real GPS). OTP upgraded to 6 digits. |
 | M4 | Insufficient Input/Output Validation | Partial | Backend validates all inputs via Zod. Android has no local input validation before API calls. |
 | M5 | Insecure Communication | Pass (debug) | TLS enforced in release. Cleartext only for 10.0.2.2 in debug. Issue: network_security_config.xml host IP bug. |
 | M6 | Inadequate Privacy Controls | Fail | No SQLCipher. No ProGuard on DTOs. No FLAG_SECURE on financial screens. |
@@ -378,7 +370,7 @@ Driver profile cards and bike photos are fetched via URLs. Without explicit cach
 
 | # | Finding | Location | Fix |
 |---|---|---|---|
-| 1 | SOS sends (0,0) coordinates | `ActiveRideScreen.kt:88` | FusedLocationProviderClient in ViewModel |
+| 1 | ~~SOS sends (0,0) coordinates~~ | ~~`ActiveRideScreen.kt:88`~~ | **RESOLVED** — FusedLocationProviderClient in ViewModel |
 | 2 | No ProGuard keep rules for Gson DTOs | `proguard-rules.pro` | Add `@Keep` or switch to kotlinx.serialization |
 | 3 | PII stored in plaintext (Aadhar, bank details) | `driver_profiles` DB table | Column-level encryption with pgcrypto |
 
@@ -389,7 +381,7 @@ Driver profile cards and bike photos are fetched via URLs. Without explicit cach
 | 4 | RTDB listeners die in background on Android 12+ | `ActiveRideViewModel` | ForegroundService with FOREGROUND_SERVICE_TYPE_LOCATION |
 | 5 | Payment order ownership not verified | `payment.service.ts` | Add `customerId === req.user.uid` guard |
 | 6 | INTERNAL_API_KEY not in startup guard | `server.ts` | Add to secret validation list |
-| 7 | OTP is 4 digits (brute-force risk) | `constants.ts` + Android | Upgrade to 6 digits |
+| 7 | ~~OTP is 4 digits (brute-force risk)~~ | ~~`constants.ts` + Android~~ | **RESOLVED** — Upgraded to 6 digits |
 
 ### Medium (fix before scale)
 
@@ -414,8 +406,8 @@ Driver profile cards and bike photos are fetched via URLs. Without explicit cach
 
 ### Before public launch
 
-5. Upgrade OTP to 6 digits across backend + Android + all tests.
-6. Wire SMS gateway (MSG91 or Fast2SMS) to `sms.service.ts`.
+5. ~~Upgrade OTP to 6 digits across backend + Android + all tests.~~ **DONE**
+6. ~~Wire SMS gateway (MSG91 or Fast2SMS) to `sms.service.ts`.~~ **DONE** (MSG91 wired)
 7. Add `ForegroundService` for active ride background tracking.
 8. Verify and document RTDB security rules — ride data must be owner-only readable.
 9. Add address field `.max(500)` in Zod validators.
@@ -427,4 +419,4 @@ Driver profile cards and bike photos are fetched via URLs. Without explicit cach
 12. Replace Gson with `kotlinx.serialization` (eliminates ProGuard risk entirely).
 13. Set BullMQ worker concurrency to 5 on `chalo-rides` queue.
 14. Add OTP cleanup cron to BullMQ `chalo-maintenance` queue.
-15. Profile Android cold start on Redmi 9 (representative mid-range Faridabad device).
+15. Profile Android cold start on Redmi 9 (representative mid-range Punjab device).

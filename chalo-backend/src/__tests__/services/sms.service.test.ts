@@ -42,9 +42,9 @@ describe('sendSOSAlerts', () => {
   const baseParams = {
     customerName: 'Priya Sharma',
     driverName: 'Raj Kumar',
-    vehicleNumber: 'HR 26 AB 1234',
-    lat: 28.4089,
-    lng: 77.3178,
+    vehicleNumber: 'PB 10 AB 1234',
+    lat: 30.9010,
+    lng: 75.8573,
     recipients: [
       { name: 'Ramesh Sharma', phone: '+919876543210', channel: 'SMS' as const },
     ],
@@ -73,8 +73,8 @@ describe('sendSOSAlerts', () => {
     // Verify message body contains key details
     const callBody = JSON.parse((mockFetch.mock.calls[0][1] as RequestInit).body as string);
     expect(callBody.sms[0].to).toContain('9876543210');
-    expect(callBody.sms[0].message).toContain('28.4089');
-    expect(callBody.sms[0].message).toContain('77.3178');
+    expect(callBody.sms[0].message).toContain('30.901');
+    expect(callBody.sms[0].message).toContain('75.8573');
     expect(callBody.sms[0].message).toContain('Priya Sharma');
     expect(callBody.sms[0].message).toContain('Raj Kumar');
   });

@@ -23,24 +23,24 @@ import CONSTANTS from '../../utils/constants';
 // ─── haversineDistance ────────────────────────────────────────
 describe('haversineDistance', () => {
   it('returns 0 for identical coordinates', () => {
-    expect(haversineDistance(28.4744, 77.4024, 28.4744, 77.4024)).toBe(0);
+    expect(haversineDistance(30.9010, 75.8573, 30.9010, 75.8573)).toBe(0);
   });
 
-  it('calculates known distance correctly (approx Delhi → Faridabad ~25 km)', () => {
-    // New Delhi ≈ (28.7041, 77.1025), Faridabad ≈ (28.4089, 77.3178)
-    const dist = haversineDistance(28.7041, 77.1025, 28.4089, 77.3178);
-    expect(dist).toBeGreaterThan(25);
-    expect(dist).toBeLessThan(40);
+  it('calculates known distance correctly (approx Amritsar → Batala ~37 km)', () => {
+    // Amritsar ≈ (31.6200, 74.8765), Batala ≈ (31.8183, 75.2004)
+    const dist = haversineDistance(31.6200, 74.8765, 31.8183, 75.2004);
+    expect(dist).toBeGreaterThan(30);
+    expect(dist).toBeLessThan(50);
   });
 
   it('is symmetric — A→B equals B→A', () => {
-    const d1 = haversineDistance(28.4744, 77.4024, 28.5, 77.45);
-    const d2 = haversineDistance(28.5, 77.45, 28.4744, 77.4024);
+    const d1 = haversineDistance(30.9010, 75.8573, 31.0, 75.90);
+    const d2 = haversineDistance(31.0, 75.90, 30.9010, 75.8573);
     expect(d1).toBe(d2);
   });
 
   it('returns a 2-decimal precision number', () => {
-    const dist = haversineDistance(28.4744, 77.4024, 28.5, 77.45);
+    const dist = haversineDistance(30.9010, 75.8573, 31.0, 75.90);
     expect(dist.toString().split('.')[1]?.length ?? 0).toBeLessThanOrEqual(2);
   });
 });
@@ -186,23 +186,23 @@ describe('paginationToSkip', () => {
 
 // ─── generateOTP ─────────────────────────────────────────────
 describe('generateOTP', () => {
-  it('generates a 4-digit OTP by default', () => {
+  it('generates a 6-digit OTP by default', () => {
     const otp = generateOTP();
-    expect(otp).toHaveLength(4);
-    expect(/^\d{4}$/.test(otp)).toBe(true);
-  });
-
-  it('generates OTP of requested length', () => {
-    const otp = generateOTP(6);
     expect(otp).toHaveLength(6);
     expect(/^\d{6}$/.test(otp)).toBe(true);
   });
 
-  it('always returns >= 1000 for 4-digit OTP', () => {
+  it('generates OTP of requested length', () => {
+    const otp = generateOTP(4);
+    expect(otp).toHaveLength(4);
+    expect(/^\d{4}$/.test(otp)).toBe(true);
+  });
+
+  it('always returns >= 100000 for 6-digit OTP', () => {
     for (let i = 0; i < 50; i++) {
-      const otp = parseInt(generateOTP(4), 10);
-      expect(otp).toBeGreaterThanOrEqual(1000);
-      expect(otp).toBeLessThanOrEqual(9999);
+      const otp = parseInt(generateOTP(6), 10);
+      expect(otp).toBeGreaterThanOrEqual(100000);
+      expect(otp).toBeLessThanOrEqual(999999);
     }
   });
 });
@@ -269,11 +269,11 @@ describe('isValidScheduleTime', () => {
 describe('isDriverNearPickup', () => {
   it('returns true when driver is within 200m of pickup', () => {
     // Same point → 0 distance
-    expect(isDriverNearPickup(28.4744, 77.4024, 28.4744, 77.4024)).toBe(true);
+    expect(isDriverNearPickup(30.9010, 75.8573, 30.9010, 75.8573)).toBe(true);
   });
 
   it('returns false when driver is 1 km away from pickup', () => {
     // Approximately 1 km shift in latitude
-    expect(isDriverNearPickup(28.4744, 77.4024, 28.4839, 77.4024)).toBe(false);
+    expect(isDriverNearPickup(30.9010, 75.8573, 30.9100, 75.8573)).toBe(false);
   });
 });
