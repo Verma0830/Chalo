@@ -1,6 +1,7 @@
 package com.chalo.customer.presentation.activeride
 
 import app.cash.turbine.test
+import android.content.Context
 import com.chalo.customer.domain.model.CancelResult
 import com.chalo.customer.domain.model.Driver
 import com.chalo.customer.domain.model.PaymentMethod
@@ -9,11 +10,16 @@ import com.chalo.customer.domain.model.RideStatus
 import com.chalo.customer.domain.model.ShareLink
 import com.chalo.customer.domain.repository.RideRepository
 import com.chalo.customer.domain.repository.RtdbRepository
+import com.chalo.customer.presentation.screens.activeride.ActiveRideEvent
+import com.chalo.customer.presentation.screens.activeride.ActiveRideViewModel
 import com.chalo.customer.util.MainDispatcherRule
+import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.LatLng
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
+import io.mockk.unmockkStatic
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -35,6 +41,7 @@ class ActiveRideViewModelTest {
 
     private val rideRepository: RideRepository = mockk()
     private val rtdbRepository: RtdbRepository = mockk()
+    private val context: Context = mockk(relaxed = true)
 
     private lateinit var viewModel: ActiveRideViewModel
 
@@ -67,13 +74,21 @@ class ActiveRideViewModelTest {
 
     @Before
     fun setUp() {
+        mockkStatic(LocationServices::class)
+        every { LocationServices.getFusedLocationProviderClient(any()) } returns mockk(relaxed = true)
+
         // Default: RTDB emits no events (empty flows)
         every { rtdbRepository.observeRideStatus(any()) } returns flowOf()
         every { rtdbRepository.observeDriverLocation(any()) } returns flowOf()
     }
 
+    @org.junit.After
+    fun tearDown() {
+        unmockkStatic(LocationServices::class)
+    }
+
     private fun initViewModel() {
-        viewModel = ActiveRideViewModel(rideRepository, rtdbRepository)
+        viewModel = ActiveRideViewModel(rideRepository, rtdbRepository, context)
         viewModel.init(rideId)
     }
 
@@ -122,7 +137,7 @@ class ActiveRideViewModelTest {
         coEvery { rideRepository.getRideDetails(rideId) } returns Result.success(completedRide)
         every { rtdbRepository.observeRideStatus(rideId) } returns flowOf("COMPLETED")
 
-        viewModel = ActiveRideViewModel(rideRepository, rtdbRepository)
+        viewModel = ActiveRideViewModel(rideRepository, rtdbRepository, context)
 
         viewModel.events.test {
             viewModel.init(rideId)
@@ -140,7 +155,7 @@ class ActiveRideViewModelTest {
         coEvery { rideRepository.getRideDetails(rideId) } returns Result.success(upiRide)
         every { rtdbRepository.observeRideStatus(rideId) } returns flowOf("COMPLETED")
 
-        viewModel = ActiveRideViewModel(rideRepository, rtdbRepository)
+        viewModel = ActiveRideViewModel(rideRepository, rtdbRepository, context)
 
         viewModel.events.test {
             viewModel.init(rideId)
@@ -157,7 +172,7 @@ class ActiveRideViewModelTest {
         coEvery { rideRepository.getRideDetails(rideId) } returns Result.success(baseRide)
         every { rtdbRepository.observeRideStatus(rideId) } returns flowOf("CANCELLED")
 
-        viewModel = ActiveRideViewModel(rideRepository, rtdbRepository)
+        viewModel = ActiveRideViewModel(rideRepository, rtdbRepository, context)
 
         viewModel.events.test {
             viewModel.init(rideId)
@@ -172,7 +187,7 @@ class ActiveRideViewModelTest {
         coEvery { rideRepository.getRideDetails(rideId) } returns Result.success(baseRide)
         every { rtdbRepository.observeRideStatus(rideId) } returns flowOf("NO_DRIVER")
 
-        viewModel = ActiveRideViewModel(rideRepository, rtdbRepository)
+        viewModel = ActiveRideViewModel(rideRepository, rtdbRepository, context)
 
         viewModel.events.test {
             viewModel.init(rideId)
@@ -311,7 +326,7 @@ class ActiveRideViewModelTest {
         advanceUntilIdle()
 
         viewModel.events.test {
-            viewModel.onSosConfirm(28.41, 77.32)
+            viewModel.onSosConfirm()
             advanceUntilIdle()
 
             assertTrue(awaitItem() is ActiveRideEvent.SosTriggered)

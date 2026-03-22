@@ -1,6 +1,7 @@
 package com.chalo.customer.presentation.auth
 
 import app.cash.turbine.test
+import android.content.Context
 import com.chalo.customer.data.local.preferences.UserPreferences
 import com.chalo.customer.domain.repository.AuthRepository
 import com.chalo.customer.domain.repository.VerifyOtpResult
@@ -17,6 +18,7 @@ import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.unmockkStatic
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -35,12 +37,13 @@ class OtpVerifyViewModelTest {
 
     private val authRepository: AuthRepository = mockk()
     private val userPrefs: UserPreferences = mockk(relaxed = true)
+    private val context: Context = mockk(relaxed = true)
 
     private lateinit var viewModel: OtpVerifyViewModel
 
     @Before
     fun setUp() {
-        viewModel = OtpVerifyViewModel(authRepository, userPrefs)
+        viewModel = OtpVerifyViewModel(authRepository, userPrefs, context)
         viewModel.init("+919876543210")
     }
 

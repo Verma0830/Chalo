@@ -9,8 +9,8 @@ data class ApiResponse<T>(
     @SerialName("success") val success: Boolean,
     @SerialName("message") val message: String,
     @SerialName("data")    val data: T?,
-    @SerialName("meta")    val meta: PaginationMetaDto?,
-    @SerialName("code")    val code: String?,
+    @SerialName("meta")    val meta: PaginationMetaDto? = null,
+    @SerialName("code")    val code: String? = null,
 )
 
 @Serializable

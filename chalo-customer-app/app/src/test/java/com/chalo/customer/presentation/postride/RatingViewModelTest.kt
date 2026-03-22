@@ -7,6 +7,8 @@ import com.chalo.customer.domain.model.PaymentMethod
 import com.chalo.customer.domain.model.Ride
 import com.chalo.customer.domain.model.RideStatus
 import com.chalo.customer.domain.repository.RideRepository
+import com.chalo.customer.presentation.screens.postride.RatingEvent
+import com.chalo.customer.presentation.screens.postride.RatingViewModel
 import com.chalo.customer.util.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify
