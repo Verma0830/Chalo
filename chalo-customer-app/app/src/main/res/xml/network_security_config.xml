@@ -14,26 +14,28 @@
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>
-        <domain-config cleartextTrafficPermitted="true">
-            <!-- Android emulator host loopback alias -->
-            <domain includeSubdomains="false">10.0.2.2</domain>
-            <!--
-                Common home/office router ranges for physical device testing.
-                Replace with your actual machine IP (e.g. 192.168.1.105).
-                192.168.1.1 and 192.168.0.1 are router addresses — not valid here.
-            -->
-            <domain includeSubdomains="false">192.168.1.100</domain>
-            <domain includeSubdomains="false">192.168.1.101</domain>
-            <domain includeSubdomains="false">192.168.1.102</domain>
-            <domain includeSubdomains="false">192.168.1.103</domain>
-            <domain includeSubdomains="false">192.168.1.104</domain>
-            <domain includeSubdomains="false">192.168.1.105</domain>
-            <domain includeSubdomains="false">192.168.1.106</domain>
-            <domain includeSubdomains="false">192.168.1.107</domain>
-            <domain includeSubdomains="false">192.168.1.108</domain>
-            <domain includeSubdomains="false">192.168.1.109</domain>
-            <domain includeSubdomains="false">192.168.1.110</domain>
-        </domain-config>
     </debug-overrides>
+
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- Android emulator host loopback alias -->
+        <domain includeSubdomains="false">10.0.2.2</domain>
+        <!--
+            Common home/office router ranges for physical device testing.
+            Replace with your actual machine IP (e.g. 192.168.1.105).
+            192.168.1.1 and 192.168.0.1 are router addresses — not valid here.
+        -->
+        <domain includeSubdomains="false">192.168.1.100</domain>
+        <domain includeSubdomains="false">192.168.1.101</domain>
+        <domain includeSubdomains="false">192.168.1.102</domain>
+        <domain includeSubdomains="false">192.168.1.103</domain>
+        <domain includeSubdomains="false">192.168.1.104</domain>
+        <domain includeSubdomains="false">192.168.1.105</domain>
+        <domain includeSubdomains="false">192.168.1.106</domain>
+        <domain includeSubdomains="false">192.168.1.107</domain>
+        <domain includeSubdomains="false">192.168.1.108</domain>
+        <domain includeSubdomains="false">192.168.1.109</domain>
+        <domain includeSubdomains="false">192.168.1.110</domain>
+    </domain-config>
+
     <base-config cleartextTrafficPermitted="false" />
 </network-security-config>
