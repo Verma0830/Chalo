@@ -135,6 +135,7 @@ class ActiveRideViewModelTest {
             val event = awaitItem()
             assertTrue(event is ActiveRideEvent.RideCompleted)
             assertEquals(rideId, (event as ActiveRideEvent.RideCompleted).rideId)
+            cancelAndIgnoreRemainingEvents()
         }
     }
 
