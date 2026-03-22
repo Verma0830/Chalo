@@ -10,7 +10,7 @@ Authoritative source for what is actually implemented. When this file conflicts 
 
 Two modules in the monorepo:
 
-- **`chalo-backend`** — Node.js/TypeScript REST API. 60 routed endpoints across 7 route groups. 320 passing tests. Fully running on port 3001.
+- **`chalo-backend`** — Node.js/TypeScript REST API. 60 routed endpoints across 7 route groups. 321 passing tests. Fully running on port 3001.
 - **`chalo-customer-app`** — Android app (Kotlin + Jetpack Compose). All major screen groups implemented. 53 JVM unit tests in `app/src/test`.
 
 ---
@@ -402,7 +402,7 @@ SplashViewModel
 
 ## 6. Testing coverage
 
-### Backend — 320 passing tests
+### Backend — 321 passing tests
 
 | Category | Files | What's covered |
 |---|---|---|
@@ -509,6 +509,8 @@ Use `DATABASE_URL` with port **5433** when running commands from the host machin
 | `docs/development/NEXT_STEPS.md` | All pending work — testing, release readiness, product ops |
 | `docs/development/IMPROVEMENTS.md` | Prioritised improvement backlog |
 | `docs/development/FRIEND_SETUP.md` | Onboarding guide for new developers |
+| `docs/development/BACKUP_DISASTER_RECOVERY.md` | Backup cadence, restore process, RPO/RTO |
+| `docs/development/INCIDENT_RUNBOOK.md` | Incident response playbooks |
 | `docs/reviews/CODE_REVIEW.md` | Historical code review notes |
 | `docs/reviews/SECURITY_PERFORMANCE_REVIEW.md` | Security and performance review |
 | `README.md` | Quick start |

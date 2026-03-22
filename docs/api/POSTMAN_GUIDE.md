@@ -173,7 +173,7 @@ Body:
 ```
 
 - `email` is optional.
-- `languagePref`: `"pa"` (Punjabi) or `"en"` (English). Default: `"pa"`.
+- `languagePref`: `"pa"` (Punjabi), `"en"` (English), or `"hi"` (Hindi). Default: `"pa"`.
 
 Expected: `200 { user: { ... } }`
 
@@ -322,7 +322,7 @@ POST {{base_url}}/auth/register-driver
 Body:
 {
   "phone": "+919999999999",
-  "otp": "1234",
+  "otp": "123456",
   "name": "Ravi Kumar"
 }
 ```

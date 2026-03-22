@@ -1,17 +1,20 @@
 package com.chalo.customer.data.remote.dto
 
-import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class NotificationDto(
-    @SerializedName("id")        val id: String,
-    @SerializedName("type")      val type: String,
-    @SerializedName("title")     val title: String,
-    @SerializedName("body")      val body: String,
-    @SerializedName("isRead")    val isRead: Boolean,
-    @SerializedName("data")      val data: Map<String, String>?,
-    @SerializedName("createdAt") val createdAt: String,
+    @SerialName("id")        val id: String,
+    @SerialName("type")      val type: String,
+    @SerialName("title")     val title: String,
+    @SerialName("body")      val body: String,
+    @SerialName("isRead")    val isRead: Boolean,
+    @SerialName("data")      val data: Map<String, String>?,
+    @SerialName("createdAt") val createdAt: String,
 )
 
+@Serializable
 data class UnreadCountDto(
-    @SerializedName("count") val count: Int,
+    @SerialName("count") val count: Int,
 )

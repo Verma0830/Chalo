@@ -1,147 +1,164 @@
 package com.chalo.customer.data.remote.dto
 
-import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 // ── Request bodies ───────────────────────────────────────────────
 
+@Serializable
 data class LocationDto(
-    @SerializedName("lat")     val lat: Double,
-    @SerializedName("lng")     val lng: Double,
-    @SerializedName("address") val address: String,
+    @SerialName("lat")     val lat: Double,
+    @SerialName("lng")     val lng: Double,
+    @SerialName("address") val address: String,
 )
 
+@Serializable
 data class FareEstimateRequest(
-    @SerializedName("pickup") val pickup: LocationDto,
-    @SerializedName("drop")   val drop: LocationDto,
+    @SerialName("pickup") val pickup: LocationDto,
+    @SerialName("drop")   val drop: LocationDto,
 )
 
+@Serializable
 data class CreateRideRequest(
-    @SerializedName("pickup")        val pickup: LocationDto,
-    @SerializedName("drop")          val drop: LocationDto,
-    @SerializedName("paymentMethod") val paymentMethod: String,  // "CASH" | "UPI"
+    @SerialName("pickup")        val pickup: LocationDto,
+    @SerialName("drop")          val drop: LocationDto,
+    @SerialName("paymentMethod") val paymentMethod: String,  // "CASH" | "UPI"
 )
 
+@Serializable
 data class ScheduleRideRequest(
-    @SerializedName("pickup")        val pickup: LocationDto,
-    @SerializedName("drop")          val drop: LocationDto,
-    @SerializedName("paymentMethod") val paymentMethod: String,
-    @SerializedName("scheduledAt")   val scheduledAt: String,    // ISO 8601
+    @SerialName("pickup")        val pickup: LocationDto,
+    @SerialName("drop")          val drop: LocationDto,
+    @SerialName("paymentMethod") val paymentMethod: String,
+    @SerialName("scheduledAt")   val scheduledAt: String,    // ISO 8601
 )
 
+@Serializable
 data class CancelRideRequest(
-    @SerializedName("reasonCode") val reasonCode: String,
-    @SerializedName("note")       val note: String? = null,
+    @SerialName("reasonCode") val reasonCode: String,
+    @SerialName("note")       val note: String? = null,
 )
 
+@Serializable
 data class RateRideRequest(
-    @SerializedName("rating")  val rating: Int,
-    @SerializedName("comment") val comment: String? = null,
+    @SerialName("rating")  val rating: Int,
+    @SerialName("comment") val comment: String? = null,
 )
 
+@Serializable
 data class TriggerSosRequest(
-    @SerializedName("lat") val lat: Double,
-    @SerializedName("lng") val lng: Double,
+    @SerialName("lat") val lat: Double,
+    @SerialName("lng") val lng: Double,
 )
 
 // ── Response DTOs ────────────────────────────────────────────────
 
+@Serializable
 data class FareEstimateDto(
-    @SerializedName("estimatedFare")       val estimatedFare: Int,       // rupees
-    @SerializedName("distanceKm")          val distanceKm: Double,
-    @SerializedName("durationMins")        val durationMins: Int,
-    @SerializedName("baseFare")            val baseFare: Int,
-    @SerializedName("bookingFee")          val bookingFee: Int,
-    @SerializedName("surgeMultiplier")     val surgeMultiplier: Double,
-    @SerializedName("minimumFareApplied")  val minimumFareApplied: Boolean,
-    @SerializedName("minimumFare")         val minimumFare: Int,
+    @SerialName("estimatedFare")      val estimatedFare: Int,       // rupees
+    @SerialName("distanceKm")         val distanceKm: Double,
+    @SerialName("durationMins")       val durationMins: Int,
+    @SerialName("baseFare")           val baseFare: Int,
+    @SerialName("bookingFee")         val bookingFee: Int,
+    @SerialName("surgeMultiplier")    val surgeMultiplier: Double,
+    @SerialName("minimumFareApplied") val minimumFareApplied: Boolean,
+    @SerialName("minimumFare")        val minimumFare: Int,
     /** Encoded Google Maps polyline — empty string when Maps API was unavailable */
-    @SerializedName("routePolyline")       val routePolyline: String = "",
+    @SerialName("routePolyline")      val routePolyline: String = "",
 )
 
+@Serializable
 data class RideDto(
-    @SerializedName("id")              val id: String,
-    @SerializedName("status")          val status: String,
-    @SerializedName("paymentMethod")   val paymentMethod: String,
-    @SerializedName("paymentStatus")   val paymentStatus: String?,
-    @SerializedName("estimatedFare")   val estimatedFare: Int,
-    @SerializedName("finalFare")       val finalFare: Int?,
-    @SerializedName("distanceKm")      val distanceKm: Double?,
-    @SerializedName("durationMins")    val durationMins: Int?,
-    @SerializedName("pickupAddress")   val pickupAddress: String,
-    @SerializedName("dropAddress")     val dropAddress: String,
-    @SerializedName("pickupLat")       val pickupLat: Double,
-    @SerializedName("pickupLng")       val pickupLng: Double,
-    @SerializedName("dropLat")         val dropLat: Double?,
-    @SerializedName("dropLng")         val dropLng: Double?,
-    @SerializedName("rideStartOtp")    val rideStartOtp: String?,
-    @SerializedName("customerRating")  val customerRating: Int?,
-    @SerializedName("driverRating")    val driverRating: Int?,
-    @SerializedName("ratingSkippedAt") val ratingSkippedAt: String?,
-    @SerializedName("scheduledAt")     val scheduledAt: String?,
-    @SerializedName("createdAt")       val createdAt: String,
-    @SerializedName("completedAt")     val completedAt: String?,
-    @SerializedName("driver")          val driver: DriverSummaryDto?,
-    @SerializedName("cancellationFee") val cancellationFee: Int?,
+    @SerialName("id")              val id: String,
+    @SerialName("status")          val status: String,
+    @SerialName("paymentMethod")   val paymentMethod: String,
+    @SerialName("paymentStatus")   val paymentStatus: String?,
+    @SerialName("estimatedFare")   val estimatedFare: Int,
+    @SerialName("finalFare")       val finalFare: Int?,
+    @SerialName("distanceKm")      val distanceKm: Double?,
+    @SerialName("durationMins")    val durationMins: Int?,
+    @SerialName("pickupAddress")   val pickupAddress: String,
+    @SerialName("dropAddress")     val dropAddress: String,
+    @SerialName("pickupLat")       val pickupLat: Double,
+    @SerialName("pickupLng")       val pickupLng: Double,
+    @SerialName("dropLat")         val dropLat: Double?,
+    @SerialName("dropLng")         val dropLng: Double?,
+    @SerialName("rideStartOtp")    val rideStartOtp: String?,
+    @SerialName("customerRating")  val customerRating: Int?,
+    @SerialName("driverRating")    val driverRating: Int?,
+    @SerialName("ratingSkippedAt") val ratingSkippedAt: String?,
+    @SerialName("scheduledAt")     val scheduledAt: String?,
+    @SerialName("createdAt")       val createdAt: String,
+    @SerialName("completedAt")     val completedAt: String?,
+    @SerialName("driver")          val driver: DriverSummaryDto?,
+    @SerialName("cancellationFee") val cancellationFee: Int?,
 )
 
+@Serializable
 data class DriverSummaryDto(
-    @SerializedName("id")            val id: String,
-    @SerializedName("name")          val name: String?,
-    @SerializedName("driverProfile") val driverProfile: DriverProfileSummaryDto?,
+    @SerialName("id")            val id: String,
+    @SerialName("name")          val name: String?,
+    @SerialName("driverProfile") val driverProfile: DriverProfileSummaryDto?,
 )
 
+@Serializable
 data class DriverProfileSummaryDto(
-    @SerializedName("vehicleNumber") val vehicleNumber: String?,
-    @SerializedName("vehicleModel")  val vehicleModel: String?,
-    @SerializedName("ratingAvg")     val ratingAvg: Double?,
-    @SerializedName("ratingCount")   val ratingCount: Int?,
+    @SerialName("vehicleNumber") val vehicleNumber: String?,
+    @SerialName("vehicleModel")  val vehicleModel: String?,
+    @SerialName("ratingAvg")     val ratingAvg: Double?,
+    @SerialName("ratingCount")   val ratingCount: Int?,
 )
 
+@Serializable
 data class RideLocationDto(
-    @SerializedName("driverId")  val driverId: String?,
-    @SerializedName("lat")       val lat: Double?,
-    @SerializedName("lng")       val lng: Double?,
-    @SerializedName("updatedAt") val updatedAt: String?,
+    @SerialName("driverId")  val driverId: String?,
+    @SerialName("lat")       val lat: Double?,
+    @SerialName("lng")       val lng: Double?,
+    @SerialName("updatedAt") val updatedAt: String?,
 )
 
+@Serializable
 data class ShareRideResponseDto(
-    @SerializedName("shareUrl")   val shareUrl: String,
-    @SerializedName("expiresAt")  val expiresAt: String,
+    @SerialName("shareUrl")  val shareUrl: String,
+    @SerialName("expiresAt") val expiresAt: String,
 )
 
+@Serializable
 data class CancelRideResponseDto(
-    @SerializedName("rideId")              val rideId: String,
-    @SerializedName("status")             val status: String,
-    @SerializedName("cancellationFee")    val cancellationFee: Int,
-    @SerializedName("cancellationWarning") val cancellationWarning: Boolean?,
+    @SerialName("rideId")               val rideId: String,
+    @SerialName("status")               val status: String,
+    @SerialName("cancellationFee")      val cancellationFee: Int,
+    @SerialName("cancellationWarning")  val cancellationWarning: Boolean?,
 )
 
+@Serializable
 data class RideReceiptDto(
-    @SerializedName("rideId")          val rideId: String,
-    @SerializedName("pickupAddress")   val pickupAddress: String,
-    @SerializedName("dropAddress")     val dropAddress: String,
-    @SerializedName("distanceKm")      val distanceKm: Double,
-    @SerializedName("durationMins")    val durationMins: Int,
-    @SerializedName("baseFare")        val baseFare: Int,
-    @SerializedName("bookingFee")      val bookingFee: Int,
-    @SerializedName("surgeMultiplier") val surgeMultiplier: Double,
-    @SerializedName("finalFare")       val finalFare: Int,
-    @SerializedName("paymentMethod")   val paymentMethod: String,
-    @SerializedName("paymentStatus")   val paymentStatus: String,
-    @SerializedName("completedAt")     val completedAt: String,
-    @SerializedName("driver")          val driver: DriverSummaryDto?,
+    @SerialName("rideId")          val rideId: String,
+    @SerialName("pickupAddress")   val pickupAddress: String,
+    @SerialName("dropAddress")     val dropAddress: String,
+    @SerialName("distanceKm")      val distanceKm: Double,
+    @SerialName("durationMins")    val durationMins: Int,
+    @SerialName("baseFare")        val baseFare: Int,
+    @SerialName("bookingFee")      val bookingFee: Int,
+    @SerialName("surgeMultiplier") val surgeMultiplier: Double,
+    @SerialName("finalFare")       val finalFare: Int,
+    @SerialName("paymentMethod")   val paymentMethod: String,
+    @SerialName("paymentStatus")   val paymentStatus: String,
+    @SerialName("completedAt")     val completedAt: String,
+    @SerialName("driver")          val driver: DriverSummaryDto?,
 )
 
+@Serializable
 data class RideHistoryItemDto(
-    @SerializedName("id")            val id: String,
-    @SerializedName("pickupAddress") val pickupAddress: String,
-    @SerializedName("dropAddress")   val dropAddress: String,
-    @SerializedName("finalFare")     val finalFare: Int?,
-    @SerializedName("status")        val status: String,
-    @SerializedName("paymentMethod") val paymentMethod: String,
-    @SerializedName("distanceKm")    val distanceKm: Double?,
-    @SerializedName("customerRating") val customerRating: Int?,
-    @SerializedName("createdAt")     val createdAt: String,
-    @SerializedName("completedAt")   val completedAt: String?,
-    @SerializedName("driver")        val driver: DriverSummaryDto?,
+    @SerialName("id")              val id: String,
+    @SerialName("pickupAddress")   val pickupAddress: String,
+    @SerialName("dropAddress")     val dropAddress: String,
+    @SerialName("finalFare")       val finalFare: Int?,
+    @SerialName("status")          val status: String,
+    @SerialName("paymentMethod")   val paymentMethod: String,
+    @SerialName("distanceKm")      val distanceKm: Double?,
+    @SerialName("customerRating")  val customerRating: Int?,
+    @SerialName("createdAt")       val createdAt: String,
+    @SerialName("completedAt")     val completedAt: String?,
+    @SerialName("driver")          val driver: DriverSummaryDto?,
 )

@@ -1,8 +1,8 @@
 [versions]
 # Core
 agp                    = "8.3.2"
-kotlin                 = "1.9.23"
-ksp                    = "1.9.23-1.0.20"
+kotlin                 = "2.0.21"
+ksp                    = "2.0.21-1.0.27"
 
 # Compose
 composeBom             = "2024.04.01"
@@ -17,7 +17,7 @@ hiltNavigationCompose  = "1.2.0"
 # Network
 retrofit               = "2.11.0"
 okhttp                 = "4.12.0"
-gson                   = "2.10.1"
+kotlinxSerializationJson = "1.7.3"
 
 # Local DB
 room                   = "2.6.1"
@@ -85,12 +85,12 @@ hilt-android-compiler      = { group = "com.google.dagger", name = "hilt-android
 hilt-navigation-compose    = { group = "androidx.hilt",     name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 
 # Network
-retrofit                   = { group = "com.squareup.retrofit2", name = "retrofit",          version.ref = "retrofit" }
-retrofit-gson              = { group = "com.squareup.retrofit2", name = "converter-gson",    version.ref = "retrofit" }
-okhttp-bom                 = { group = "com.squareup.okhttp3",   name = "okhttp-bom",        version.ref = "okhttp" }
-okhttp                     = { group = "com.squareup.okhttp3",   name = "okhttp" }
-okhttp-logging             = { group = "com.squareup.okhttp3",   name = "logging-interceptor" }
-gson                       = { group = "com.google.code.gson",   name = "gson",              version.ref = "gson" }
+retrofit                        = { group = "com.squareup.retrofit2",  name = "retrofit",                      version.ref = "retrofit" }
+retrofit-kotlinx-serialization  = { group = "com.squareup.retrofit2",  name = "converter-kotlinx-serialization", version.ref = "retrofit" }
+okhttp-bom                      = { group = "com.squareup.okhttp3",    name = "okhttp-bom",                    version.ref = "okhttp" }
+okhttp                          = { group = "com.squareup.okhttp3",    name = "okhttp" }
+okhttp-logging                  = { group = "com.squareup.okhttp3",    name = "logging-interceptor" }
+kotlinx-serialization-json      = { group = "org.jetbrains.kotlinx",   name = "kotlinx-serialization-json",    version.ref = "kotlinxSerializationJson" }
 
 # Room
 room-runtime               = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
@@ -101,11 +101,12 @@ room-compiler              = { group = "androidx.room", name = "room-compiler", 
 coil-compose               = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 
 # Firebase
-firebase-bom               = { group = "com.google.firebase", name = "firebase-bom",          version.ref = "firebaseBom" }
+firebase-bom               = { group = "com.google.firebase", name = "firebase-bom",             version.ref = "firebaseBom" }
 firebase-auth              = { group = "com.google.firebase", name = "firebase-auth-ktx" }
 firebase-database          = { group = "com.google.firebase", name = "firebase-database-ktx" }
 firebase-messaging         = { group = "com.google.firebase", name = "firebase-messaging-ktx" }
 firebase-crashlytics       = { group = "com.google.firebase", name = "firebase-crashlytics-ktx" }
+firebase-config            = { group = "com.google.firebase", name = "firebase-config-ktx" }
 
 # Maps
 maps-compose               = { group = "com.google.maps.android", name = "maps-compose",          version.ref = "mapsCompose" }
@@ -131,9 +132,10 @@ kotlinx-coroutines-test    = { group = "org.jetbrains.kotlinx",             name
 androidx-arch-core-testing = { group = "androidx.arch.core",                name = "core-testing",                  version.ref = "archCoreTesting" }
 
 [plugins]
-android-application  = { id = "com.android.application",          version.ref = "agp" }
-kotlin-android       = { id = "org.jetbrains.kotlin.android",      version.ref = "kotlin" }
-kotlin-compose       = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-hilt-android         = { id = "com.google.dagger.hilt.android",    version.ref = "hilt" }
-ksp                  = { id = "com.google.devtools.ksp",           version.ref = "ksp" }
-google-services      = { id = "com.google.gms.google-services",    version.ref = "googleServices" }
+android-application  = { id = "com.android.application",                  version.ref = "agp" }
+kotlin-android       = { id = "org.jetbrains.kotlin.android",              version.ref = "kotlin" }
+kotlin-compose       = { id = "org.jetbrains.kotlin.plugin.compose",       version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+hilt-android         = { id = "com.google.dagger.hilt.android",            version.ref = "hilt" }
+ksp                  = { id = "com.google.devtools.ksp",                   version.ref = "ksp" }
+google-services      = { id = "com.google.gms.google-services",            version.ref = "googleServices" }

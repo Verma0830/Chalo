@@ -118,79 +118,41 @@ Currently, when a ride is COMPLETED with CASH payment, `ActiveRideViewModel` emi
 
 ## Group 5 — Backend Architecture
 
-### 5.1 PostGIS driver search (replace bounding box with ST_DWithin)
-Current driver search uses a lat/lng bounding box (`gte`/`lte`) filter via Prisma. This uses the B-tree composite index on `(currentLat, currentLng)` — correct but less accurate than a true radius check.
+### 5.1 PostGIS driver search — IMPLEMENTED
+`ride.service.ts` already uses `ST_DWithin` + `ST_Distance` in `queryNearbyDrivers()` with geography casts, and ranks candidates by computed distance.
 
-**Fix:**
-```typescript
-const nearbyDrivers = await prisma.$queryRaw<{userId: string; distanceKm: number}[]>`
-  SELECT dp."userId",
-         ST_Distance(
-           ST_SetSRID(ST_MakePoint(dp."currentLng", dp."currentLat"), 4326)::geography,
-           ST_SetSRID(ST_MakePoint(${pickupLng}, ${pickupLat}), 4326)::geography
-         ) / 1000 AS "distanceKm"
-  FROM driver_profiles dp
-  WHERE dp."isOnline" = true
-    AND dp."verificationStatus" = 'VERIFIED'
-    AND ST_DWithin(
-      ST_SetSRID(ST_MakePoint(dp."currentLng", dp."currentLat"), 4326)::geography,
-      ST_SetSRID(ST_MakePoint(${pickupLng}, ${pickupLat}), 4326)::geography,
-      ${radiusKm * 1000}
-    )
-  ORDER BY "distanceKm"
-  LIMIT 5
-`;
-```
-This uses the GiST spatial index created in the `postgis_indexes` migration and performs a correct spherical distance check.
+### 5.2 OpenTelemetry distributed tracing — IMPLEMENTED (baseline)
+Implemented in backend:
+1. Added OpenTelemetry SDK and auto-instrumentation dependencies.
+2. Added telemetry bootstrap/shutdown in server lifecycle (`src/telemetry/index.ts`, `server.ts`).
+3. Propagated trace carrier through BullMQ payload (`traceContext`) and extracted context in worker before processing.
 
-### 5.2 OpenTelemetry distributed tracing
-Request IDs are logged but not correlated across BullMQ jobs. When `ride-offer-expired` fires, its log context is disconnected from the original `createRide` request.
+Remaining hardening (optional): route spans to Jaeger/Tempo in deployment infra and add dashboards/alerts around trace sampling and exporter health.
 
-**What to build:**
-1. Add `@opentelemetry/sdk-node` and `@opentelemetry/auto-instrumentations-node`.
-2. Propagate trace context into BullMQ job data as `traceParent`.
-3. Resume the span in the job worker using `propagation.extract()`.
-4. Export spans to Jaeger (self-hosted, free) or Grafana Tempo.
+### 5.3 OTP cleanup scheduling — IMPLEMENTED
+`authService.cleanupExpiredOTPs()` is now executed via the BullMQ maintenance queue (`otp-cleanup` repeating job + startup run).
 
-### 5.3 OTP cleanup cron
-`authService.cleanupExpiredOTPs()` is defined but never called. OTP records accumulate forever.
-
-**Fix:** Add to `chalo-maintenance` queue in `queue.ts`:
-```typescript
-new CronJob('0 3 * * *', async () => {  // 3am daily
-  await authService.cleanupExpiredOTPs();
-});
-```
-
-### 5.4 Upgrade OTP to 6 digits
-4-digit OTP has 10,000 combinations. Change to 6 digits:
-- `CONSTANTS.OTP_DIGITS = 6`
-- Zod validator: `z.string().length(6)`
-- Android: `OtpTextField` max length → 6
-- All contract tests updated
-- Auth service tests updated
+### 5.4 Upgrade OTP to 6 digits — IMPLEMENTED
+Auth OTP is 6 digits across validators, service logic, and tests.
 
 ---
 
 ## Group 6 — Infrastructure & Operations
 
-### 6.1 Backup and disaster recovery
-There is no documented backup strategy. The PostgreSQL container on Docker Desktop has no volume snapshot policy.
+### 6.1 Backup and disaster recovery — IMPLEMENTED (runbook + scripts)
+Added:
+- `chalo-backend/scripts/backup-db.sh`
+- `chalo-backend/scripts/backup-db.ps1`
+- `docs/development/BACKUP_DISASTER_RECOVERY.md`
 
-**What to implement:**
-- Daily `pg_dump` to an S3 bucket (or Firebase Storage bucket).
-- Point-in-time recovery via PostgreSQL WAL archiving if using a managed DB (Supabase, Neon, or AWS RDS).
-- Document RTO (Recovery Time Objective) and RPO (Recovery Point Objective) targets.
-- Test restore procedure monthly.
+Includes backup cadence, retention, restore drill, and RPO/RTO targets.
 
-### 6.2 Incident runbooks
-There are no runbooks for the most likely production incidents:
-
-**Runbooks to write:**
-1. **Payment webhook failure** — Razorpay sends webhook, backend returns 5xx, Razorpay retries. If retries exhaust, payment status is stuck at `PENDING`. Resolution: check `razorpay_payment_id` in DB, manually trigger verification endpoint.
-2. **SOS not delivered** — FCM send succeeded but customer's phone is offline. Resolution: check `sos_alerts` table, call emergency contact directly via the `alertSentTo` JSON field.
-3. **Driver stuck in REQUESTED** — `ride-offer-expired` job ran but no driver found, `NO_DRIVER` status not set. Resolution: BullMQ UI, check queue, manually trigger re-dispatch or cancel ride.
-4. **Redis down** — Rate limiter fails open (configured with `skip` on Redis error — confirm this is the case). Auth cache misses fall back to Firebase verify. Monitor for elevated Firebase API calls.
+### 6.2 Incident runbooks — IMPLEMENTED
+Added `docs/development/INCIDENT_RUNBOOK.md` with procedures for:
+1. Payment webhook failure
+2. SOS not delivered
+3. Ride stuck in REQUESTED
+4. Redis outage
 
 ### 6.3 Analytics and funnel tracking
 There is no analytics integration. The engineering team cannot see where users drop off in the booking funnel.
@@ -209,45 +171,36 @@ There is no analytics integration. The engineering team cannot see where users d
 
 **Tool:** Mixpanel (free up to 20M events/month) or Firebase Analytics (free, Google ecosystem). A/B testing in V2 can use Firebase Remote Config + Analytics.
 
-### 6.4 Feature flags
-There is no feature flag system. Risky changes (new surge algorithm, new payment flow) cannot be rolled out to a percentage of users before full launch.
-
-**What to build:**
-Firebase Remote Config is already available (Firebase project is set up). Use it as a lightweight feature flag store:
-- `enable_dynamic_surge: false` → `true` when ready
-- `enable_wallet: false`
-- `enable_places_autocomplete: false` → `true` after testing
-
-Android: read flags in `AppModule` at startup, inject into ViewModels. Backend: read flags from `platform_config` table (already exists).
+### 6.4 Feature flags — IMPLEMENTED
+Backend `platform_config` keys seeded. Android Remote Config wired:
+- `FeatureFlagRepository` interface in `domain/repository/`
+- `FeatureFlagRepositoryImpl` fetches from Firebase Remote Config at startup with 1-hour TTL (60s in debug)
+- Defaults: `enable_dynamic_surge=true`, `enable_wallet=false`, `enable_places_autocomplete=true`
+- Injected into `ChaloApplication` via Hilt; `featureFlags` singleton available in any ViewModel via `@Inject`
 
 ---
 
 ## Group 7 — Code Quality
 
-### 7.1 Replace Gson with kotlinx.serialization
-Gson uses reflection and is not null-safe — missing JSON fields silently become `null` on non-null Kotlin properties. `kotlinx.serialization` uses KSP codegen, is null-safe, and is not affected by R8 minification.
-
-**Migration scope:** All files in `data/remote/dto/` — add `@Serializable` annotation, replace `@SerializedName` with `@SerialName`, replace `GsonConverterFactory` with `kotlinx.serialization.json.Json` + `KotlinxSerializationConverterFactory` in `NetworkModule`. Update contract tests to use the serialization library instead of Gson.
-
-**Risk:** All DTO mappings must be verified after migration. The contract tests written in `AuthDtoContractTest` and `RideDtoContractTest` serve as the regression suite for this migration.
+### 7.1 Replace Gson with kotlinx.serialization — IMPLEMENTED
+All 5 DTO files migrated: `@SerializedName` → `@SerialName`, `@Serializable` added to every class.
+`NetworkModule` uses `json.asConverterFactory(...)` with `ignoreUnknownKeys = true` and `coerceInputValues = true`.
+Kotlin upgraded to **2.0.21** (KSP `2.0.21-1.0.27`) — the `org.jetbrains.kotlin.plugin.compose` and `org.jetbrains.kotlin.plugin.serialization` plugins are wired in both `build.gradle.kts` files.
+Gson dependency removed; replaced with `converter-kotlinx-serialization` (built into Retrofit 2.11).
 
 ### 7.2 Room migration strategy
-`AppDatabase` is version 1 with no migration defined. Any schema change will use destructive migration (data wipe on update).
+PARTIALLY IMPLEMENTED:
+- `exportSchema = true` enabled in `AppDatabase`.
+- Added centralized migration registry (`DatabaseMigrations`) and wired `addMigrations(*DatabaseMigrations.ALL)`.
+- Removed `fallbackToDestructiveMigration()` from DB builder.
 
-**Fix:** Define `Migration(1, 2)` objects for every schema change. Enable `addMigrations()` on the `Room.databaseBuilder()` call. Add `exportSchema = true` and commit schema JSON files to track Room schema history.
+Remaining: add concrete migration objects when schema version changes (e.g., `MIGRATION_1_2`).
 
 ### 7.3 ProGuard keep rules for DTOs (short-term fix)
-Until Gson is replaced with kotlinx.serialization, add to `proguard-rules.pro`:
-
-```proguard
--keep class com.chalo.customer.data.remote.dto.** { *; }
--keepclassmembers class com.chalo.customer.data.remote.dto.** { *; }
-```
-
-Or add `@Keep` to the top of each DTO file. This is a stopgap — the real fix is Group 7.1.
+IMPLEMENTED in `app/proguard-rules.pro` with both class and class-member keep rules for `data.remote.dto`.
 
 ### 7.4 Consolidate duplicate Timber/logger setup
-The Android app initialises Timber in `ChaloApplication.onCreate()`. Some ViewModels also use `Log.d()` directly. Standardise: all logging goes through `Timber` so tags and log levels are consistent and can be disabled in release builds via `Timber.plant()` (already done in Application class).
+IMPLEMENTED baseline: Timber is initialized in `ChaloApplication` and no `android.util.Log` usages remain in the main Android source set.
 
 ---
 

@@ -388,6 +388,7 @@ export class FareService {
               CONSTANTS.CONFIG_KEYS.BASE_FARE_PER_MIN,
               CONSTANTS.CONFIG_KEYS.COMMISSION_PERCENTAGE,
               CONSTANTS.CONFIG_KEYS.SURGE_ENABLED,
+              CONSTANTS.CONFIG_KEYS.ENABLE_DYNAMIC_SURGE,
               CONSTANTS.CONFIG_KEYS.GST_PERCENTAGE,
               CONSTANTS.CONFIG_KEYS.MIN_FARE,
             ],
@@ -408,7 +409,9 @@ export class FareService {
           Number(configMap.get(CONSTANTS.CONFIG_KEYS.COMMISSION_PERCENTAGE)) ||
           config.business.commissionPercentage,
         surgeEnabled:
-          configMap.has(CONSTANTS.CONFIG_KEYS.SURGE_ENABLED)
+          configMap.has(CONSTANTS.CONFIG_KEYS.ENABLE_DYNAMIC_SURGE)
+            ? configMap.get(CONSTANTS.CONFIG_KEYS.ENABLE_DYNAMIC_SURGE) === 'true'
+            : configMap.has(CONSTANTS.CONFIG_KEYS.SURGE_ENABLED)
             ? configMap.get(CONSTANTS.CONFIG_KEYS.SURGE_ENABLED) === 'true'
             : config.business.surgeEnabled,
         gstPercentage:

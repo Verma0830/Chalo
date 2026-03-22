@@ -3,6 +3,7 @@ package com.chalo.customer.di
 import android.content.Context
 import androidx.room.Room
 import com.chalo.customer.data.local.AppDatabase
+import com.chalo.customer.data.local.DatabaseMigrations
 import com.chalo.customer.data.local.dao.NotificationDao
 import com.chalo.customer.data.local.dao.RideDao
 import dagger.Module
@@ -20,7 +21,7 @@ object DatabaseModule {
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, "chalo.db")
-            .fallbackToDestructiveMigration()  // safe for V1 dev — switch to migrations for production
+            .addMigrations(*DatabaseMigrations.ALL)
             .build()
 
     @Provides

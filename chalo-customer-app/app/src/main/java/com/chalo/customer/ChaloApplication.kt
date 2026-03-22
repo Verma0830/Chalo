@@ -4,12 +4,23 @@ import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
+import com.chalo.customer.domain.repository.FeatureFlagRepository
 import com.google.android.libraries.places.api.Places
 import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import timber.log.Timber
+import javax.inject.Inject
 
 @HiltAndroidApp
 class ChaloApplication : Application() {
+
+    @Inject lateinit var featureFlags: FeatureFlagRepository
+
+    // App-scoped coroutine scope for fire-and-forget startup work
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate() {
         super.onCreate()
@@ -23,6 +34,9 @@ class ChaloApplication : Application() {
         if (!Places.isInitialized()) {
             Places.initialize(applicationContext, BuildConfig.MAPS_API_KEY)
         }
+
+        // Fetch Remote Config flags in the background — defaults stay active until fetch completes
+        appScope.launch { featureFlags.fetchAndActivate() }
 
         createNotificationChannels()
     }

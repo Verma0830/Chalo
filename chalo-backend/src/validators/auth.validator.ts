@@ -43,7 +43,7 @@ export const completeProfileSchema = z.object({
     .optional()
     .or(z.literal('')),
   languagePref: z
-    .enum(['pa', 'en'], { message: 'Language must be "pa" (Punjabi) or "en" (English)' })
+    .enum(['pa', 'en', 'hi'], { message: 'Language must be "pa" (Punjabi), "en" (English), or "hi" (Hindi)' })
     .default('pa'),
 });
 

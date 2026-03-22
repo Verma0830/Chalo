@@ -17,6 +17,7 @@ import logger from '../config/logger';
 import { getDatabase } from '../config/firebase';
 import { getRedisClient, isRedisReady } from '../config/redis';
 import { Prisma, RideStatus, CancellationBy, CancellationReasonCode } from '@prisma/client';
+import { captureTraceContext } from '../telemetry/traceContext';
 
 // ---------------------------------------------------------------------------
 // Typed select shape for ride history — using Prisma.RideGetPayload ensures
@@ -1324,7 +1325,14 @@ export class RideService {
 
     // Schedule the batch expiry job — BullMQ fires after RIDE_OFFER_BATCH_TTL_SECS
     const { scheduleRideOfferExpiry } = await import('../jobs/queue');
-    await scheduleRideOfferExpiry({ rideId, nextBatchStart, pickupLat, pickupLng, fare });
+    await scheduleRideOfferExpiry({
+      rideId,
+      nextBatchStart,
+      pickupLat,
+      pickupLng,
+      fare,
+      traceContext: captureTraceContext(),
+    });
 
     logger.info('Batch dispatched', { rideId, driverCount: driverUserIds.length, nextBatchStart });
   }

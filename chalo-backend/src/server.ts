@@ -12,6 +12,7 @@ import { prisma, disconnectDatabase } from './config/database';
 import { connectRedis, disconnectRedis } from './config/redis';
 import { createApp } from './app';
 import { initJobQueue, closeJobQueue } from './jobs/queue';
+import { initTelemetry, shutdownTelemetry } from './telemetry';
 
 // Track active connections for graceful shutdown
 const connections: Set<Socket> = new Set();
@@ -19,6 +20,9 @@ let isShuttingDown = false;
 
 async function startServer(): Promise<void> {
   try {
+    // 0. Initialize OpenTelemetry if enabled
+    await initTelemetry();
+
     // 1. Initialize Firebase Admin
     initializeFirebase();
     logger.info('Firebase Admin SDK initialized');
@@ -107,6 +111,10 @@ async function startServer(): Promise<void> {
           // Disconnect database
           await disconnectDatabase();
           logger.info('Database disconnected');
+
+          // Shutdown telemetry exporter flush
+          await shutdownTelemetry();
+          logger.info('Telemetry shutdown complete');
 
           logger.info('Graceful shutdown complete');
           process.exit(0);

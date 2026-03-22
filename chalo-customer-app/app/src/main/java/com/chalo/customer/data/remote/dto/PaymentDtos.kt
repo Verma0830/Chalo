@@ -1,25 +1,30 @@
 package com.chalo.customer.data.remote.dto
 
-import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class CreatePaymentOrderRequest(
-    @SerializedName("rideId") val rideId: String,
+    @SerialName("rideId") val rideId: String,
 )
 
+@Serializable
 data class VerifyPaymentRequest(
-    @SerializedName("razorpayOrderId")   val razorpayOrderId: String,
-    @SerializedName("razorpayPaymentId") val razorpayPaymentId: String,
-    @SerializedName("razorpaySignature") val razorpaySignature: String,
+    @SerialName("razorpayOrderId")   val razorpayOrderId: String,
+    @SerialName("razorpayPaymentId") val razorpayPaymentId: String,
+    @SerialName("razorpaySignature") val razorpaySignature: String,
 )
 
+@Serializable
 data class PaymentOrderDto(
-    @SerializedName("razorpayOrderId") val razorpayOrderId: String,
-    @SerializedName("amount")          val amount: Int,          // paise
-    @SerializedName("currency")        val currency: String,
-    @SerializedName("rideId")          val rideId: String,
+    @SerialName("razorpayOrderId") val razorpayOrderId: String,
+    @SerialName("amount")          val amount: Int,          // paise
+    @SerialName("currency")        val currency: String,
+    @SerialName("rideId")          val rideId: String,
 )
 
+@Serializable
 data class PaymentVerifyResponseDto(
-    @SerializedName("rideId")        val rideId: String,
-    @SerializedName("paymentStatus") val paymentStatus: String,
+    @SerialName("rideId")        val rideId: String,
+    @SerialName("paymentStatus") val paymentStatus: String,
 )

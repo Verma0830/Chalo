@@ -1,80 +1,92 @@
 package com.chalo.customer.data.remote.dto
 
-import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 // ── Request bodies ───────────────────────────────────────────────
 
+@Serializable
 data class SendOtpRequest(
-    @SerializedName("phone") val phone: String,
+    @SerialName("phone") val phone: String,
 )
 
+@Serializable
 data class VerifyOtpRequest(
-    @SerializedName("phone") val phone: String,
-    @SerializedName("otp")   val otp: String,
+    @SerialName("phone") val phone: String,
+    @SerialName("otp")   val otp: String,
 )
 
+@Serializable
 data class CompleteProfileRequest(
-    @SerializedName("name")         val name: String,
-    @SerializedName("email")        val email: String? = null,
-    @SerializedName("languagePref") val languagePref: String = "en",
+    @SerialName("name")         val name: String,
+    @SerialName("email")        val email: String? = null,
+    @SerialName("languagePref") val languagePref: String = "en",
 )
 
+@Serializable
 data class UpdateEmergencyContactRequest(
-    @SerializedName("emergencyContactName")  val emergencyContactName: String,
-    @SerializedName("emergencyContactPhone") val emergencyContactPhone: String,
+    @SerialName("emergencyContactName")  val emergencyContactName: String,
+    @SerialName("emergencyContactPhone") val emergencyContactPhone: String,
 )
 
+@Serializable
 data class RegisterDeviceTokenRequest(
-    @SerializedName("fcmToken") val fcmToken: String,
+    @SerialName("fcmToken") val fcmToken: String,
 )
 
+@Serializable
 data class SavedLocationRequest(
-    @SerializedName("type")    val type: String,   // "home" | "work"
-    @SerializedName("lat")     val lat: Double,
-    @SerializedName("lng")     val lng: Double,
-    @SerializedName("address") val address: String,
+    @SerialName("type")    val type: String,   // "home" | "work"
+    @SerialName("lat")     val lat: Double,
+    @SerialName("lng")     val lng: Double,
+    @SerialName("address") val address: String,
 )
 
 // ── Response DTOs ────────────────────────────────────────────────
 
+@Serializable
 data class SendOtpResponseDto(
-    @SerializedName("message")   val message: String,
-    @SerializedName("expiresIn") val expiresIn: Int,
+    @SerialName("message")   val message: String,
+    @SerialName("expiresIn") val expiresIn: Int,
 )
 
+@Serializable
 data class VerifyOtpResponseDto(
-    @SerializedName("isNewUser") val isNewUser: Boolean,
-    @SerializedName("token")     val token: String,      // Firebase custom token
-    @SerializedName("user")      val user: UserDto,
+    @SerialName("isNewUser") val isNewUser: Boolean,
+    @SerialName("token")     val token: String,      // Firebase custom token
+    @SerialName("user")      val user: UserDto,
 )
 
+@Serializable
 data class UserDto(
-    @SerializedName("id")    val id: String,
-    @SerializedName("phone") val phone: String,
-    @SerializedName("name")  val name: String?,
-    @SerializedName("role")  val role: String,
+    @SerialName("id")    val id: String,
+    @SerialName("phone") val phone: String,
+    @SerialName("name")  val name: String?,
+    @SerialName("role")  val role: String,
 )
 
+@Serializable
 data class ProfileDto(
-    @SerializedName("id")                     val id: String,
-    @SerializedName("phone")                  val phone: String,
-    @SerializedName("name")                   val name: String?,
-    @SerializedName("email")                  val email: String?,
-    @SerializedName("role")                   val role: String,
-    @SerializedName("languagePref")           val languagePref: String?,
-    @SerializedName("createdAt")              val createdAt: String,
-    @SerializedName("customerProfile")        val customerProfile: CustomerProfileDto?,
+    @SerialName("id")              val id: String,
+    @SerialName("phone")           val phone: String,
+    @SerialName("name")            val name: String?,
+    @SerialName("email")           val email: String?,
+    @SerialName("role")            val role: String,
+    @SerialName("languagePref")    val languagePref: String?,
+    @SerialName("createdAt")       val createdAt: String,
+    @SerialName("customerProfile") val customerProfile: CustomerProfileDto?,
 )
 
+@Serializable
 data class CustomerProfileDto(
-    @SerializedName("emergencyContactName")   val emergencyContactName: String?,
-    @SerializedName("emergencyContactPhone")  val emergencyContactPhone: String?,
-    @SerializedName("savedHomeAddress")       val savedHomeAddress: String?,
-    @SerializedName("savedHomeLat")           val savedHomeLat: Double?,
-    @SerializedName("savedHomeLng")           val savedHomeLng: Double?,
-    @SerializedName("savedWorkAddress")       val savedWorkAddress: String?,
-    @SerializedName("savedWorkLat")           val savedWorkLat: Double?,
-    @SerializedName("savedWorkLng")           val savedWorkLng: Double?,
-    @SerializedName("totalRides")             val totalRides: Int?,
-    @SerializedName("cancellationCount")      val cancellationCount: Int?,
+    @SerialName("emergencyContactName")   val emergencyContactName: String?,
+    @SerialName("emergencyContactPhone")  val emergencyContactPhone: String?,
+    @SerialName("savedHomeAddress")       val savedHomeAddress: String?,
+    @SerialName("savedHomeLat")           val savedHomeLat: Double?,
+    @SerialName("savedHomeLng")           val savedHomeLng: Double?,
+    @SerialName("savedWorkAddress")       val savedWorkAddress: String?,
+    @SerialName("savedWorkLat")           val savedWorkLat: Double?,
+    @SerialName("savedWorkLng")           val savedWorkLng: Double?,
+    @SerialName("totalRides")             val totalRides: Int?,
+    @SerialName("cancellationCount")      val cancellationCount: Int?,
 )

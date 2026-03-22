@@ -29,3 +29,4 @@
 
 # Chalo DTOs — never obfuscate JSON-mapped classes
 -keep class com.chalo.customer.data.remote.dto.** { *; }
+-keepclassmembers class com.chalo.customer.data.remote.dto.** { *; }

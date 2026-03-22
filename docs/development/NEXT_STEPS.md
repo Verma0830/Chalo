@@ -224,7 +224,9 @@ The implemented cancellation policy (reason codes, fee tiers, serial canceller t
 
 ### Launch runbook
 
-Prepare a document covering:
+Status: Implemented in `docs/development/INCIDENT_RUNBOOK.md`.
+
+The runbook now covers:
 
 - **Driver no-show**: what support does, how to trigger refund/credit
 - **Payment failure**: how to identify via admin `/rides` filter (`paymentStatus=FAILED`), how to trigger manual resolution
@@ -251,7 +253,9 @@ The Zod validators in `src/validators/` contain the full schema for every reques
 
 ### Feature flags
 
-Before adding any experimental UI behaviour (e.g. a new ride type, a redesigned booking flow), add a feature flag system. Options: Firebase Remote Config (already available on Spark plan) or a simple server-side `platform_config` key.
+Backend feature flags are now seeded in `platform_config` (`enable_dynamic_surge`, `enable_wallet`, `enable_places_autocomplete`) and dynamic surge rollout uses the flag.
+
+Remaining: add Firebase Remote Config read path in Android startup and inject flags into ViewModels.
 
 ### Analytics taxonomy
 
@@ -271,5 +275,4 @@ Define a shared event taxonomy before launch. Events should be emitted by both b
 | Android CI depends on configured Gradle version (no wrapper committed) | Tooling mismatch can break CI after AGP upgrades | Medium |
 | network_security_config IP entries wrong | Physical device testing with wrong IP fails silently | Medium |
 | No release signing config | Can't ship to Play Store | High (before release) |
-| Postman examples missing for 4 newer endpoints | Manual testing harder for new developers | Low |
-| No incident runbook | Support team has no playbook when things go wrong | Medium |
+| Android still uses Gson DTO parsing | Reflection/null-safety risk until kotlinx.serialization migration | Medium |

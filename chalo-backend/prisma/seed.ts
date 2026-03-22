@@ -18,6 +18,9 @@ async function main() {
     { key: 'commission_percentage', value: '15', description: 'Commission % taken from each ride (commission plan drivers)' },
     { key: 'subscription_fee_weekly', value: '199', description: 'Weekly subscription fee in INR (subscription plan drivers)' },
     { key: 'surge_enabled', value: 'true', description: 'Whether surge pricing is active' },
+    { key: 'enable_dynamic_surge', value: 'true', description: 'Feature flag for dynamic surge algorithm rollout' },
+    { key: 'enable_wallet', value: 'false', description: 'Feature flag for in-app wallet flow' },
+    { key: 'enable_places_autocomplete', value: 'true', description: 'Feature flag for customer places autocomplete UI' },
     { key: 'surge_multiplier', value: '1.0', description: 'Current global surge multiplier (override)' },
     { key: 'min_fare', value: '30', description: 'Minimum fare in INR' },
     { key: 'base_fare_per_km', value: '12', description: 'Fare per km in INR' },
@@ -44,6 +47,9 @@ async function main() {
   console.log('  Commission:        15%');
   console.log('  Subscription:      ₹199/week');
   console.log('  Surge:             Enabled');
+  console.log('  Dynamic Surge:     Enabled (feature flag)');
+  console.log('  Wallet:            Disabled (feature flag)');
+  console.log('  Places Autocomplete: Enabled (feature flag)');
   console.log('  Min Fare:          ₹30');
   console.log('  Per Km:            ₹12');
   console.log('  Per Min:           ₹2');

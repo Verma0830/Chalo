@@ -1,19 +1,22 @@
 package com.chalo.customer.data.remote.dto
 
-import com.google.gson.annotations.SerializedName
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 /** Generic wrapper that matches the backend's ApiResponse shape */
+@Serializable
 data class ApiResponse<T>(
-    @SerializedName("success")    val success: Boolean,
-    @SerializedName("message")    val message: String,
-    @SerializedName("data")       val data: T?,
-    @SerializedName("meta")       val meta: PaginationMetaDto?,
-    @SerializedName("code")       val code: String?,
+    @SerialName("success") val success: Boolean,
+    @SerialName("message") val message: String,
+    @SerialName("data")    val data: T?,
+    @SerialName("meta")    val meta: PaginationMetaDto?,
+    @SerialName("code")    val code: String?,
 )
 
+@Serializable
 data class PaginationMetaDto(
-    @SerializedName("page")       val page: Int,
-    @SerializedName("limit")      val limit: Int,
-    @SerializedName("total")      val total: Int,
-    @SerializedName("totalPages") val totalPages: Int,
+    @SerialName("page")       val page: Int,
+    @SerialName("limit")      val limit: Int,
+    @SerialName("total")      val total: Int,
+    @SerialName("totalPages") val totalPages: Int,
 )

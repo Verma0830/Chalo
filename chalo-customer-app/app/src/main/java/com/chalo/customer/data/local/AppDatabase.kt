@@ -10,7 +10,7 @@ import com.chalo.customer.data.local.entity.RideEntity
 @Database(
     entities = [RideEntity::class, NotificationEntity::class],
     version = 1,
-    exportSchema = false,
+    exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun rideDao(): RideDao

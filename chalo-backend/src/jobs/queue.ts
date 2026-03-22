@@ -8,6 +8,8 @@ import config from '../config';
 import logger from '../config/logger';
 import { authService } from '../services/auth.service';
 import CONSTANTS from '../utils/constants';
+import { context as otelContext } from '@opentelemetry/api';
+import { extractTraceContext, TraceCarrier } from '../telemetry/traceContext';
 
 /**
  * Parse Redis URL into IORedis-compatible connection options
@@ -44,6 +46,7 @@ export interface RideOfferExpiredPayload {
   pickupLat: number;
   pickupLng: number;
   fare: number;
+  traceContext?: TraceCarrier;
 }
 
 /**
@@ -232,6 +235,7 @@ export async function initJobQueue(): Promise<void> {
   ridesWorker = new Worker(
     RIDES_QUEUE,
     async (job) => {
+      const runJob = async () => {
       switch (job.name) {
         case 'ride-offer-expired': {
           const { rideId, nextBatchStart, pickupLat, pickupLng, fare } = job.data as RideOfferExpiredPayload;
@@ -349,6 +353,11 @@ export async function initJobQueue(): Promise<void> {
           logger.warn('Unknown rides job type', { jobName: job.name });
           return;
       }
+      };
+
+      const data = job.data as RideOfferExpiredPayload;
+      const traceCtx = extractTraceContext(data.traceContext);
+      return otelContext.with(traceCtx, runJob);
     },
     { connection, concurrency: 5 }
   );

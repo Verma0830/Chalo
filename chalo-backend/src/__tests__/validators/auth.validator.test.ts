@@ -91,9 +91,14 @@ describe('completeProfileSchema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('accepts "hi" as language preference', () => {
+    const result = completeProfileSchema.safeParse({ name: 'Rahul', languagePref: 'hi' });
+    expect(result.success).toBe(true);
+  });
+
   it('rejects invalid language preference', () => {
     expect(
-      completeProfileSchema.safeParse({ name: 'Rahul', languagePref: 'hi' }).success
+      completeProfileSchema.safeParse({ name: 'Rahul', languagePref: 'fr' }).success
     ).toBe(false);
   });
 

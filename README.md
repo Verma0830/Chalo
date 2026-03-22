@@ -4,7 +4,7 @@ Punjab-focused bike ride-hailing platform. Production-ready backend with a fully
 
 ## Current Status (March 2026)
 
-- Backend API: **60 endpoints** across auth, rides, driver, payments, notifications, admin, and public tracking. 320/320 tests passing.
+- Backend API: **60 endpoints** across auth, rides, driver, payments, notifications, admin, and public tracking. 321/321 tests passing.
 - Database: Prisma + PostgreSQL/PostGIS, 10 migrations applied.
 - Android customer app: full feature implementation — Compose screens, navigation, DI, repositories, API clients, Room, Firebase RTDB + FCM integration. 53 unit tests across 6 test classes.
 - CI: GitHub Actions pipeline — backend (lint + test + build) and Android (lint + unit tests + debug APK) run on every push to `main`.
@@ -37,7 +37,7 @@ docs/                   All documentation
 | Validation | Zod |
 | Logging | Winston |
 | Metrics | Prometheus client |
-| Tests | Jest + ts-jest (320 passing) |
+| Tests | Jest + ts-jest (321 passing) |
 
 ## Android Customer App Stack
 
@@ -97,7 +97,7 @@ Full emulator setup: [docs/development/EMULATOR_SETUP.md](docs/development/EMULA
 ## Running Tests
 
 ```bash
-# Backend (320 tests)
+# Backend (321 tests)
 cd chalo-backend
 npm test
 
@@ -126,6 +126,9 @@ Every push to `main` runs:
 | [docs/development/NEXT_STEPS.md](docs/development/NEXT_STEPS.md) | Remaining work with priority and impact |
 | [docs/development/FRIEND_SETUP.md](docs/development/FRIEND_SETUP.md) | New developer onboarding |
 | [docs/development/BACKEND_FLOWS.md](docs/development/BACKEND_FLOWS.md) | Backend lifecycle flows (auth, ride, driver broadcast) |
+| [docs/development/BACKUP_DISASTER_RECOVERY.md](docs/development/BACKUP_DISASTER_RECOVERY.md) | Backup cadence, restore drill, RPO/RTO targets |
+| [docs/development/INCIDENT_RUNBOOK.md](docs/development/INCIDENT_RUNBOOK.md) | Step-by-step incident response playbook |
+| [CHANGELOG.md](CHANGELOG.md) | Chronological release and change notes |
 | [docs/reviews/CODE_REVIEW.md](docs/reviews/CODE_REVIEW.md) | Full code quality review — 15 backend + 15 Android findings |
 | [docs/reviews/SECURITY_PERFORMANCE_REVIEW.md](docs/reviews/SECURITY_PERFORMANCE_REVIEW.md) | Security (OWASP) + performance findings with fixes |
 | [docs/development/IMPROVEMENTS.md](docs/development/IMPROVEMENTS.md) | Prioritised feature and quality improvements backlog |
