@@ -4,7 +4,7 @@ Punjab-focused bike ride-hailing platform. Production-ready backend with a fully
 
 ## Current Status (March 2026)
 
-- Backend API: **60 endpoints** across auth, rides, driver, payments, notifications, admin, and public tracking. 319/319 tests passing.
+- Backend API: **60 endpoints** across auth, rides, driver, payments, notifications, admin, and public tracking. 320/320 tests passing.
 - Database: Prisma + PostgreSQL/PostGIS, 10 migrations applied.
 - Android customer app: full feature implementation — Compose screens, navigation, DI, repositories, API clients, Room, Firebase RTDB + FCM integration. 53 unit tests across 6 test classes.
 - CI: GitHub Actions pipeline — backend (lint + test + build) and Android (lint + unit tests + debug APK) run on every push to `main`.
@@ -37,7 +37,7 @@ docs/                   All documentation
 | Validation | Zod |
 | Logging | Winston |
 | Metrics | Prometheus client |
-| Tests | Jest + ts-jest (319 passing) |
+| Tests | Jest + ts-jest (320 passing) |
 
 ## Android Customer App Stack
 
@@ -97,13 +97,12 @@ Full emulator setup: [docs/development/EMULATOR_SETUP.md](docs/development/EMULA
 ## Running Tests
 
 ```bash
-# Backend (319 tests)
+# Backend (320 tests)
 cd chalo-backend
 npm test
 
 # Android unit tests (53 tests)
-cd chalo-customer-app
-./gradlew test
+gradle -p chalo-customer-app test
 ```
 
 ## CI Pipeline

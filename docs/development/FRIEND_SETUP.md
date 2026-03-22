@@ -83,7 +83,8 @@ Android:
 ## 9) Testing status
 
 - Backend has Jest tests under chalo-backend/src/__tests__.
-- Android app currently has no test files in src/test and src/androidTest.
+- Android app has JVM unit tests under chalo-customer-app/app/src/test (53 tests currently).
+- Android instrumentation tests under src/androidTest are still pending.
 
 ## 10) Common issues
 

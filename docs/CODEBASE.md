@@ -10,8 +10,8 @@ Authoritative source for what is actually implemented. When this file conflicts 
 
 Two modules in the monorepo:
 
-- **`chalo-backend`** — Node.js/TypeScript REST API. 60 routed endpoints across 7 route groups. 319 passing tests. Fully running on port 3001.
-- **`chalo-customer-app`** — Android app (Kotlin + Jetpack Compose). All major screen groups implemented. No test coverage yet.
+- **`chalo-backend`** — Node.js/TypeScript REST API. 60 routed endpoints across 7 route groups. 320 passing tests. Fully running on port 3001.
+- **`chalo-customer-app`** — Android app (Kotlin + Jetpack Compose). All major screen groups implemented. 53 JVM unit tests in `app/src/test`.
 
 ---
 
@@ -402,7 +402,7 @@ SplashViewModel
 
 ## 6. Testing coverage
 
-### Backend — 319 passing tests
+### Backend — 320 passing tests
 
 | Category | Files | What's covered |
 |---|---|---|
@@ -413,19 +413,13 @@ SplashViewModel
 
 Run: `cd chalo-backend && npm test`
 
-### Android — 0 tests
+### Android — 53 passing JVM tests
 
-No test files exist in `src/test/` or `src/androidTest/`. This is the highest-priority gap in the entire project.
+Android unit tests now exist under `app/src/test/` and cover ViewModel behavior and DTO/repository mapping contracts.
 
-**What needs to be written:**
+Run: `gradle -p chalo-customer-app test`
 
-Unit tests (JUnit + MockK, in `src/test/`):
-- `OtpVerifyViewModel` — verify Firebase sign-in is called after successful OTP verify, error state on failure, auto-verify trigger on 4-digit entry
-- `AuthRepositoryImpl` — mapper from `ProfileDto` → `User` domain model
-- `RideRepositoryImpl` — mapper from `RideDto` → `Ride` domain model, cancellation request shape
-- `FareEstimateViewModel` — estimate request construction, error handling
-- `ActiveRideViewModel` — status polling logic, state transitions
-- `UserPreferences` — read/write/clear DataStore keys (can use in-memory DataStore)
+**What still needs to be written:**
 
 Instrumentation tests (Espresso + Compose test, in `src/androidTest/`):
 - OTP flow: enter phone → enter OTP → verify Firebase sign-in + navigation
@@ -437,9 +431,9 @@ Instrumentation tests (Espresso + Compose test, in `src/androidTest/`):
 
 ## 7. Known gaps and issues
 
-### Android test coverage (critical)
+### Android instrumentation coverage (high)
 
-No unit or instrumentation tests exist. All Android behaviour relies on manual testing. Any refactor or DTO shape change can silently break the app without any automated signal.
+JVM unit tests exist and run in CI, but there are still no instrumentation tests in `src/androidTest/`. UI/navigation regressions can still slip through without emulator/device-level automation.
 
 ### DTO contract fragility
 
@@ -449,9 +443,9 @@ The Android DTOs (`RideDtos.kt`, `AuthDtos.kt`, etc.) are manually maintained an
 
 `network_security_config.xml` lists `192.168.0.0` and `192.168.1.0` as allowed cleartext domains for physical device testing. These are network addresses, not host IPs, and do not work. The actual host machine IP (e.g. `192.168.1.105`) must be added manually per developer environment.
 
-### No CI/CD for Android
+### Android CI dependency on global Gradle
 
-No GitHub Actions or equivalent pipeline runs lint, build, or tests on the Android module. Issues only surface locally when a developer happens to build.
+GitHub Actions CI runs Android lint, unit tests, and debug APK assembly in `.github/workflows/ci.yml`. Since `gradlew` is not committed in `chalo-customer-app`, the workflow uses a configured Gradle version (`gradle -p chalo-customer-app ...`). Keep Gradle and AGP versions aligned when upgrading Android build tooling.
 
 ### Documentation lag risk
 

@@ -184,6 +184,7 @@ jobs:
       - name: Setup Gradle cache
         uses: gradle/actions/setup-gradle@v3.5.0
         with:
+          gradle-version: '8.4'
           gradle-home-cache-cleanup: true
 
       # local.properties is not committed — create a minimal one for CI
@@ -197,13 +198,11 @@ jobs:
           EOF
 
       - name: Run Android lint
-        working-directory: chalo-customer-app
-        run: ./gradlew lint --stacktrace
+        run: gradle -p chalo-customer-app lint --stacktrace
         # Lint report available at app/build/reports/lint-results-debug.html
 
       - name: Run Android unit tests
-        working-directory: chalo-customer-app
-        run: ./gradlew test --stacktrace
+        run: gradle -p chalo-customer-app test --stacktrace
 
       - name: Upload unit test results
         if: always()
@@ -222,8 +221,7 @@ jobs:
           retention-days: 7
 
       - name: Build debug APK
-        working-directory: chalo-customer-app
-        run: ./gradlew assembleDebug --stacktrace
+        run: gradle -p chalo-customer-app assembleDebug --stacktrace
 
       - name: Verify APK was produced
         run: test -f chalo-customer-app/app/build/outputs/apk/debug/app-debug.apk

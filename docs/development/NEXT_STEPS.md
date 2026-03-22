@@ -41,15 +41,15 @@ Every screen that loads data from the network must handle:
 
 ---
 
-## 2. Android testing (highest priority gap)
+## 2. Android instrumentation testing (remaining high-priority gap)
 
-There are zero tests in the Android module. This is the single biggest risk in the project. Any change to a DTO field name, a navigation path, or a ViewModel function silently breaks the app with no automated signal.
+The Android module now has 53 JVM unit tests in `app/src/test/`, and those run in CI. The biggest remaining risk is missing instrumentation coverage (`app/src/androidTest/`) for end-to-end UI/navigation/device behavior.
 
 ### What to write: unit tests
 
 Location: `app/src/test/` — these run on JVM, no emulator needed, fast to run.
 
-Framework: JUnit 5 + MockK + Kotlin coroutines test (`kotlinx-coroutines-test`).
+Framework: JUnit 4 + MockK + Kotlin coroutines test (`kotlinx-coroutines-test`).
 
 **OtpVerifyViewModel tests:**
 - Entering 6 digits triggers `onVerify()` automatically (and SMS Retriever auto-fills + submits)
@@ -180,19 +180,19 @@ Add example request bodies and expected responses to `docs/api/POSTMAN_GUIDE.md`
 
 ### CI/CD for Android
 
-Minimum pipeline (GitHub Actions or equivalent):
+Current pipeline (already implemented in `.github/workflows/ci.yml`):
 
 ```yaml
 on: [push, pull_request]
 jobs:
   android:
     steps:
-      - lint                    # ./gradlew lint
-      - unit tests              # ./gradlew test
-      - debug build             # ./gradlew assembleDebug
+      - lint                    # gradle -p chalo-customer-app lint
+      - unit tests              # gradle -p chalo-customer-app test
+      - debug build             # gradle -p chalo-customer-app assembleDebug
 ```
 
-Add to `.github/workflows/android.yml`. This catches build breaks and lint regressions before they reach the main branch.
+This catches build breaks and lint regressions before they reach the main branch. Keep Gradle and AGP versions compatible when Android tooling is upgraded.
 
 ### Crashlytics and FCM in release
 
@@ -266,9 +266,9 @@ Define a shared event taxonomy before launch. Events should be emitted by both b
 
 | Gap | Impact | Priority |
 |---|---|---|
-| Zero Android tests | Any change can silently break the app — no automated safety net | Critical |
+| No Android instrumentation tests | UI/navigation regressions can ship despite JVM unit tests | High |
 | DTO contract not enforced | Backend field rename silently produces null in app | High |
-| No Android CI pipeline | Build breaks and regressions only caught locally | High |
+| Android CI depends on configured Gradle version (no wrapper committed) | Tooling mismatch can break CI after AGP upgrades | Medium |
 | network_security_config IP entries wrong | Physical device testing with wrong IP fails silently | Medium |
 | No release signing config | Can't ship to Play Store | High (before release) |
 | Postman examples missing for 4 newer endpoints | Manual testing harder for new developers | Low |
