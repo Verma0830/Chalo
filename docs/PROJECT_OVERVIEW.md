@@ -750,7 +750,7 @@ android  (parallel with above, no dependency)
 
 ### Job 2: Test
 
-Services: `postgis/postgis:16-3.4-alpine` + `redis:7-alpine`
+Services: `postgis/postgis:16-3.5-alpine` + `redis:7-alpine`
 
 Steps: install → `prisma generate` → `prisma migrate deploy` → `jest --coverage --forceExit` → Codecov upload
 
