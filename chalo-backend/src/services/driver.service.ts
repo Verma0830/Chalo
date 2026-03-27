@@ -463,7 +463,7 @@ export class DriverService {
    * UPDATE handles the race automatically.
    */
   async acceptRide(userId: string, rideId: string) {
-    const assignedRideOtp = generateOTP();
+    const assignedRideOtp = generateOTP(4);
 
     // Atomic compare-and-swap: succeed only if ride is still unassigned + REQUESTED
     const updated = await prisma.$transaction(async (tx) => {
@@ -552,7 +552,7 @@ export class DriverService {
     let otpForCustomer = ride.rideStartOtp;
     let otpBackfilled = false;
     if (!otpForCustomer) {
-      otpForCustomer = generateOTP();
+      otpForCustomer = generateOTP(4);
       await prisma.ride.update({
         where: { id: rideId },
         data: { rideStartOtp: otpForCustomer },

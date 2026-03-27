@@ -83,7 +83,7 @@ fun OtpVerifyScreen(
         )
         Spacer(Modifier.height(ChaloSpacing.xl))
 
-        // 4-box OTP input
+        // 6-box OTP input
         OtpInputRow(
             otp       = uiState.otp,
             onChanged = viewModel::onOtpChanged,

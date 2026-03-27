@@ -18,7 +18,7 @@ on:
 
 env:
   # Opt JavaScript actions into Node 24 ahead of GitHub's default switch.
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 jobs:
 
