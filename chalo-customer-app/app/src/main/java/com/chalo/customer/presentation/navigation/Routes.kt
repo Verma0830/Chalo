@@ -33,7 +33,7 @@ object Routes {
 
     // ── Builder functions ────────────────────────────────────────
 
-    fun otpVerify(phone: String)   = "otp_verify/${encodePhone(phone)}"
+    fun otpVerify(phone: String)   = "otp_verify/${phone.removePrefix("+")}"
     fun activeRide(rideId: String) = "active_ride/$rideId"
     fun payment(rideId: String)    = "payment/$rideId"
     fun rating(rideId: String)     = "rating/$rideId"
@@ -47,5 +47,5 @@ object Routes {
 
     // URL-encode for NavArgs (addresses contain spaces/commas)
     private fun encode(s: String)       = java.net.URLEncoder.encode(s, "UTF-8")
-    private fun encodePhone(s: String)  = java.net.URLEncoder.encode(s, "UTF-8")
+    private fun(s: String)  = java.net.URLEncoder.encode(s, "UTF-8")
 }

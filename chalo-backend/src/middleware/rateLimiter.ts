@@ -117,7 +117,7 @@ export function createRateLimiter(options: RateLimitConfig) {
  */
 export const authRateLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: 100,
   message: 'Too many OTP requests. Please wait 15 minutes before trying again.',
   prefix: 'rl:auth',
 });

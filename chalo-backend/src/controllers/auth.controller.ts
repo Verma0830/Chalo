@@ -38,6 +38,7 @@ export class AuthController {
    */
   async verifyOTP(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
+      console.log('VERIFY BODY:', JSON.stringify(req.body));
       const input = req.body as VerifyOTPInput;
       const result = await authService.verifyOTP(input);
       ApiResponse.success(res, result, result.isNewUser ? 'Welcome to Chalo!' : 'Login successful');

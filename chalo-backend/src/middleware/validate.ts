@@ -21,6 +21,7 @@ export function validate(schema: ZodSchema, target: ValidationTarget = 'body') {
   return (req: Request, _res: Response, next: NextFunction): void => {
     try {
       const data = req[target];
+      console.log('VALIDATE INPUT:', JSON.stringify(data)); 
       const parsed = schema.parse(data);
 
       // Replace with parsed (cleaned/transformed) data
