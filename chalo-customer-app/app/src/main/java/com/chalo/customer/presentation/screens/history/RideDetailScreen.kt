@@ -44,7 +44,7 @@ fun RideDetailScreen(
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             when (val state = uiState) {
                 is RideDetailUiState.Loading -> FullScreenLoading()
-                is RideDetailUiState.Error   -> FullScreenError(state.message) { viewModel.load(rideId) }
+                is RideDetailUiState.Error   -> FullScreenError(state.message, onRetry = { viewModel.load(rideId) })
                 is RideDetailUiState.Success -> RideDetailContent(
                     ride           = state.ride,
                     onViewReceipt  = { onViewReceipt(rideId) },

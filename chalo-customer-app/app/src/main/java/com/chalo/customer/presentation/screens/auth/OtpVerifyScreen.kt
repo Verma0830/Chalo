@@ -1,5 +1,9 @@
 package com.chalo.customer.presentation.screens.auth
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,14 +13,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.chalo.customer.presentation.components.ChaloPrimaryButton
 import com.chalo.customer.presentation.theme.ChaloSpacing
 import com.chalo.customer.util.maskPhone
+import com.google.android.gms.auth.api.phone.SmsRetriever
 import kotlinx.coroutines.flow.collectLatest
 
 @Composable
@@ -26,6 +33,7 @@ fun OtpVerifyScreen(
     viewModel: OtpVerifyViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     LaunchedEffect(phone) { viewModel.init(phone) }
 
@@ -37,6 +45,29 @@ fun OtpVerifyScreen(
         }
     }
 
+    // Register SMS Retriever broadcast receiver while this screen is visible
+    DisposableEffect(Unit) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(ctx: Context, intent: Intent) {
+                if (SmsRetriever.SMS_RETRIEVED_ACTION == intent.action) {
+                    val extras    = intent.extras ?: return
+                    val smsMessage = extras.getString(SmsRetriever.EXTRA_SMS_MESSAGE) ?: return
+                    // Extract 6-digit OTP from message using regex
+                    val otp = Regex("\\d{6}").find(smsMessage)?.value ?: return
+                    viewModel.onSmsReceived(otp)
+                }
+            }
+        }
+        val filter = IntentFilter(SmsRetriever.SMS_RETRIEVED_ACTION)
+        ContextCompat.registerReceiver(
+            context,
+            receiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
+        onDispose { context.unregisterReceiver(receiver) }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -46,13 +77,13 @@ fun OtpVerifyScreen(
         Text("Verify OTP", style = MaterialTheme.typography.headlineLarge)
         Spacer(Modifier.height(ChaloSpacing.sm))
         Text(
-            text  = "Enter the 4-digit OTP sent to ${phone.maskPhone()}",
+            text  = "Enter the 6-digit OTP sent to ${phone.maskPhone()}",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(ChaloSpacing.xl))
 
-        // 4-box OTP input
+        // 6-box OTP input
         OtpInputRow(
             otp       = uiState.otp,
             onChanged = viewModel::onOtpChanged,
@@ -64,7 +95,7 @@ fun OtpVerifyScreen(
             text      = "Verify",
             onClick   = viewModel::onVerify,
             isLoading = uiState.isLoading,
-            enabled   = uiState.otp.length == 4,
+            enabled   = uiState.otp.length == 6,
         )
 
         Spacer(Modifier.height(ChaloSpacing.md))
@@ -102,14 +133,14 @@ private fun OtpInputRow(
 ) {
     BasicTextField(
         value         = otp,
-        onValueChange = { if (it.length <= 4 && it.all { c -> c.isDigit() }) onChanged(it) },
+        onValueChange = { if (it.length <= 6 && it.all { c -> c.isDigit() }) onChanged(it) },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
         decorationBox = { _ ->
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                repeat(4) { index ->
+                repeat(6) { index ->
                     val char = otp.getOrNull(index)?.toString() ?: ""
                     Box(
                         modifier = Modifier

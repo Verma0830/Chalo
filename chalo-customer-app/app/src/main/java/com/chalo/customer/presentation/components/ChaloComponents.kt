@@ -2,6 +2,8 @@ package com.chalo.customer.presentation.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -69,6 +71,7 @@ fun FullScreenLoading(message: String = "Loading…") {
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             CircularProgressIndicator()
+            @Suppress("DEPRECATION")
             Spacer(modifier = Modifier.height(ChaloSpacing.md))
             Text(text = message, style = MaterialTheme.typography.bodyMedium)
         }
@@ -87,7 +90,7 @@ fun FullScreenError(
         contentAlignment = Alignment.Center,
     ) {
         Column(
-            modifier = Modifier.padding(ChaloSpacing.lg),
+            modifier = Modifier.padding(all = ChaloSpacing.lg),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
@@ -96,6 +99,7 @@ fun FullScreenError(
                 textAlign = TextAlign.Center,
                 color     = MaterialTheme.colorScheme.onSurface,
             )
+            @Suppress("DEPRECATION")
             Spacer(modifier = Modifier.height(ChaloSpacing.md))
             ChaloPrimaryButton(text = "Retry", onClick = onRetry, modifier = Modifier.width(160.dp))
         }
@@ -115,7 +119,7 @@ fun ChaloTopBar(
             if (onBack != null) {
                 IconButton(onClick = onBack) {
                     Icon(
-                        imageVector = androidx.compose.material.icons.Icons.Default.ArrowBack,
+                        imageVector = Icons.Default.ArrowBack,
                         contentDescription = "Back",
                     )
                 }

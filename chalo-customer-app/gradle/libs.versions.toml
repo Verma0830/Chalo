@@ -6,6 +6,7 @@ ksp                    = "1.9.23-1.0.20"
 
 # Compose
 composeBom             = "2024.04.01"
+composeCompiler        = "1.5.11"
 activityCompose        = "1.9.0"
 navigationCompose      = "2.7.7"
 lifecycleRuntimeCompose = "2.7.0"
@@ -27,7 +28,8 @@ coil                   = "2.6.0"
 
 # Firebase
 googleServices         = "4.4.1"
-firebaseBom            = "32.8.1"
+firebaseCrashlytics    = "3.0.2"
+firebaseBom            = "33.1.0"
 
 # Maps
 mapsCompose            = "4.3.3"
@@ -113,9 +115,9 @@ datastore-preferences      = { group = "androidx.datastore", name = "datastore-p
 timber                     = { group = "com.jakewharton.timber", name = "timber", version.ref = "timber" }
 
 [plugins]
-android-application  = { id = "com.android.application",          version.ref = "agp" }
-kotlin-android       = { id = "org.jetbrains.kotlin.android",      version.ref = "kotlin" }
-kotlin-compose       = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-hilt-android         = { id = "com.google.dagger.hilt.android",    version.ref = "hilt" }
-ksp                  = { id = "com.google.devtools.ksp",           version.ref = "ksp" }
-google-services      = { id = "com.google.gms.google-services",    version.ref = "googleServices" }
+android-application   = { id = "com.android.application",          version.ref = "agp" }
+kotlin-android        = { id = "org.jetbrains.kotlin.android",      version.ref = "kotlin" }
+hilt-android          = { id = "com.google.dagger.hilt.android",    version.ref = "hilt" }
+ksp                   = { id = "com.google.devtools.ksp",           version.ref = "ksp" }
+google-services       = { id = "com.google.gms.google-services",    version.ref = "googleServices" }
+firebase-crashlytics  = { id = "com.google.firebase.crashlytics",    version.ref = "firebaseCrashlytics" }

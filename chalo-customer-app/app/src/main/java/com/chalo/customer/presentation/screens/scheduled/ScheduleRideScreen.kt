@@ -3,7 +3,7 @@ package com.chalo.customer.presentation.screens.scheduled
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -47,21 +47,22 @@ fun ScheduleRideScreen(
             @OptIn(ExperimentalMaterial3Api::class)
             TopAppBar(
                 title = { Text("Schedule Ride") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back") } },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } },
             )
         },
     ) { padding ->
         Column(
             modifier = Modifier
-                .padding(padding)
+                .padding(paddingValues = padding)
                 .fillMaxSize()
-                .padding(ChaloSpacing.md),
+                .padding(all = ChaloSpacing.md),
         ) {
             Text(
                 "Schedule your ride up to 7 days in advance.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            @Suppress("DEPRECATION")
             Spacer(Modifier.height(ChaloSpacing.lg))
 
             // Pickup address
@@ -73,6 +74,7 @@ fun ScheduleRideScreen(
                 singleLine    = true,
                 shape         = RoundedCornerShape(12.dp),
             )
+            @Suppress("DEPRECATION")
             Spacer(Modifier.height(ChaloSpacing.md))
 
             // Drop address
@@ -84,6 +86,7 @@ fun ScheduleRideScreen(
                 singleLine    = true,
                 shape         = RoundedCornerShape(12.dp),
             )
+            @Suppress("DEPRECATION")
             Spacer(Modifier.height(ChaloSpacing.md))
 
             // Scheduled time display
@@ -107,10 +110,12 @@ fun ScheduleRideScreen(
                 )
             }
 
+            @Suppress("DEPRECATION")
             Spacer(Modifier.height(ChaloSpacing.md))
 
             // Payment method
             Text("Payment Method", style = MaterialTheme.typography.titleSmall)
+            @Suppress("DEPRECATION")
             Spacer(Modifier.height(ChaloSpacing.sm))
             Row(horizontalArrangement = Arrangement.spacedBy(ChaloSpacing.sm)) {
                 PaymentMethod.entries.forEach { method ->
@@ -134,6 +139,7 @@ fun ScheduleRideScreen(
             )
 
             uiState.errorMessage?.let { msg ->
+                @Suppress("DEPRECATION")
                 Spacer(Modifier.height(ChaloSpacing.md))
                 Text(msg, color = MaterialTheme.colorScheme.error)
             }

@@ -3,10 +3,10 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt.android)
     alias(libs.plugins.ksp)
     alias(libs.plugins.google.services)
+    alias(libs.plugins.firebase.crashlytics)
 }
 
 // Read local.properties safely
@@ -33,6 +33,7 @@ android {
 
         // Maps API key goes in manifest placeholder (read by Maps SDK)
         manifestPlaceholders["MAPS_API_KEY"] = localProps["MAPS_API_KEY"] ?: "YOUR_MAPS_API_KEY"
+        buildConfigField("String", "MAPS_API_KEY", "\"${localProps["MAPS_API_KEY"] ?: ""}\"")
     }
 
     buildTypes {
@@ -63,6 +64,10 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.11"
     }
 }
 
@@ -128,3 +133,4 @@ dependencies {
     // Logging
     implementation(libs.timber)
 }
+

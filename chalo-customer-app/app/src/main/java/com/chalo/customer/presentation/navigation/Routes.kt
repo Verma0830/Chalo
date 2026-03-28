@@ -33,7 +33,7 @@ object Routes {
 
     // ── Builder functions ────────────────────────────────────────
 
-    fun otpVerify(phone: String)   = "otp_verify/${encodePhone(phone)}"
+    fun otpVerify(phone: String)   = "otp_verify/${phone.removePrefix("+")}"
     fun activeRide(rideId: String) = "active_ride/$rideId"
     fun payment(rideId: String)    = "payment/$rideId"
     fun rating(rideId: String)     = "rating/$rideId"

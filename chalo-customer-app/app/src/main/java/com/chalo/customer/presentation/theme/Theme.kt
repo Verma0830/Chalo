@@ -6,6 +6,8 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 
 private val LightColorScheme = lightColorScheme(
     primary          = ChaloPrimary,
@@ -61,10 +63,10 @@ fun ChaloTheme(
 
 // Spacing constants — use these instead of hardcoded Dp values
 object ChaloSpacing {
-    val xs  = androidx.compose.ui.unit.dp * 4
-    val sm  = androidx.compose.ui.unit.dp * 8
-    val md  = androidx.compose.ui.unit.dp * 16
-    val lg  = androidx.compose.ui.unit.dp * 24
-    val xl  = androidx.compose.ui.unit.dp * 32
-    val xxl = androidx.compose.ui.unit.dp * 48
+    val xs: Dp  = 4.dp
+    val sm: Dp  = 8.dp
+    val md: Dp  = 16.dp
+    val lg: Dp  = 24.dp
+    val xl: Dp  = 32.dp
+    val xxl: Dp = 48.dp
 }

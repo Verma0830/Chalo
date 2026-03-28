@@ -69,7 +69,8 @@ fun ChaloNavGraph(
             route = Routes.OTP_VERIFY,
             arguments = listOf(navArgument("phone") { type = NavType.StringType }),
         ) { backStack ->
-            val phone = URLDecoder.decode(backStack.arguments?.getString("phone") ?: "", "UTF-8")
+            val raw = backStack.arguments?.getString("phone") ?: ""
+            val phone = if (raw.startsWith("91")) "+$raw" else raw
             OtpVerifyScreen(
                 phone = phone,
                 onVerified = { isNewUser ->

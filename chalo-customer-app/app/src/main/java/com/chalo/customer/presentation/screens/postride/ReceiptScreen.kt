@@ -5,7 +5,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -38,12 +38,12 @@ fun ReceiptScreen(
             TopAppBar(
                 title = { Text("Receipt") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back") }
+                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
                 }
             )
         }
     ) { padding ->
-        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+        Box(modifier = Modifier.padding(paddingValues = padding).fillMaxSize()) {
             when (val state = uiState) {
                 is ReceiptUiState.Loading -> FullScreenLoading()
                 is ReceiptUiState.Error   -> FullScreenError(state.message, onRetry = { viewModel.load(rideId) })
@@ -59,7 +59,7 @@ private fun ReceiptContent(receipt: RideReceipt) {
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(ChaloSpacing.md),
+            .padding(all = ChaloSpacing.md),
     ) {
         // Success icon
         Column(
@@ -77,7 +77,7 @@ private fun ReceiptContent(receipt: RideReceipt) {
 
         // Route
         Surface(shape = RoundedCornerShape(16.dp), tonalElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(ChaloSpacing.md)) {
+            Column(modifier = Modifier.padding(all = ChaloSpacing.md)) {
                 Text("Route", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(ChaloSpacing.sm))
                 Text(receipt.pickupAddress, style = MaterialTheme.typography.bodyMedium)
@@ -97,7 +97,7 @@ private fun ReceiptContent(receipt: RideReceipt) {
 
         // Fare breakdown
         Surface(shape = RoundedCornerShape(16.dp), tonalElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(ChaloSpacing.md)) {
+            Column(modifier = Modifier.padding(all = ChaloSpacing.md)) {
                 Text("Fare Breakdown", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(ChaloSpacing.sm))
                 ReceiptRow("Base Fare", receipt.baseFare.toRupees())
@@ -117,7 +117,7 @@ private fun ReceiptContent(receipt: RideReceipt) {
         receipt.driver?.let { driver ->
             Spacer(Modifier.height(ChaloSpacing.md))
             Surface(shape = RoundedCornerShape(16.dp), tonalElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(ChaloSpacing.md)) {
+                Column(modifier = Modifier.padding(all = ChaloSpacing.md)) {
                     Text("Driver", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(ChaloSpacing.sm))
                     Text(driver.name ?: "—", style = MaterialTheme.typography.bodyMedium)
