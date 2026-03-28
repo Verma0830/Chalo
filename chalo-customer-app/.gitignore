@@ -11,3 +11,5 @@ app/build
 *.keystore
 build-error.txt
 gradle/wrapper/gradle-wrapper.jar
+
+google-services.json
