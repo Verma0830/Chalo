@@ -8,6 +8,8 @@ import com.chalo.customer.domain.repository.RideRepository
 import com.chalo.customer.domain.repository.RtdbRepository
 import com.google.android.gms.maps.model.LatLng
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -19,6 +21,7 @@ data class ActiveRideUiState(
     val driverLocation: LatLng?   = null,
     val isLoading: Boolean        = true,
     val errorMessage: String?     = null,
+    val noDriverFound: Boolean    = false,
     val showCancelSheet: Boolean  = false,
     val showSosConfirm: Boolean   = false,
     val isCancelling: Boolean     = false,
@@ -45,16 +48,19 @@ class ActiveRideViewModel @Inject constructor(
     val events = _events.receiveAsFlow()
 
     private var rideId: String = ""
+    private var pollingJob: Job? = null
 
     fun init(rideId: String) {
         if (this.rideId == rideId) return
         this.rideId = rideId
-        loadRide()
+        loadRideOnce()
+        startPolling()
         observeRideStatusFromRtdb()
         observeDriverLocation()
     }
 
-    private fun loadRide() {
+    // Load once immediately on screen open
+    private fun loadRideOnce() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             rideRepository.getRideDetails(rideId)
@@ -68,10 +74,37 @@ class ActiveRideViewModel @Inject constructor(
         }
     }
 
+    // Poll every 8 seconds as fallback (RTDB is primary)
+    private fun startPolling() {
+        pollingJob?.cancel()
+        pollingJob = viewModelScope.launch {
+            while (true) {
+                delay(8000L)
+                // Stop polling if terminal state reached
+                val currentStatus = _uiState.value.ride?.status
+                if (currentStatus in listOf(
+                    RideStatus.COMPLETED,
+                    RideStatus.CANCELLED,
+                    RideStatus.NO_DRIVER,
+                )) break
+
+                rideRepository.getRideDetails(rideId)
+                    .onSuccess { ride ->
+                        _uiState.update { it.copy(ride = ride) }
+                        handleRideStatus(ride.status)
+                    }
+                    .onFailure { error ->
+                        // Don't crash on 429 — just log and wait
+                        Timber.w("Polling failed: ${error.message}")
+                    }
+            }
+        }
+    }
+
     private fun observeRideStatusFromRtdb() {
         viewModelScope.launch {
             rtdbRepository.observeRideStatus(rideId)
-                .catch { e -> Timber.e(e, "RTDB status error â€” falling back to polling") }
+                .catch { e -> Timber.e(e, "RTDB status error — falling back to polling") }
                 .collect { statusStr ->
                     val status = RideStatus.fromString(statusStr)
                     _uiState.update { state ->
@@ -95,6 +128,7 @@ class ActiveRideViewModel @Inject constructor(
     private suspend fun handleRideStatus(status: RideStatus) {
         when (status) {
             RideStatus.COMPLETED -> {
+                pollingJob?.cancel()
                 val ride = _uiState.value.ride ?: return
                 if (ride.paymentMethod.name == "UPI" && ride.paymentStatus == "PENDING") {
                     _events.send(ActiveRideEvent.PaymentRequired(rideId))
@@ -102,7 +136,14 @@ class ActiveRideViewModel @Inject constructor(
                     _events.send(ActiveRideEvent.RideCompleted(rideId))
                 }
             }
-            RideStatus.CANCELLED, RideStatus.NO_DRIVER -> {
+            RideStatus.NO_DRIVER -> {
+                pollingJob?.cancel()
+                // Update Room so HomeViewModel stops seeing this as active
+                rideRepository.updateLocalRideStatus(rideId, "NO_DRIVER")
+                _uiState.update { it.copy(noDriverFound = true) }
+            }
+            RideStatus.CANCELLED -> {
+                pollingJob?.cancel()
                 _events.send(ActiveRideEvent.RideNavigateHome)
             }
             else -> Unit
@@ -122,6 +163,7 @@ class ActiveRideViewModel @Inject constructor(
             _uiState.update { it.copy(isCancelling = true, showCancelSheet = false) }
             rideRepository.cancelRide(rideId, reasonCode, note)
                 .onSuccess {
+                    pollingJob?.cancel()
                     _events.send(ActiveRideEvent.RideNavigateHome)
                 }
                 .onFailure { error ->
@@ -155,5 +197,11 @@ class ActiveRideViewModel @Inject constructor(
         }
     }
 
-    fun onRetry() = loadRide()
+    fun onRetry() = loadRideOnce()
+
+    override fun onCleared() {
+        super.onCleared()
+        pollingJob?.cancel()
+    }
 }
+

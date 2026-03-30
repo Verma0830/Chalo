@@ -46,8 +46,14 @@ class HomeViewModel @Inject constructor(
     private fun observeActiveRide() {
         viewModelScope.launch {
             rideRepository.getActiveRide().collect { ride ->
+                // Extra safety — ignore terminal status rides that slipped through cache
+                if (ride?.status in listOf(RideStatus.NO_DRIVER, RideStatus.CANCELLED, RideStatus.COMPLETED)) {
+                    _uiState.update { it.copy(activeRide = null) }
+                    return@collect
+                }
                 _uiState.update { it.copy(activeRide = ride) }
             }
         }
     }
 }
+
