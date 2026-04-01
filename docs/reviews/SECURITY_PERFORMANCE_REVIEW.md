@@ -262,7 +262,7 @@ ride_share_links: (rideId, revokedAt), expiresAt
 **Finding PERF-01 (MEDIUM): Driver search is a full table scan within radius**
 `ride.service.ts` `searchAndNotifyDrivers` queries `driverProfile.findMany` with a latitude/longitude bounding box filter. Bounding box queries on `(currentLat, currentLng)` use a B-tree index — this can do range scans but is not as efficient as a PostGIS spatial index.
 
-The `postgis/postgis:16-3.4-alpine` Docker image is used in CI (PostGIS is available). PostGIS indexes (GiST on `geography` columns) exist from migration `postgis_indexes`. However, the Prisma client cannot use PostGIS operators via the standard API — the driver search may be falling back to the B-tree composite index.
+The `postgis/postgis:16-3.5-alpine` Docker image is used in CI (PostGIS is available). PostGIS indexes (GiST on `geography` columns) exist from migration `postgis_indexes`. However, the Prisma client cannot use PostGIS operators via the standard API — the driver search may be falling back to the B-tree composite index.
 
 **Fix (if confirmed):** Use Prisma `$queryRaw` with `ST_DWithin(geography, geography, radius_meters)` for the driver search. This uses the GiST index and runs a true spherical distance check — far more accurate and faster than a bounding box.
 

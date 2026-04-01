@@ -16,6 +16,8 @@ interface RideRepository {
     suspend fun getRideReceipt(rideId: String): Result<RideReceipt>
     suspend fun shareRide(rideId: String): Result<ShareLink>
     suspend fun triggerSos(rideId: String, lat: Double, lng: Double): Result<Unit>
+    suspend fun updateLocalRideStatus(rideId: String, status: String)
     fun getActiveRide(): Flow<Ride?>
     fun getCachedRideHistory(): Flow<List<RideHistoryItem>>
 }
+

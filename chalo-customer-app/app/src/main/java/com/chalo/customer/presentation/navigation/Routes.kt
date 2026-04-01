@@ -9,6 +9,7 @@ object Routes {
 
     // Main app
     const val HOME            = "home"
+    const val VEHICLE_SELECT  = "vehicle_select/{pickupLat}/{pickupLng}/{pickupAddress}/{dropLat}/{dropLng}/{dropAddress}"
     const val FARE_ESTIMATE   = "fare_estimate/{pickupLat}/{pickupLng}/{pickupAddress}/{dropLat}/{dropLng}/{dropAddress}"
     const val ACTIVE_RIDE     = "active_ride/{rideId}"
     const val PAYMENT         = "payment/{rideId}"
@@ -40,6 +41,11 @@ object Routes {
     fun receipt(rideId: String)    = "receipt/$rideId"
     fun rideDetail(rideId: String) = "ride_detail/$rideId"
 
+    fun vehicleSelect(
+        pickupLat: Double, pickupLng: Double, pickupAddress: String,
+        dropLat: Double, dropLng: Double, dropAddress: String,
+    ) = "vehicle_select/$pickupLat/$pickupLng/${encode(pickupAddress)}/$dropLat/$dropLng/${encode(dropAddress)}"
+
     fun fareEstimate(
         pickupLat: Double, pickupLng: Double, pickupAddress: String,
         dropLat: Double,   dropLng: Double,   dropAddress: String,
@@ -49,3 +55,5 @@ object Routes {
     private fun encode(s: String)       = java.net.URLEncoder.encode(s, "UTF-8")
     private fun(s: String)  = java.net.URLEncoder.encode(s, "UTF-8")
 }
+
+

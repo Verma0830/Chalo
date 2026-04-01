@@ -131,6 +131,10 @@ class RideRepositoryImpl @Inject constructor(
             if (!response.success) error(response.message)
         }
 
+    override suspend fun updateLocalRideStatus(rideId: String, status: String) {
+        rideDao.updateStatus(rideId, status)
+    }
+
     override fun getActiveRide(): Flow<Ride?> =
         rideDao.getActiveRide().map { it?.toDomain() }
 
@@ -321,3 +325,4 @@ class RideRepositoryImpl @Inject constructor(
         } catch (_: Exception) { null }
     }
 }
+
