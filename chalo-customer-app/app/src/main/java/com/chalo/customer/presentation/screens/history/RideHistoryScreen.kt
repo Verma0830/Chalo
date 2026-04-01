@@ -6,7 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DirectionsBike
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -36,11 +36,11 @@ fun RideHistoryScreen(
             @OptIn(ExperimentalMaterial3Api::class)
             TopAppBar(
                 title = { Text("Ride History") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back") } }
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") } }
             )
         }
     ) { padding ->
-        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+        Box(modifier = Modifier.padding(paddingValues = padding).fillMaxSize()) {
             when (val state = uiState) {
                 is RideHistoryUiState.Loading -> FullScreenLoading()
                 is RideHistoryUiState.Error   -> FullScreenError(state.message, viewModel::load)
@@ -49,7 +49,7 @@ fun RideHistoryScreen(
                         EmptyHistory()
                     } else {
                         LazyColumn(
-                            contentPadding = PaddingValues(ChaloSpacing.md),
+                            contentPadding = PaddingValues(all = ChaloSpacing.md),
                             verticalArrangement = Arrangement.spacedBy(ChaloSpacing.sm),
                         ) {
                             items(state.rides, key = { it.id }) { ride ->
@@ -73,7 +73,7 @@ private fun RideHistoryCard(ride: RideHistoryItem, onClick: () -> Unit) {
         tonalElevation = 2.dp,
     ) {
         Row(
-            modifier = Modifier.padding(ChaloSpacing.md),
+            modifier = Modifier.padding(all = ChaloSpacing.md),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
@@ -123,6 +123,7 @@ private fun EmptyHistory() {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(Icons.Default.DirectionsBike, null, modifier = Modifier.size(64.dp),
                 tint = MaterialTheme.colorScheme.outlineVariant)
+            @Suppress("DEPRECATION")
             Spacer(Modifier.height(ChaloSpacing.md))
             Text("No rides yet", style = MaterialTheme.typography.titleMedium)
             Text("Book your first ride!", style = MaterialTheme.typography.bodyMedium,

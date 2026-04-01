@@ -9,6 +9,7 @@ object Routes {
 
     // Main app
     const val HOME            = "home"
+    const val VEHICLE_SELECT  = "vehicle_select/{pickupLat}/{pickupLng}/{pickupAddress}/{dropLat}/{dropLng}/{dropAddress}"
     const val FARE_ESTIMATE   = "fare_estimate/{pickupLat}/{pickupLng}/{pickupAddress}/{dropLat}/{dropLng}/{dropAddress}"
     const val ACTIVE_RIDE     = "active_ride/{rideId}"
     const val PAYMENT         = "payment/{rideId}"
@@ -33,12 +34,17 @@ object Routes {
 
     // ── Builder functions ────────────────────────────────────────
 
-    fun otpVerify(phone: String)   = "otp_verify/${encodePhone(phone)}"
+    fun otpVerify(phone: String)   = "otp_verify/${phone.removePrefix("+")}"
     fun activeRide(rideId: String) = "active_ride/$rideId"
     fun payment(rideId: String)    = "payment/$rideId"
     fun rating(rideId: String)     = "rating/$rideId"
     fun receipt(rideId: String)    = "receipt/$rideId"
     fun rideDetail(rideId: String) = "ride_detail/$rideId"
+
+    fun vehicleSelect(
+        pickupLat: Double, pickupLng: Double, pickupAddress: String,
+        dropLat: Double, dropLng: Double, dropAddress: String,
+    ) = "vehicle_select/$pickupLat/$pickupLng/${encode(pickupAddress)}/$dropLat/$dropLng/${encode(dropAddress)}"
 
     fun fareEstimate(
         pickupLat: Double, pickupLng: Double, pickupAddress: String,
@@ -49,3 +55,5 @@ object Routes {
     private fun encode(s: String)       = java.net.URLEncoder.encode(s, "UTF-8")
     private fun encodePhone(s: String)  = java.net.URLEncoder.encode(s, "UTF-8")
 }
+
+

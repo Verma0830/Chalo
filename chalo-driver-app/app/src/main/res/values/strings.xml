@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Chalo Driver</string>
+
+    <!-- Auth -->
+    <string name="enter_phone">Enter your\nphone number</string>
+    <string name="phone_hint">+91 XXXXX XXXXX</string>
+    <string name="send_otp">Send OTP</string>
+    <string name="verify_otp">Verify OTP</string>
+    <string name="otp_sent_to">OTP sent to %1$s</string>
+    <string name="resend_otp">Resend OTP</string>
+    <string name="resend_in">Resend in %1$ds</string>
+    <string name="enter_your_name">Enter your name</string>
+    <string name="register_as_driver">Register as Driver</string>
+
+    <!-- KYC -->
+    <string name="submit_documents">Submit Documents</string>
+    <string name="license_number">Driving License Number</string>
+    <string name="rc_number">RC Number</string>
+    <string name="aadhar_number">Aadhar Number (12 digits)</string>
+    <string name="vehicle_number">Vehicle Number</string>
+    <string name="vehicle_model">Vehicle Model</string>
+    <string name="upload_license">Upload License Photo</string>
+    <string name="upload_rc">Upload RC Photo</string>
+    <string name="upload_aadhar">Upload Aadhar Photo</string>
+    <string name="upload_bike_photo">Upload Bike Photo (optional)</string>
+    <string name="documents_under_review">Documents Under Review</string>
+    <string name="kyc_pending_message">Your documents are being reviewed. You will be notified once approved.</string>
+
+    <!-- Home -->
+    <string name="go_online">Go Online</string>
+    <string name="go_offline">Go Offline</string>
+    <string name="you_are_online">You are Online</string>
+    <string name="you_are_offline">You are Offline</string>
+    <string name="waiting_for_rides">Waiting for ride requests\u2026</string>
+
+    <!-- Incoming Ride -->
+    <string name="new_ride_request">New Ride Request</string>
+    <string name="accept">Accept</string>
+    <string name="decline">Decline</string>
+    <string name="time_remaining">%1$ds</string>
+
+    <!-- Active Ride -->
+    <string name="navigate_to_pickup">Navigate to Pickup</string>
+    <string name="i_have_arrived">I\'ve Arrived</string>
+    <string name="enter_otp">Enter OTP from Customer</string>
+    <string name="start_ride">Start Ride</string>
+    <string name="complete_ride">Complete Ride</string>
+    <string name="cancel_ride">Cancel Ride</string>
+    <string name="ride_in_progress">Ride in Progress</string>
+    <string name="rate_customer">Rate Customer</string>
+
+    <!-- Earnings -->
+    <string name="earnings">Earnings</string>
+    <string name="today">Today</string>
+    <string name="this_week">This Week</string>
+    <string name="this_month">This Month</string>
+    <string name="total_earnings">Total Earnings</string>
+    <string name="total_rides">Total Rides</string>
+    <string name="commission">Commission</string>
+    <string name="net_earnings">Net Earnings</string>
+    <string name="trip_history">Trip History</string>
+
+    <!-- Withdrawal -->
+    <string name="withdraw">Withdraw</string>
+    <string name="withdrawal_amount">Withdrawal Amount</string>
+    <string name="upi_id">UPI ID</string>
+    <string name="bank_account">Bank Account Number</string>
+    <string name="ifsc_code">IFSC Code</string>
+    <string name="request_withdrawal">Request Withdrawal</string>
+
+    <!-- Profile -->
+    <string name="profile">Profile</string>
+    <string name="sign_out">Sign Out</string>
+
+    <!-- Common -->
+    <string name="error_generic">Something went wrong. Please try again.</string>
+    <string name="error_network">No internet connection.</string>
+    <string name="retry">Retry</string>
+    <string name="loading">Loading\u2026</string>
+    <string name="submit">Submit</string>
+    <string name="cancel">Cancel</string>
+    <string name="ok">OK</string>
+
+    <!-- Notification channels -->
+    <string name="channel_ride_requests">Ride Requests</string>
+    <string name="channel_ride_updates">Ride Updates</string>
+</resources>

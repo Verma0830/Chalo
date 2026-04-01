@@ -111,3 +111,11 @@ enum class PaymentMethod {
             entries.firstOrNull { it.name == value } ?: CASH
     }
 }
+
+enum class VehicleType {
+    BIKE, AUTO, CAR, E_RICKSHAW;
+    companion object {
+        fun fromString(value: String): VehicleType =
+            entries.firstOrNull { it.name == value } ?: BIKE
+    }
+}
