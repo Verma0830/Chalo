@@ -173,11 +173,33 @@ export class RideService {
     });
 
     return {
-      rideId: createdRide.id,
-      status: createdRide.status,
-      fare: {
-        ...fareEstimate,
-      },
+        id: createdRide.id,
+        rideId: createdRide.id,
+        status: createdRide.status,
+        pickupAddress: createdRide.pickupAddress,
+        dropAddress: createdRide.dropAddress,
+        pickupLat: createdRide.pickupLat,
+        pickupLng: createdRide.pickupLng,
+        dropLat: createdRide.dropLat,
+        dropLng: createdRide.dropLng,
+        paymentMethod: createdRide.paymentMethod,
+        paymentStatus: createdRide.paymentStatus,
+        estimatedFare: fareEstimate.estimatedFare,
+        finalFare: null,
+        distanceKm: fareEstimate.distanceKm,
+        durationMins: fareEstimate.durationMins,
+        rideStartOtp: null,
+        customerRating: null,
+        driverRating: null,
+        ratingSkippedAt: null,
+        scheduledAt: null,
+        createdAt: createdRide.createdAt,
+        completedAt: null,
+        driver: null,
+        cancellationFee: null,
+        fare: {
+          ...fareEstimate,
+        },
       pickup: sanitizedPickup,
       drop: sanitizedDrop,
       paymentMethod,
@@ -202,10 +224,10 @@ export class RideService {
    * Expand the bounds via a code change when the operating zone grows.
    */
   private enforceServiceArea(lat: number, lng: number): void {
-    const SW_LAT = 29.50;
-    const SW_LNG = 73.85;
-    const NE_LAT = 32.60;
-    const NE_LNG = 76.95;
+    const SW_LAT = 6.0;
+    const SW_LNG = 68.0;
+    const NE_LAT = 37.0;
+    const NE_LNG = 97.0;
 
     if (lat < SW_LAT || lat > NE_LAT || lng < SW_LNG || lng > NE_LNG) {
       logger.warn('Ride request outside service area', { lat, lng });
@@ -1421,3 +1443,5 @@ export class RideService {
 
 export const rideService = new RideService();
 export default rideService;
+
+

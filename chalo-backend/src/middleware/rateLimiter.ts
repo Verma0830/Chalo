@@ -117,7 +117,7 @@ export function createRateLimiter(options: RateLimitConfig) {
  */
 export const authRateLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 1000,
   message: 'Too many OTP requests. Please wait 15 minutes before trying again.',
   prefix: 'rl:auth',
 });
@@ -127,7 +127,7 @@ export const authRateLimiter = createRateLimiter({
  */
 export const apiRateLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 1000,
   prefix: 'rl:api',
 });
 
@@ -151,3 +151,6 @@ export const webhookRateLimiter = createRateLimiter({
   max: 200,
   prefix: 'rl:webhook',
 });
+
+
+
