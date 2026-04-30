@@ -1,0 +1,116 @@
+# ============================================================
+# Chalo Backend — Docker Compose (Development)
+# Brings up PostgreSQL + PostGIS, Redis, and the backend API
+#
+# Prerequisites:
+#   1. Copy .env.example → .env and fill in values
+#   2. Place firebase-service-account.json in chalo-backend/ (never committed)
+#   3. Run: docker compose up --build
+#
+# NOTE: Prisma migrations run automatically at startup (dev only, single instance).
+# For production, run: npx prisma migrate deploy in CI/CD before deploying.
+# ============================================================
+
+services:
+
+  # ---------- PostgreSQL + PostGIS ----------
+  postgres:
+    image: postgis/postgis:16-3.5-alpine
+    container_name: chalo-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: luffy
+      POSTGRES_DB: chalo_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  # ---------- Redis ----------
+  redis:
+    image: redis:7-alpine
+    container_name: chalo-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+  # ---------- Backend API ----------
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chalo-api
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      # development — keeps startup guards relaxed so placeholder secrets are allowed
+      NODE_ENV: development
+      PORT: 5000
+      DATABASE_URL: "postgresql://postgres:luffy@postgres:5432/chalo_db?schema=public"
+      REDIS_URL: "redis://redis:6379"
+      # Firebase service account is mounted as a volume below — never baked into image
+      FIREBASE_SERVICE_ACCOUNT_PATH: "./firebase-service-account.json"
+      FIREBASE_DATABASE_URL: "${FIREBASE_DATABASE_URL:-}"
+      # Razorpay — use test keys for local dev
+      RAZORPAY_KEY_ID: "${RAZORPAY_KEY_ID:-rzp_test_placeholder}"
+      RAZORPAY_KEY_SECRET: "${RAZORPAY_KEY_SECRET:-placeholder_secret}"
+      RAZORPAY_WEBHOOK_SECRET: "${RAZORPAY_WEBHOOK_SECRET:-}"
+      GOOGLE_MAPS_API_KEY: "${GOOGLE_MAPS_API_KEY:-placeholder_key}"
+      MSG91_AUTH_KEY: "${MSG91_AUTH_KEY:-}"
+      MSG91_SENDER_ID: "${MSG91_SENDER_ID:-CHALO}"
+      INTERNAL_API_KEY: "${INTERNAL_API_KEY:-}"
+      LOG_LEVEL: "debug"
+    volumes:
+      # Mount Firebase service account file (read-only) from host into container
+      # IMPORTANT: create firebase-service-account.json in chalo-backend/ before running
+      # It is excluded from git (.gitignore) and Docker image (.dockerignore) — mount only
+      - ./firebase-service-account.json:/app/firebase-service-account.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - backend
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+    # Migrations are run from the host before starting the container.
+    # See README: npx prisma migrate dev --name init
+
+networks:
+  # Isolated bridge network — services only talk to each other, not the outside
+  backend:
+    driver: bridge
+
+volumes:
+  pgdata:
+  redisdata:

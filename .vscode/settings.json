@@ -1,0 +1,20 @@
+{
+  "files.associations": {
+    ".github/workflows/*.yml": "yaml",
+    ".github/workflows/*.yaml": "yaml"
+  },
+  "typescript.tsdk": "chalo-backend/node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+  "eslint.workingDirectories": ["./chalo-backend"],
+  "editor.defaultFormatter": "dbaeumer.vscode-eslint",
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "prisma.pinToPrisma6": true,
+  "github-actions.use-enterprise": false,
+  "github-actions.workflows.pinned.enabled": false,
+  "chat.tools.terminal.autoApprove": {
+    "npx jest": true
+  }
+}

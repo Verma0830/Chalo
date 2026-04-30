@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm test -- --forceExit)",
+      "Bash(docker exec chalo-db psql -U postgres -d chalo -c \"SELECT migration_name, finished_at, applied_steps_count, rolled_back_at FROM _prisma_migrations ORDER BY started_at;\")",
+      "Bash(docker exec chalo-db psql -U postgres -d chalo -c \"SELECT extname FROM pg_extension;\")",
+      "Bash(docker exec chalo-db psql -U postgres -d chalo -c \"\\\\dt public.*\")",
+      "Bash(npx prisma migrate deploy)",
+      "Bash(docker start chalo-db chalo-redis)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:luffy@localhost:5433/chalo?schema=public\" npx prisma migrate deploy)",
+      "Bash(DATABASE_URL=\"postgresql://postgres:luffy@localhost:5433/chalo?schema=public\" npx prisma generate)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(node -e \":*)",
+      "Bash(node update_seed.js)",
+      "Bash(rm update_seed.js)",
+      "Bash(node update_validator.js)",
+      "Bash(rm update_validator.js)",
+      "Bash(npx prisma:*)",
+      "Bash(node update_cancel.js)",
+      "Bash(rm update_cancel.js)",
+      "Bash(npm test:*)",
+      "Bash(node fix_validator_tests.js)",
+      "Bash(rm fix_validator_tests.js)",
+      "Bash(node update_flows_cancel.js)",
+      "Bash(rm update_flows_cancel.js)"
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+node_modules
+dist
+.env
+*.log
+.git
+.github
+coverage
+.nyc_output
+firebase-service-account.json
+
+# Test files — not needed in Docker build context
+src/__tests__
+jest.config.ts
+jest.setup.ts
+
+# Load test scripts
+k6
+
+# Linting / editor config
+.eslintrc.json
+.vscode
+
+# Documentation
+*.md
+.env.example

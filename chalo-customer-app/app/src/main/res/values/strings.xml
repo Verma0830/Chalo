@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Chalo</string>
+
+    <!-- Auth -->
+    <string name="enter_phone">Enter your phone number</string>
+    <string name="phone_hint">+91 XXXXX XXXXX</string>
+    <string name="send_otp">Send OTP</string>
+    <string name="verify_otp">Verify OTP</string>
+    <string name="otp_sent_to">OTP sent to %1$s</string>
+    <string name="resend_otp">Resend OTP</string>
+    <string name="resend_in">Resend in %1$ds</string>
+    <string name="complete_profile">Complete your profile</string>
+    <string name="your_name">Your name</string>
+    <string name="save_continue">Save &amp; Continue</string>
+
+    <!-- Home -->
+    <string name="where_to">Where to?</string>
+    <string name="search_destination">Search destination</string>
+    <string name="book_ride">Book Ride</string>
+    <string name="fare_estimate">Fare Estimate</string>
+    <string name="distance_km">%1$.1f km</string>
+    <string name="duration_min">%1$d min</string>
+    <string name="minimum_fare_applies">Minimum fare applies</string>
+
+    <!-- Active Ride -->
+    <string name="searching_driver">Searching for a driver…</string>
+    <string name="driver_assigned">Driver assigned</string>
+    <string name="driver_arriving">Driver is on the way</string>
+    <string name="driver_arrived">Driver has arrived</string>
+    <string name="ride_in_progress">Ride in progress</string>
+    <string name="share_your_otp">Your OTP: %1$s</string>
+    <string name="cancel_ride">Cancel Ride</string>
+    <string name="share_ride">Share Ride</string>
+    <string name="sos">SOS</string>
+
+    <!-- Post Ride -->
+    <string name="rate_your_ride">Rate your ride</string>
+    <string name="rate_driver">Rate Driver</string>
+    <string name="skip">Skip</string>
+    <string name="rate_later">Rate Later</string>
+    <string name="submit_rating">Submit Rating</string>
+    <string name="payment_pending">Payment Pending</string>
+    <string name="pay_now">Pay Now</string>
+    <string name="receipt">Receipt</string>
+    <string name="total_fare">Total Fare</string>
+    <string name="base_fare">Base Fare</string>
+    <string name="booking_fee">Booking Fee</string>
+
+    <!-- History -->
+    <string name="ride_history">Ride History</string>
+    <string name="no_rides_yet">No rides yet</string>
+
+    <!-- Profile -->
+    <string name="profile">Profile</string>
+    <string name="emergency_contact">Emergency Contact</string>
+    <string name="saved_locations">Saved Locations</string>
+    <string name="home">Home</string>
+    <string name="work">Work</string>
+    <string name="sign_out">Sign Out</string>
+
+    <!-- Notifications -->
+    <string name="notifications">Notifications</string>
+    <string name="no_notifications">No notifications</string>
+    <string name="mark_all_read">Mark all read</string>
+
+    <!-- Errors -->
+    <string name="error_generic">Something went wrong. Please try again.</string>
+    <string name="error_network">No internet connection.</string>
+    <string name="retry">Retry</string>
+    <string name="loading">Loading…</string>
+</resources>

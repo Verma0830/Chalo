@@ -1,0 +1,7 @@
+{
+  "references": [
+    { "path": "./chalo-backend" },
+    { "path": "./chalo-backend/src/__tests__" }
+  ],
+  "files": []
+}
