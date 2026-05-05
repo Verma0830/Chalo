@@ -1,1 +1,33 @@
-node_modules/
+# Android build outputs
+**/build/
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+local.properties
+
+# Gradle
+.gradle/
+gradle-wrapper.jar
+
+# Secrets (VERY IMPORTANT - never commit these!)
+google-services.json
+**/google-services.json
+**/*.json.json
+firebase-*.json
+*service-account*.json
+
+# Kotlin/Kapt generated
+**/generated/
+**/kspCaches/
+
+# OS
+.DS_Store
+Thumbs.db
+.kotlin/
